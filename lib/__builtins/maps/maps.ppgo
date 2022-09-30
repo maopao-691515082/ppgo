@@ -1,0 +1,8 @@
+/*
+
+public func len<K, V>(m [K]V) int;
+public func has_key<K, V>(m [K]V, k K) bool;
+public func get<K, V>(m [K]V, k K) V;
+public func pop<K, V>(m [K]V, k K) V;
+
+*/

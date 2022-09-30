@@ -1,0 +1,287 @@
+import (
+    "os";
+    "time";
+)
+
+class Record
+{
+    ptr_comp Record;
+    discr, enum_comp, int_comp int;
+    str_comp string;
+
+    func assign(other Record)
+    {
+        this.ptr_comp   = other.ptr_comp;
+        this.discr      = other.discr;
+        this.enum_comp  = other.enum_comp;
+        this.int_comp   = other.int_comp;
+        this.str_comp   = other.str_comp;
+    }
+}
+
+var loops int = 5000000;
+
+final var (
+    Ident1 int = 1;
+    Ident2 int = 2;
+    Ident3 int = 3;
+    Ident4 int = 4;
+    Ident5 int = 5;
+)
+
+var (
+    int_glob int;
+    bool_glob bool;
+    char1_glob, char2_glob byte;
+
+    array1_glob []int;
+    array2_glob [][]int;
+
+    ptr_glb, ptr_glb_next Record;
+)
+
+func init()
+{
+    array1_glob.resize(51);
+    for (var _, v : array2_glob.resize(51))
+    {
+        v.resize(51);
+    }
+}
+
+func func3(enum_par_in int) bool
+{
+    var enum_loc = enum_par_in;
+    return enum_loc == Ident3;
+}
+
+func func2(str_par_i1, str_par_i2 string) bool
+{
+    var (
+        int_loc = 1;
+        char_loc byte;
+    )
+    while (int_loc <= 1)
+    {
+        if (func1(str_par_i1[int_loc], str_par_i2[int_loc + 1]) == Ident1)
+        {
+            char_loc = 'A';
+            ++ int_loc;
+        }
+    }
+    if (char_loc >= 'W' && char_loc <= 'Z')
+    {
+        int_loc = 7;
+    }
+    if (char_loc == 'X')
+    {
+        return true;
+    }
+    if (str_par_i1 > str_par_i2)
+    {
+        int_loc += 7;
+        return true;
+    }
+    return false;
+}
+
+func func1(char_par1, char_par2 byte) int
+{
+    var (
+        char_loc1 = char_par1;
+        char_loc2 = char_loc1;
+    )
+    return Ident1 if char_loc2 != char_par2 else Ident2;
+}
+
+func proc8(array1_par []int, array2_par [][]int, int_par_i1, int_par_i2 int)
+{
+    var int_loc = int_par_i1 + 5;
+    array1_par[int_loc] = int_par_i2;
+    array1_par[int_loc + 1] = array1_par[int_loc];
+    array1_par[int_loc + 30] = int_loc;
+    for (var int_index : int_loc .. int_loc + 2)
+    {
+        array2_par[int_loc][int_index] = int_loc;
+    }
+    ++ array2_par[int_loc][int_loc - 1];
+    array2_par[int_loc + 20][int_loc] = array1_par[int_loc];
+    int_glob = 5;
+}
+
+func proc7(int_par_i1, int_par_i2 int) int
+{
+    var (
+        int_loc = int_par_i1 + 2;
+        int_par_out = int_par_i2 + int_loc;
+    )
+    return int_par_out;
+}
+
+func proc6(enum_par_in int) int
+{
+    var enum_par_out = enum_par_in;
+    if (!func3(enum_par_in))
+    {
+        enum_par_out = Ident4;
+    }
+    if (enum_par_in != Ident1)
+    {
+        enum_par_out = Ident1;
+    }
+    else if (enum_par_in == Ident2)
+    {
+        enum_par_out = Ident1 if int_glob > 100 else Ident4;
+    }
+    else if (enum_par_in == Ident3)
+    {
+        enum_par_out = Ident2;
+    }
+    else if (enum_par_in == Ident4)
+    {
+    }
+    else if (enum_par_in == Ident5)
+    {
+        enum_par_out = Ident3;
+    }
+    return enum_par_out;
+}
+
+func proc5()
+{
+    char1_glob = 'A';
+    bool_glob = false;
+}
+
+func proc4()
+{
+    var bool_loc = char1_glob == 'A';
+    bool_loc = bool_loc || bool_glob;
+    char2_glob = 'B';
+}
+
+func proc3(ptr_par_out Record) Record
+{
+    if (ptr_glb != nil)
+    {
+        ptr_par_out = ptr_glb.ptr_comp;
+    }
+    else
+    {
+        int_glob = 100;
+    }
+    ptr_glb.int_comp = proc7(10, int_glob);
+    return ptr_par_out;
+}
+
+func proc2(int_par_io int) int
+{
+    var (
+        int_loc = int_par_io + 10;
+        enum_loc = 0;
+    )
+    while (true)
+    {
+        if (char1_glob == 'A')
+        {
+            -- int_loc;
+            int_par_io = int_loc - int_glob;
+            enum_loc = Ident1;
+        }
+        if (enum_loc == Ident1)
+        {
+            break;
+        }
+    }
+    return int_par_io;
+}
+
+func proc1(ptr_par_in Record) Record
+{
+    var next_record = ptr_par_in.ptr_comp;
+    next_record.assign(ptr_glb);
+    ptr_par_in.int_comp = 5;
+    next_record.int_comp = ptr_par_in.int_comp;
+    next_record.ptr_comp = ptr_par_in.ptr_comp;
+    next_record.ptr_comp = proc3(next_record.ptr_comp);
+    if (next_record.discr == Ident1)
+    {
+        next_record.int_comp = 6;
+        next_record.enum_comp = proc6(ptr_par_in.enum_comp);
+        next_record.ptr_comp = ptr_glb.ptr_comp;
+        next_record.int_comp = proc7(next_record.int_comp, 10);
+    }
+    else
+    {
+        ptr_par_in.assign(next_record);
+    }
+    return ptr_par_in;
+}
+
+func proc0()
+{
+    ptr_glb_next = Record();
+    ptr_glb = Record();
+
+    ptr_glb.ptr_comp = ptr_glb_next;
+    ptr_glb.discr = Ident1;
+    ptr_glb.enum_comp = Ident3;
+    ptr_glb.int_comp = 40;
+    ptr_glb.str_comp = "DHRYSTONE PROGRAM, SOME STRING";
+
+    var string1_loc = "DHRYSTONE PROGRAM, 1'ST STRING";
+
+    array2_glob[8][7] = 10;
+
+    for (var i : 0 .. loops)
+    {
+        proc5();
+        proc4();
+        var (
+            int_loc1 = 2;
+            int_loc2 = 3;
+            enum_loc = Ident2;
+            string2_loc = "DHRYSTONE PROGRAM, 2'ND STRING";
+        )
+        bool_glob = !func2(string1_loc, string2_loc);
+        var int_loc3 = 0;
+        while (int_loc1 < int_loc2)
+        {
+            int_loc3 = 5 * int_loc1 - int_loc2;
+            int_loc3 = proc7(int_loc1, int_loc2);
+            ++ int_loc1;
+        }
+        proc8(array1_glob, array2_glob, int_loc1, int_loc3);
+        ptr_glb = proc1(ptr_glb);
+        for (var char_idx : 'A' .. char2_glob + '\2')
+        {
+            if (enum_loc == func1(char_idx, 'C'))
+            {
+                enum_loc = proc6(Ident1);
+            }
+        }
+        int_loc3 = int_loc2 * int_loc1;
+        int_loc2 = int_loc3 / int_loc1;
+        int_loc2 = 7 * (int_loc3 - int_loc2) - int_loc1;
+        int_loc1 = proc2(int_loc1);
+    }
+}
+
+public func main()
+{
+    if (os.args.len() > 1)
+    {
+        var exc any;
+        loops, exc = os.args[1].parse_int();
+        if (exc != nil || loops <= 0)
+        {
+            println("Invalid loops arg");
+            return;
+        }
+    }
+    var ts = time.time();
+    proc0();
+    var tm = time.time() - ts;
+    println("Time used: %f sec".(tm));
+    println("This machine benchmarks at %f PPGoStones/second".(loops.<float> / tm));
+}

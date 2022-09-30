@@ -1,0 +1,14 @@
+/*
+
+public func len<E>(v []E) int;
+public func resize<E>(v []E, sz int) []E;
+public func get<E>(v []E, idx int) E;
+public func set<E>(v []E, idx int, e E) []E;
+public func append<E>(v []E, e E) []E;
+public func extend<E>(v []E, es []E) []E;
+public func insert<E>(v []E, idx int, e E) []E;
+public func insert_vec<E>(v []E, idx int, es []E) []E;
+public func pop<E>(v []E, idx int) E;
+public func pop_last<E>(v []E) E;
+
+*/

@@ -1,0 +1,5 @@
+public func throw(t any);
+
+public class TypeAssertionException
+{
+}

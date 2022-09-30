@@ -1,0 +1,3 @@
+public func println(s string);
+
+public func assert(cond bool);
