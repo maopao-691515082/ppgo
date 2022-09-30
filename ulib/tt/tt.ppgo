@@ -1,0 +1,19 @@
+public func main()
+{
+    var m = [int]int{1: 2};
+    m[2] = 3;
+    for (var k, v : m)
+    {
+        println("%s: %s".(k, v));
+    }
+
+    println("%s".(m.len()));
+    println("%s".(m.has_key(1)));
+    println("%s".(m.get(1)));
+
+    println("%s".(m.pop(1)));
+
+    println("%s".(m.len()));
+    println("%s".(m.has_key(1)));
+    println("%s".(m.get(1)));
+}

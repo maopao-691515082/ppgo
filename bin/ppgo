@@ -1,0 +1,43 @@
+#!/usr/bin/env python2
+#coding=utf8
+
+import os, sys, getopt
+
+def main():
+    THIS_SCRIPT_NAME_SUFFIX = "/bin/ppgo"
+    this_script_name = os.path.realpath(os.path.expanduser(sys.argv[0]))
+    assert this_script_name.endswith(THIS_SCRIPT_NAME_SUFFIX)
+    ppgo_dir = this_script_name[: -len(THIS_SCRIPT_NAME_SUFFIX)]
+
+    def _show_usage_and_exit():
+        print >> sys.stderr, (
+            "ppgo [-v] [--ST] {-o <OUT_BIN> <MAIN_MOD_PATH> | <MAIN_MOD_PATH> <ARGS_FOR_RUNNING>}")
+        sys.exit(1)
+
+    cmd_args = ["/usr/bin/env", "python2", "%s/compiler/ppgoc.py" % ppgo_dir]
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1 :], "vo:", ["ST"])
+    except getopt.GetoptError:
+        _show_usage_and_exit()
+    opts = dict(opts)
+    if "-v" in opts:
+        cmd_args.append("-v")
+    if "--ST" in opts:
+        cmd_args.append("--ST")
+    out_bin = opts.get("-o")
+    if out_bin is None:
+        cmd_args.append("--run")
+    else:
+        cmd_args.append("-o")
+        cmd_args.append(out_bin)
+        if len(args) != 1:
+            _show_usage_and_exit()
+    if not args:
+        _show_usage_and_exit()
+    cmd_args += args
+
+    os.execv(cmd_args[0], cmd_args)
+
+if __name__ == "__main__":
+    main()

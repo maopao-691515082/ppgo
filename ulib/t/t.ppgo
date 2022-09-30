@@ -1,0 +1,118 @@
+import (
+    "math/rand";
+    "time";
+    "os";
+)
+
+func rand_prepare(a []int)
+{
+    var alen = a.len();
+    var count = 0;
+    while (count < alen / 1000)
+    {
+        var (
+            i = rand.fast_rand_n(alen);
+            j = rand.fast_rand_n(alen);
+        )
+        if ((i < j && a[i] > a[j]) || (i > j && a[i] < a[j]))
+        {
+            var tmp = a[i];
+            a[i] = a[j];
+            a[j] = tmp;
+            count = 0;
+        }
+        else
+        {
+            ++ count;
+        }
+    }
+}
+
+func insert_sort(a []int, begin, end int)
+{
+    assert(begin <= end);
+    for (var i : begin + 1 .. end)
+    {
+        var n = a[i];
+        while (i > begin && n < a[i - 1])
+        {
+            a[i] = a[i - 1];
+            -- i;
+        }
+        a[i] = n;
+    }
+}
+
+func qsort(a []int, begin, end int)
+{
+    assert(begin <= end);
+    if (end - begin < 10)
+    {
+        insert_sort(a, begin, end);
+        return;
+    }
+    var (
+        pivot = a[begin];
+        i = begin + 1;
+        j = end - 1;
+    )
+    while (true)
+    {
+        while (i <= j && a[i] <= pivot)
+        {
+            ++ i;
+        }
+        while (j >= i  && a[j] > pivot)
+        {
+            -- j;
+        }
+        if (i > j)
+        {
+            break;
+        }
+        assert(i != j);
+        var tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+    }
+    assert(i == j + 1);
+    var tmp = a[j];
+    a[j] = a[begin];
+    a[begin] = tmp;
+    qsort(a, begin, j);
+    qsort(a, i, end);
+}
+
+public func main()
+{
+    var (
+        enable_rand_prepare = os.args.len() >= 3 && os.args[2] == "rp";
+        use_qsort = os.args.len() >= 3 && os.args[2] == "qs";
+        data_count = os.args.get(1).parse_int();
+    )
+
+    println("start");
+
+    var a = []int{}.resize(data_count);
+    for (var i : 0 .. a.len())
+    {
+        a[i] = rand.fast_rand_n(100000000);
+    }
+
+    var ts = time.time();
+
+    if (use_qsort)
+    {
+        qsort(a, 0, a.len());
+    }
+    else
+    {
+        if (enable_rand_prepare)
+        {
+            rand_prepare(a);
+        }
+        insert_sort(a, 0, a.len());
+    }
+
+    println("time cost: %f sec".(time.time() - ts));
+}
