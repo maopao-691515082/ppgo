@@ -287,6 +287,8 @@ class Parser:
             while True:
                 if expr is not None and not expr.is_lvalue:
                     et.syntax_err("需要左值")
+                if expr.tp.is_func:
+                    et.syntax_err("不能赋值给闭包函数类型的变量")
                 lvalues.append(expr)
                 if sym != ",":
                     break

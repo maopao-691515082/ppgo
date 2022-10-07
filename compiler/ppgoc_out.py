@@ -102,6 +102,13 @@ def gen_tp_code(tp):
     if tp.is_map:
         ktp, vtp = tp.map_kv_tp
         return "::ppgo::Map<%s, %s >" % (gen_tp_code(ktp), gen_tp_code(vtp))
+    if tp.is_func:
+        atps, rtps = tp.func_arg_ret_tps
+        cs = ["::std::function<::ppgo::Exc::Ptr (", gen_func_ret_tp_code_from_tps(rtps)]
+        for atp in atps:
+            cs += [",", gen_tp_code(atp)]
+        cs.append(")>")
+        return "".join(cs)
     assert tp.is_coi_type
     coi = tp.get_coi()
     mnc = mncs[coi.mod.name]

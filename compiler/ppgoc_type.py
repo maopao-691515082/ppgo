@@ -242,7 +242,7 @@ for tp in BASE_TYPES + ["nil"]:
 del tp
 STR_TYPE = STRING_TYPE
 
-def parse_tp(tl, dep_mns):
+def parse_tp(tl, dep_mns, allow_func = False):
     t = tl.pop()
 
     if t.is_sym("["):
@@ -257,6 +257,57 @@ def parse_tp(tl, dep_mns):
             vtp = parse_tp(tl, dep_mns)
             tp = Type(t, "[map")
             tp.map_kv_tp = ktp, vtp
+        tp._set_is_XXX()
+        return tp
+
+    if t.is_reserved("func"):
+        if not allow_func:
+            t.syntax_err("闭包函数类型只能用于显式声明函数参数类型")
+
+        func_t = t
+        atps = []
+        rtps = []
+
+        tl.pop_sym("(")
+        while True:
+            if tl.peek().is_sym(")"):
+                tl.pop_sym(")")
+                break
+
+            atps.append(parse_tp(tl, dep_mns, allow_func = True))
+
+            t = tl.peek()
+            if t.is_sym(","):
+                tl.pop_sym(",")
+                continue
+
+            if not t.is_sym(")"):
+                t.syntax_err("需要','或')'")
+
+        t = tl.peek()
+        if t.is_sym("("):
+            tl.pop_sym("(")
+            while True:
+                if tl.peek().is_sym(")"):
+                    tl.pop_sym(")")
+                    break
+
+                rtps.append(parse_tp(tl, dep_mns))
+
+                t = tl.peek()
+                if t.is_sym(","):
+                    tl.pop_sym(",")
+                    continue
+
+                if not t.is_sym(")"):
+                    t.syntax_err("需要','或')'")
+
+        elif not (t.is_sym and t.value in (",", ")")):
+            rtps.append(parse_tp(tl, dep_mns))
+
+
+        tp = Type(func_t, "func")
+        tp.func_arg_ret_tps = atps, rtps
         tp._set_is_XXX()
         return tp
 
@@ -277,6 +328,13 @@ def from_cls(cls):
     tp = Type(t, cls.name, mn = cls.mod.name)
     tp._set_is_checked()
     assert tp.get_coi() is cls
+    return tp
+
+def from_closure(f):
+    tp = Type(f.func_t, "func")
+    tp.func_arg_ret_tps = [tp for _, (_, tp) in f.arg_defs], [tp for _, (_, tp) in f.ret_defs]
+    tp._set_is_XXX()
+    tp._set_is_checked()
     return tp
 
 def make_multi(tps):

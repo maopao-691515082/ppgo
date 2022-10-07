@@ -251,6 +251,9 @@ class Parser:
                 #子表达式
                 parse_stk.push_expr(self.parse(vars_stk, None))
                 self.tl.pop_sym(")")
+            elif t.is_reserved("func"):
+                f = ppgoc_mod.Closure(self.mod, self.fn, t, self.tl, vars_stk, self.cls)
+                parse_stk.push_expr(Expr("closure", f, ppgoc_type.from_closure(f)))
             elif t.is_name:
                 if t.value in self.dep_mns:
                     m = ppgoc_mod.mods[self.dep_mns[t.value]]
@@ -366,6 +369,14 @@ class Parser:
                     else:
                         t.syntax_err("不能对类型'%s'做下标运算" % oe.tp)
                     assert e is not None
+                    parse_stk.push_expr(e)
+                elif t.is_sym("("):
+                    fe = parse_stk.pop_expr()
+                    if not fe.tp.is_func:
+                        t.syntax_err("类型'%s'不可调用" % fe.tp)
+                    atps, rtps = fe.tp.func_arg_ret_tps
+                    el = self.parse_exprs_of_calling_ex(vars_stk, atps)
+                    e = Expr("()", (fe, el), rtps[0] if len(rtps) == 1 else ppgoc_type.make_multi(rtps))
                     parse_stk.push_expr(e)
                 elif t.is_sym(".") and self.tl.peek().is_sym("<"):
                     self.tl.pop_sym("<")
@@ -554,10 +565,13 @@ class Parser:
             return Expr("call_func", (func, el), tps[0] if len(tps) == 1 else ppgoc_type.make_multi(tps))
 
     def parse_exprs_of_calling(self, vars_stk, arg_defs):
-        t = self.tl.peek()
-        tps = [tp for _, tp in arg_defs.itervalues()][::-1]
-        el = []
         self.tl.pop_sym("(")
+        return self.parse_exprs_of_calling_ex(vars_stk, [tp for _, tp in arg_defs.itervalues()])
+
+    def parse_exprs_of_calling_ex(self, vars_stk, tps):
+        tps = tps[:: -1]
+        t = self.tl.peek()
+        el = []
         while True:
             if self.tl.peek().is_sym(")"):
                 self.tl.pop_sym(")")

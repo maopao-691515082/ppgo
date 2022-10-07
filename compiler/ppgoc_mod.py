@@ -55,7 +55,7 @@ def parse_aor_defs(tl, dep_mns, arg_defs = None):
             tl.pop_sym(",")
             continue
 
-        tp = ppgoc_type.parse_tp(tl, dep_mns)
+        tp = ppgoc_type.parse_tp(tl, dep_mns, allow_func = arg_defs is None)
         for name, t in batch_type_args.iteritems():
             aor_defs[name] = t, tp
         batch_type_args = ppgoc_util.OrderedDict()
@@ -326,6 +326,51 @@ class Intf(COIBase):
                 if tp != otp:
                     return False
         return True
+
+class Closure:
+    def __init__(self, mod, fn, func_t, tl, vars_stk, cls):
+        self.mod = mod
+        self.fn = fn
+        self.func_t = func_t
+        self.name = "<closure@%d:%d>" % (func_t.line_no, func_t.pos + 1)
+
+        dep_mns = self.mod.dep_mns_by_fn(self.fn)
+
+        tl.pop_sym("(")
+        self.arg_defs = parse_aor_defs(tl, dep_mns)
+        tl.pop_sym(")")
+
+        self.ret_defs = ppgoc_util.OrderedDict()
+        t = tl.peek()
+        if not t.is_sym("{"):
+            if t.is_sym("("):
+                tl.pop_sym("(")
+                self.ret_defs = parse_aor_defs(tl, dep_mns, self.arg_defs)
+                tl.pop_sym(")")
+            else:
+                self.ret_defs[None] = tl.peek(), ppgoc_type.parse_tp(tl, dep_mns)
+
+        for var_defs in self.arg_defs, self.ret_defs:
+            for name, (t, _) in var_defs:
+                if name is not None:
+                    for vars in vars_stk:
+                        if name in vars:
+                            t.syntax_err("与上层变量名冲突")
+
+        tl.pop_sym("{")
+        arg_tps = ppgoc_util.OrderedDict()
+        for name, (_, tp) in self.arg_defs.iteritems():
+            arg_tps[name] = tp
+        if not (len(self.ret_defs) == 1 and None in self.ret_defs):
+            for name, (_, tp) in self.ret_defs.iteritems():
+                assert name and name not in arg_tps
+                arg_tps[name] = tp
+        self.stmts = ppgoc_stmt.Parser(
+            tl, self.mod, dep_mns, cls, self,
+        ).parse(vars_stk + (arg_tps,), 0)
+        tl.pop_sym("}")
+
+    __repr__ = __str__ = lambda self : "%s.%s" % (self.mod, self.name)
 
 class Func:
     def __init__(self, mod, fn, decrs, name_t, name, arg_defs, ret_defs, block_tl):
