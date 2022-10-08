@@ -52,6 +52,10 @@ class Code:
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
             return
+        if self.fn is None:
+            #to string
+            self.content = "\n".join(self.lines) + "\n"
+            return
         with open(self.fn, "w") as f:
             for line in self.lines:
                 print >> f, line
@@ -104,7 +108,7 @@ def gen_tp_code(tp):
         return "::ppgo::Map<%s, %s >" % (gen_tp_code(ktp), gen_tp_code(vtp))
     if tp.is_func:
         atps, rtps = tp.func_arg_ret_tps
-        cs = ["::std::function<::ppgo::Exc::Ptr (", gen_func_ret_tp_code_from_tps(rtps)]
+        cs = ["::std::function<::ppgo::Exc::Ptr (%s &" % gen_func_ret_tp_code_from_tps(rtps)]
         for atp in atps:
             cs += [",", gen_tp_code(atp)]
         cs.append(")>")
@@ -535,6 +539,51 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
             "%s; })" % rv,
         ]
         return "\n".join(cs)
+
+    if expr.op == "()":
+        fe, el = expr.arg
+        assert fe.tp.is_func
+        atps, rtps = fe.tp.func_arg_ret_tps
+        rv = "ret_%d" % ppgoc_util.new_id()
+        excv = "exc_%d" % ppgoc_util.new_id()
+        cs = [
+            "({",
+            "%s %s;" % (gen_func_ret_tp_code_from_tps(rtps), rv),
+            "auto %s = (%s)(%s" % (excv, gen_expr_code(fe, pos_info), rv),
+        ]
+        ecs = ["(%s)" % gen_expr_code(e, pos_info) for e in el]
+        if ecs:
+            cs.append(", " + ", ".join(ecs))
+        cs.append(");")
+        t, fom = pos_info
+        cs += [
+            "if (%s) {" % excv,
+            "%s->PushTB(%s, %d, %s);" %
+                (excv, c_str_literal(t.src_file), t.line_no,
+                 c_str_literal("<none>" if fom is None else str(fom))),
+            "return %s;}" % excv,
+        ]
+        if len(rtps) == 1:
+            cs.append("::std::get<0>(%s);" % rv)
+        else:
+            cs.append("%s;" % rv)
+        cs.append("})")
+        return "\n".join(cs)
+
+    if expr.op == "closure":
+        f = expr.arg
+        rv = "ret_%d" % ppgoc_util.new_id()
+        cs = ["([&](%s &%s" % (gen_func_ret_tp_code(f), rv)]
+        for name, (_, tp) in f.arg_defs.iteritems():
+            cs.append(", ")
+            cs.append("%s l_%s" % (gen_tp_code(tp), name))
+        cs.append(") -> ::ppgo::Exc::Ptr {\n")
+        code = Code(None)
+        with code:
+            output_stmts(code, f.stmts)
+        cs.append(code.content)
+        cs.append("return nullptr;})")
+        return "".join(cs)
 
     print expr.op
     ppgoc_util.raise_bug()
