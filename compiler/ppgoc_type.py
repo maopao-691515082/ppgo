@@ -332,7 +332,8 @@ def from_cls(cls):
 
 def from_closure(f):
     tp = Type(f.func_t, "func")
-    tp.func_arg_ret_tps = [tp for _, (_, tp) in f.arg_defs], [tp for _, (_, tp) in f.ret_defs]
+    tp.func_arg_ret_tps = (
+        [atp for _, (_, atp) in f.arg_defs.iteritems()], [rtp for _, (_, rtp) in f.ret_defs.iteritems()])
     tp._set_is_XXX()
     tp._set_is_checked()
     return tp

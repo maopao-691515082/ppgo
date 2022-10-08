@@ -578,10 +578,13 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
             cs.append(", ")
             cs.append("%s l_%s" % (gen_tp_code(tp), name))
         cs.append(") -> ::ppgo::Exc::Ptr {\n")
+        ret_var_name_stk.append(rv)
         code = Code(None)
         with code:
+            output_fom_named_ret_vars(code, f)
             output_stmts(code, f.stmts)
         cs.append(code.content)
+        ret_var_name_stk.pop()
         cs.append("return nullptr;})")
         return "".join(cs)
 
@@ -594,6 +597,10 @@ def gen_var_init_code(tp):
     if tp.is_number_type:
         return " = 0"
     return ""
+
+ret_var_name_stk = []
+def get_ret_var_name():
+    return ret_var_name_stk[-1] if ret_var_name_stk else "ret"
 
 def output_stmts(code, stmts):
     for stmt in stmts:
@@ -714,7 +721,7 @@ def output_stmts(code, stmts):
 
         if stmt.type == "return":
             if stmt.expr is not None:
-                code += "::std::get<0>(ret) = (%s);" % gen_expr_code(stmt.expr)
+                code += "::std::get<0>(%s) = (%s);" % (get_ret_var_name(), gen_expr_code(stmt.expr))
             code += "return nullptr;"
             continue
 
@@ -872,7 +879,7 @@ def output_fom_named_ret_vars(code, fom):
         return
     for i, name in enumerate(fom.ret_defs):
         assert name
-        code += "auto &l_%s = ::std::get<%d>(ret);" % (name, i)
+        code += "auto &l_%s = ::std::get<%d>(%s);" % (name, i, get_ret_var_name())
 
 def output_prog_cpp():
     with Code(out_dir + "/prog.cpp") as code:
