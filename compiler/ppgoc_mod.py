@@ -356,7 +356,7 @@ class Closure:
                     for vars in vars_stk:
                         if name in vars:
                             t.syntax_err("与上层变量名冲突")
-            tp.check(self.mod)
+                tp.check(self.mod)
 
         tl.pop_sym("{")
         arg_tps = ppgoc_util.OrderedDict()
