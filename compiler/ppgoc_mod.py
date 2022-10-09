@@ -351,11 +351,12 @@ class Closure:
                 self.ret_defs[None] = tl.peek(), ppgoc_type.parse_tp(tl, dep_mns)
 
         for var_defs in self.arg_defs, self.ret_defs:
-            for name, (t, _) in var_defs.iteritems():
+            for name, (t, tp) in var_defs.iteritems():
                 if name is not None:
                     for vars in vars_stk:
                         if name in vars:
                             t.syntax_err("与上层变量名冲突")
+            tp.check(self.mod)
 
         tl.pop_sym("{")
         arg_tps = ppgoc_util.OrderedDict()
