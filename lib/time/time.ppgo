@@ -1,1 +1,16 @@
-public func time() float;
+public func time_us() int;
+
+public func time_ms() int
+{
+    return time_us() / 1000;
+}
+
+public func time_sec() int
+{
+    return time_us() / 1000000;
+}
+
+public func time() float
+{
+    return time_us().<float> / 1e6;
+}
