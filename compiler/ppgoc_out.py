@@ -106,6 +106,8 @@ def gen_tp_code(tp):
     if tp.is_map:
         ktp, vtp = tp.map_kv_tp
         return "::ppgo::Map<%s, %s >" % (gen_tp_code(ktp), gen_tp_code(vtp))
+    if tp.is_set:
+        return "::ppgo::Set<%s >" % gen_tp_code(tp.set_elem_tp)
     if tp.is_func:
         atps, rtps = tp.func_arg_ret_tps
         cs = ["::std::function<::ppgo::Exc::Ptr (%s &" % gen_func_ret_tp_code_from_tps(rtps)]
@@ -255,7 +257,7 @@ def gen_wrap_convert(c, c_tp, to_tp):
     if to_tp.is_any:
         if c_tp.is_bool_type or c_tp.is_number_type or c_tp.is_str_type:
             return "::ppgo::base_type_boxing::Obj<%s>::New(%s)" % (gen_tp_code(c_tp), c)
-        if c_tp.is_vec or c_tp.is_map:
+        if c_tp.is_vec or c_tp.is_map or c_tp.is_set:
             return "(%s).AsAny()" % c
     return "%s(%s)" % (gen_tp_code(to_tp), c)
 
@@ -319,11 +321,13 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         ec = gen_expr_code(e, pos_info)
         return gen_wrap_convert(ec, e.tp, tp)
 
-    if expr.op in ("call_vec_method", "call_map_method"):
+    if expr.op in ("call_vec_method", "call_map_method", "call_set_method"):
         if expr.op == "call_vec_method":
             mnc = mncs[ppgoc_util.MN_BUILTINS + "/vecs"]
         elif expr.op == "call_map_method":
             mnc = mncs[ppgoc_util.MN_BUILTINS + "/maps"]
+        elif expr.op == "call_set_method":
+            mnc = mncs[ppgoc_util.MN_BUILTINS + "/sets"]
         else:
             ppgoc_util.raise_bug()
         oe, method_name, el = expr.arg
@@ -496,6 +500,11 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
                 gen_expr_code(ke, pos_info), gen_expr_code(ve, pos_info)))
         return "%s({%s})" % (gen_tp_code(tp), ", ".join(ecs))
 
+    if expr.op == "new_set":
+        tp, el = expr.arg
+        assert tp.is_set
+        return "%s({%s})" % (gen_tp_code(tp), ", ".join([gen_expr_code(e, pos_info) for e in el]))
+
     if expr.op == "%s":
         e = expr.arg
         assert e.tp == ppgoc_type.ANY_TYPE
@@ -637,6 +646,18 @@ def output_stmts(code, stmts):
                         code += "%s l_%s = %s.Key();" % (gen_tp_code(ktp), stmt.k_var_name, miv)
                     if not stmt.v_var_name.startswith("_."):
                         code += "%s l_%s = %s.Value();" % (gen_tp_code(vtp), stmt.v_var_name, miv)
+                    output_stmts(code, stmt.stmts)
+            continue
+
+        if stmt.type == "for_set":
+            with code.new_blk(""):
+                sv = "set_%d" % ppgoc_util.new_id()
+                code += "auto %s = (%s);" % (sv, gen_expr_code(stmt.expr))
+                siv = "set_iter_%d" % ppgoc_util.new_id()
+                with code.new_blk("for (auto %s = %s.NewIter(); %s.Valid(); %s.Inc())" %
+                                  (siv, sv, siv, siv)):
+                    if not stmt.var_name.startswith("_."):
+                        code += "%s l_%s = %s.Elem();" % (gen_tp_code(stmt.expr.tp.set_elem_tp), stmt.var_name, siv)
                     output_stmts(code, stmt.stmts)
             continue
 

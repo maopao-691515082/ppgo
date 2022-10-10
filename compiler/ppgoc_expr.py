@@ -315,8 +315,7 @@ class Parser:
 
                     e = Expr("new_vec", (tp, el), tp)
 
-                else:
-                    assert tp.is_map
+                elif tp.is_map:
                     ktp, vtp = tp.map_kv_tp
                     self.tl.pop_sym("{")
                     kvel = []
@@ -337,6 +336,27 @@ class Parser:
                             self.tl.pop_sym(",")
 
                     e = Expr("new_map", (tp, kvel), tp)
+
+                elif tp.is_set:
+                    self.tl.pop_sym("{")
+                    el = []
+                    while True:
+                        if self.tl.peek().is_sym("}"):
+                            self.tl.pop_sym("}")
+                            break
+
+                        el.append(self.parse(vars_stk, tp.set_elem_tp))
+
+                        t = self.tl.peek()
+                        if not (t.is_sym and t.value in ("}", ",")):
+                            t.syntax_err("需要','或'}'")
+                        if t.value == ",":
+                            self.tl.pop_sym(",")
+
+                    e = Expr("new_set", (tp, el), tp)
+
+                else:
+                    ppgoc_util.raise_bug()
 
                 assert e is not None
                 parse_stk.push_expr(e)
@@ -468,6 +488,24 @@ class Parser:
                             t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
                         el = self.parse_exprs_of_calling(vars_stk, arg_defs)
                         e = Expr("call_map_method", (oe, name, el), ret_tp)
+                    elif oe.tp.is_set:
+                        #set method
+                        arg_defs = ppgoc_util.OrderedDict()
+                        if name == "len":
+                            ret_tp = ppgoc_type.INT_TYPE
+                        elif name == "has":
+                            arg_defs["e"] = None, oe.tp.set_elem_tp
+                            ret_tp = ppgoc_type.BOOL_TYPE
+                        elif name == "add":
+                            arg_defs["e"] = None, oe.tp.set_elem_tp
+                            ret_tp = oe.tp
+                        elif name == "remove":
+                            arg_defs["e"] = None, oe.tp.set_elem_tp
+                            ret_tp = oe.tp
+                        else:
+                            t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
+                        el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                        e = Expr("call_set_method", (oe, name, el), ret_tp)
                     elif oe.tp.is_coi_type:
                         coi = oe.tp.get_coi()
                         a, m = coi.get_aom(t, name)

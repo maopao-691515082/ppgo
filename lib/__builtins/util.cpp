@@ -8,7 +8,7 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr func_println(::std::tuple<> &ret, ::ppgo::tp_string s)
+::ppgo::Exc::Ptr func_println(::std::tuple<> &ret, ::ppgo::Any::Ptr a)
 {
     auto write_to_stdout = [] (const char *p, ssize_t sz) -> ::ppgo::Exc::Ptr {
         ::ppgo::Assert(sz >= 0);
@@ -26,6 +26,7 @@ namespace PPGO_THIS_MOD
         return nullptr;
     };
 
+    auto s = ::ppgo::Any::ToStr(a);
     return write_to_stdout(s.Data(), s.Len()) ?: write_to_stdout("\n", 1);
 }
 

@@ -296,6 +296,9 @@ template <typename K, typename V>
 class Map;
 
 template <typename E>
+class Set;
+
+template <typename E>
 std::string TypeName(Vec<E> *)
 {
     return std::string("[]") + TypeName((E *)nullptr);
@@ -305,6 +308,12 @@ template <typename K, typename V>
 std::string TypeName(Map<K, V> *)
 {
     return std::string("[") + TypeName((K *)nullptr) + "]" + TypeName((V *)nullptr);
+}
+
+template <typename E>
+std::string TypeName(Set<E> *)
+{
+    return std::string("[") + TypeName((E *)nullptr) + "]_";
 }
 
 template <typename E>
@@ -406,29 +415,29 @@ public:
     }
 };
 
+template <typename T>
+struct Less
+{
+    bool operator()(T a, T b) const
+    {
+        return a < b;
+    }
+};
+
+template <typename T>
+struct Less<RCPtr<T>>
+{
+    bool operator()(RCPtr<T> a, RCPtr<T> b) const
+    {
+        std::tuple<tp_int> ret;
+        Assert(!a->method_cmp(ret, b));
+        return std::get<0>(ret) < 0;
+    }
+};
+
 template <typename K, typename V>
 class Map final
 {
-    template <typename T>
-    struct Less
-    {
-        bool operator()(T a, T b) const
-        {
-            return a < b;
-        }
-    };
-
-    template <typename T>
-    struct Less<RCPtr<T>>
-    {
-        bool operator()(RCPtr<T> a, RCPtr<T> b) const
-        {
-            std::tuple<tp_int> ret;
-            Assert(!a->method_cmp(ret, b));
-            return std::get<0>(ret) < 0;
-        }
-    };
-
     struct MapObj final : public virtual Any
     {
         typedef std::map<K, V, Less<K>> map_t;
@@ -552,6 +561,107 @@ public:
     }
 };
 
+template <typename E>
+class Set final
+{
+    struct SetObj final : public virtual Any
+    {
+        typedef std::set<E, Less<E>> set_t;
+
+        set_t s_;
+
+        SetObj(std::initializer_list<E> l) : s_(l)
+        {
+        }
+
+        virtual std::string R_TypeName() const override
+        {
+            return ::ppgo::TypeName((Set<E> *)nullptr);
+        }
+    };
+
+    RCPtr<SetObj> s_;
+
+public:
+
+    Set() : s_(new SetObj({}))
+    {
+    }
+
+    Set(std::initializer_list<E> l) : s_(new SetObj(l))
+    {
+    }
+
+    Any::Ptr AsAny() const
+    {
+        return s_.RawPtr();
+    }
+
+    ssize_t Len() const
+    {
+        return (ssize_t)s_->s_.size();
+    }
+
+    bool Has(E e) const
+    {
+        return s_->s_.count(e) > 0;
+    }
+
+    void Add(E e) const
+    {
+        s_->s_.emplace(e);
+    }
+
+    void Remove(E e) const
+    {
+        s_->s_.erase(e);
+    }
+
+    class Iter
+    {
+        RCPtr<SetObj> s_;
+        typename SetObj::set_t::const_iterator it_, end_;
+
+    public:
+
+        Iter(Set<E> s) : s_(s.s_), it_(s.s_->s_.begin()), end_(s.s_->s_.end())
+        {
+        }
+
+        bool Valid() const
+        {
+            return it_ != end_;
+        }
+
+        void Inc()
+        {
+            ++ it_;
+        }
+
+        E Elem() const
+        {
+            return *it_;
+        }
+    };
+
+    Iter NewIter()
+    {
+        return Iter(*this);
+    }
+
+    static bool AssertType(Any *a, Set<E> &s)
+    {
+        Assert(a);
+        auto so = dynamic_cast<SetObj *>(a);
+        if (so)
+        {
+            s.s_ = so;
+            return true;
+        }
+        return false;
+    }
+};
+
 RCPtr<Exc> NewTypeAssertionException();
 
 template <typename E>
@@ -564,6 +674,12 @@ template <typename K, typename V>
 bool _AssertType(Any *a, Map<K, V> &m)
 {
     return Map<K, V>::AssertType(a, m);
+}
+
+template <typename E>
+bool _AssertType(Any *a, Set<E> &s)
+{
+    return Set<E>::AssertType(a, s);
 }
 
 template <typename T>

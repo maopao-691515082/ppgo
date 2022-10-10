@@ -1,0 +1,8 @@
+/*
+
+public func len<E>(s [E]_) int;
+public func has<E>(s [E]_, e E) bool;
+public func add<E>(s [E]_, e E) [E]_;
+public func remove<E>(s [E]_, e E) [E]_;
+
+*/

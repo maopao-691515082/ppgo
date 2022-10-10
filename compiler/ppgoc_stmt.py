@@ -87,6 +87,10 @@ class Parser:
                         var_t.syntax_err("循环变量数量错误")
                     new_vars[new_vars.key_at(0)] = ktp
                     new_vars[new_vars.key_at(1)] = vtp
+                elif e.tp.is_set:
+                    if len(names) != 1:
+                        var_t.syntax_err("循环变量数量错误")
+                    new_vars[new_vars.key_at(0)] = e.tp.set_elem_tp
                 else:
                     t.syntax_err("类型'%s'不可用于遍历" % e.tp)
                 self.tl.pop_sym(")")
@@ -108,6 +112,9 @@ class Parser:
                     stmts.append(Stmt(
                         "for_map", k_var_name = new_vars.key_at(0), v_var_name = new_vars.key_at(1),
                         expr = e, stmts = for_stmts))
+                elif e.tp.is_set:
+                    stmts.append(Stmt(
+                        "for_set", var_name = new_vars.key_at(0), expr = e, stmts = for_stmts))
                 else:
                     ppgoc_util.raise_bug()
                 continue

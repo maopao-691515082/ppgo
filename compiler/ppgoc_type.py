@@ -14,6 +14,7 @@ class Type:
 
         self.vec_elem_tp = None
         self.map_kv_tp = None
+        self.set_elem_tp = None
         self.func_arg_ret_tps = None
         self.multi_tps = None
 
@@ -24,6 +25,7 @@ class Type:
     def _set_is_XXX(self):
         self.is_vec = self.vec_elem_tp is not None
         self.is_map = self.map_kv_tp is not None
+        self.is_set = self.set_elem_tp is not None
         self.is_func = self.func_arg_ret_tps is not None
         self.is_multi = self.multi_tps is not None
         self.is_nil = self.t.is_reserved("nil")
@@ -84,6 +86,8 @@ class Type:
             return self.is_vec and other.is_vec and self.vec_elem_tp == other.vec_elem_tp
         if self.is_map or other.is_map:
             return self.is_map and other.is_map and self.map_kv_tp == other.map_kv_tp
+        if self.is_set or other.is_set:
+            return self.is_set and other.is_set and self.set_elem_tp == other.set_elem_tp
         if self.is_func or other.is_func:
             if not (self.is_func and other.is_func):
                 return False
@@ -123,6 +127,11 @@ class Type:
             if not ktp.can_be_map_key():
                 ktp.t.syntax_err("类型'%s'不能作为map的key" % ktp)
             vtp.check(mod)
+            return
+        if self.is_set:
+            self.set_elem_tp.check(mod)
+            if not self.set_elem_tp.can_be_map_key():
+                self.set_elem_tp.t.syntax_err("类型'%s'不能作为set的元素" % self.set_elem_tp)
             return
         if self.is_func:
             atps, rtps = self.func_arg_ret_tps
@@ -254,9 +263,14 @@ def parse_tp(tl, dep_mns, allow_func = False):
         else:
             ktp = parse_tp(tl, dep_mns)
             tl.pop_sym("]")
-            vtp = parse_tp(tl, dep_mns)
-            tp = Type(t, "[map")
-            tp.map_kv_tp = ktp, vtp
+            if tl.peek().is_reserved("_"):
+                tl.pop()
+                tp = Type(t, "[set")
+                tp.set_elem_tp = ktp
+            else:
+                vtp = parse_tp(tl, dep_mns)
+                tp = Type(t, "[map")
+                tp.map_kv_tp = ktp, vtp
         tp._set_is_XXX()
         return tp
 

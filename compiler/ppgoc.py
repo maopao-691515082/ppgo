@@ -78,7 +78,7 @@ def main():
     ppgoc_util.vlog("初始化完毕，主模块'%s'" % main_mn)
 
     ppgoc_mod.precompile_mod(ppgoc_util.MN_BUILTINS)
-    for name in "strings", "vecs", "maps":
+    for name in "strings", "vecs", "maps", "sets":
         ppgoc_mod.precompile_mod(ppgoc_util.MN_BUILTINS + "/" + name)
     ppgoc_mod.precompile_mod("os")  #for args
     main_mod = ppgoc_mod.precompile_mod(main_mn)
