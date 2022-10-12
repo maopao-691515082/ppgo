@@ -415,7 +415,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         cs = [
             "({",
             "%s %s;" % (gen_method_ret_tp_code(m), rv),
-            "auto %s = (%s)->method_%s(%s" % (excv, oec, m.name, rv),
+            "auto %s = (%s).Copy()->method_%s(%s" % (excv, oec, m.name, rv),
         ]
         ecs = ["(%s)" % gen_expr_code(e, pos_info) for e in el]
         if ecs:
