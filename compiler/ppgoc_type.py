@@ -250,6 +250,8 @@ for tp in BASE_TYPES + ["nil"]:
     exec "%s_TYPE._set_is_checked()" % tp.upper()
 del tp
 STR_TYPE = STRING_TYPE
+WITHABLE_TYPE = Type(ppgoc_token.make_fake_token_name("Withable"), "Withable", "__builtins")
+WITHABLE_TYPE._set_is_checked()
 
 def parse_tp(tl, dep_mns, allow_func = False):
     t = tl.pop()

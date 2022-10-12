@@ -6,6 +6,7 @@
 #include "_mem.h"
 #include "_base_type.h"
 #include "_exc.h"
+#include "_with.h"
 #include "_util.h"
 
 namespace ppgo

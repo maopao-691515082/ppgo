@@ -36,7 +36,7 @@ _RESERVED_WORD_SET = set(
     ["import", "public", "final", "class", "interface", "func", "var", "auto",
      "bool", "byte", "int", "uint", "float", "string", "any",
      "nil", "true", "false", "this",
-     "for", "while", "if", "else", "return", "break", "continue", "defer",
+     "for", "while", "if", "else", "return", "break", "continue", "with",
      "_"] +
     ["%s%d" % (iou, bc) for iou in "iu" for bc in (8, 16, 32, 64)] +
     ["float%d" % bc for bc in (32, 64)]
