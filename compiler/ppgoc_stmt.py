@@ -251,7 +251,7 @@ class Parser:
             if t.is_reserved("with"):
                 e = self.expr_parser.parse(vars_stk, ppgoc_type.WITHABLE_TYPE)
                 stmts.append(Stmt("with", expr = e))
-                self.tl.pop_sym(";")
+                self.tl.pop_sym(":")
                 continue
 
             self.tl.revert()
