@@ -29,7 +29,7 @@ public:
         if (exc)
         {
             auto ftb = exc->FormatWithTB();
-            fprintf(stderr, "Uncached exception in with-exit %s\n", ftb.Data());
+            fprintf(stderr, "Uncached exception in with-exit: %s\n", ftb.Data());
         }
     }
 

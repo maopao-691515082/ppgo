@@ -148,13 +148,21 @@ class Cls(COIBase):
     def get_init_method(self):
         return self.methods["init"] if "init" in self.methods else None
 
+    def get_deinit_method(self):
+        return self.methods["deinit"] if "deinit" in self.methods else None
+
     def parse(self, tl):
         self._parse(tl)
         init_method = self.get_init_method()
         if init_method is not None:
-            #check init method
             if init_method.ret_defs:
                 init_method.name_t.syntax_err("init方法不能有返回")
+        deinit_method = self.get_deinit_method()
+        if deinit_method is not None:
+            if not is_public(deinit_method):
+                deinit_method.name_t.syntax_err("deinit方法必须是public的")
+            if deinit_method.arg_defs or deinit_method.ret_defs:
+                deinit_method.name_t.syntax_err("deinit方法不能有参数或返回")
 
     def _parse(self, tl):
         dep_mns = self.mod.dep_mns_by_fn(self.fn)

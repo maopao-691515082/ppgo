@@ -204,6 +204,7 @@ def output_prog_h(native_header_fns):
                         with code.new_blk(
                             "struct cls_%s final : public virtual ::ppgo::Any%s" %
                             (cls.name, "".join(derived_intfs_codes))):
+                            code += "virtual ~cls_%s();" % cls.name
                             with code.new_blk("virtual ::std::string R_TypeName() const override"):
                                 code += "return %s;" % c_str_literal(str(cls))
                             for a in cls.attrs.itervalues():
@@ -926,6 +927,15 @@ def output_prog_cpp():
                 with code.new_blk(gen_ns_code(mod)):
 
                     for cls in mod.clses.itervalues():
+                        with code.new_blk("cls_%s::~cls_%s()" % (cls.name, cls.name)):
+                            if cls.get_deinit_method() is not None:
+                                code += "::std::tuple<> ret;"
+                                code += "auto exc = this->method_deinit(ret);"
+                                with code.new_blk("if (exc)", start_with_blank_line = False):
+                                    code += "auto ftb = exc->FormatWithTB();"
+                                    code += (
+                                        'fprintf(stderr, "Uncached exception in " %s ".deinit: %%s\\n", '
+                                        'ftb.Data());' % c_str_literal(str(cls)))
                         for m in cls.methods.itervalues():
                             if m.stmts is not None:
                                 with code.new_blk(gen_method_def(m, with_cls_name = True)):
