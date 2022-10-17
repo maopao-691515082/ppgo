@@ -883,17 +883,19 @@ def output_stmts(code, stmts):
             continue
 
         if stmt.type == "with":
-            wv = "with_%d" % ppgoc_util.new_id()
-            code += "::ppgo::WithGuard<%s> %s(%s);" % (
-                gen_tp_code(ppgoc_type.WITHABLE_TYPE), wv, gen_expr_code(stmt.expr))
-            excv = "exc_%d" % ppgoc_util.new_id()
-            code += "auto %s = %s.ExcOfEnter();" % (excv, wv)
-            with code.new_blk("if (%s)" % excv):
-                t, fom = stmt.expr.pos_info
-                code += "%s->PushTB(%s, %d, %s);" % (
-                    excv, c_str_literal(t.src_file), t.line_no,
-                    c_str_literal("<none>" if fom is None else str(fom)))
-                code += "return %s;" % excv
+            with code.new_blk(""):
+                wv = "with_%d" % ppgoc_util.new_id()
+                code += "::ppgo::WithGuard<%s> %s(%s);" % (
+                    gen_tp_code(ppgoc_type.WITHABLE_TYPE), wv, gen_expr_code(stmt.expr))
+                excv = "exc_%d" % ppgoc_util.new_id()
+                code += "auto %s = %s.ExcOfEnter();" % (excv, wv)
+                with code.new_blk("if (%s)" % excv):
+                    t, fom = stmt.expr.pos_info
+                    code += "%s->PushTB(%s, %d, %s);" % (
+                        excv, c_str_literal(t.src_file), t.line_no,
+                        c_str_literal("<none>" if fom is None else str(fom)))
+                    code += "return %s;" % excv
+                output_stmts(code, stmt.stmts)
             continue
 
         print stmt.type

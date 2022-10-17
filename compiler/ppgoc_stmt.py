@@ -249,9 +249,13 @@ class Parser:
                 continue
 
             if t.is_reserved("with"):
+                self.tl.pop_sym("(")
                 e = self.expr_parser.parse(vars_stk, ppgoc_type.WITHABLE_TYPE)
-                stmts.append(Stmt("with", expr = e))
-                self.tl.pop_sym(":")
+                self.tl.pop_sym(")")
+                self.tl.pop_sym("{")
+                with_stmts = self.parse(vars_stk + (ppgoc_util.OrderedDict(),), loop_deep)
+                self.tl.pop_sym("}")
+                stmts.append(Stmt("with", expr = e, stmts = with_stmts))
                 continue
 
             self.tl.revert()
