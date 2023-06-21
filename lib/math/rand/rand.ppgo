@@ -1,11 +1,5 @@
 public func rand() float;
 
-public func rand_n(n int) int
-{
-    assert(n > 0);
-    var r = ((rand() * (1 << 31).<float>).<int> << 32) | (rand() * (1 << 32).<float>).<int>;
-    assert(r >= 0);
-    return r % n;
-}
+public func rand_n(n int) int;
 
 public func fast_rand_n(n int) int;

@@ -6,12 +6,12 @@ namespace ppgo
 template <typename W>
 class WithGuard final
 {
-    W w_;
+    std::shared_ptr<W> w_;
     Exc::Ptr exc_;
 
 public:
 
-    WithGuard(W w) : w_(w)
+    WithGuard(const std::shared_ptr<W> &w) : w_(w)
     {
         std::tuple<> ret;
         exc_ = w_->method_enter(ret);

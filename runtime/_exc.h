@@ -27,14 +27,14 @@ class Exc
 
 public:
 
-    typedef std::shared_ptr<Exc> Ptr;
+    typedef ExcPtr Ptr;
 
     void PushTB(const char *file, int line, const char *func)
     {
         tb_.emplace_back(tp_string::Sprintf("File [%s] Line [%d] Func [%s]", file, line, func));
     }
 
-    std::shared_ptr<Any> Throwed() const
+    Any::Ptr Throwed() const
     {
         return throwed_;
     }
@@ -64,14 +64,10 @@ public:
         return tp_string(buf.data(), buf.size());
     }
 
-    static Ptr New(std::shared_ptr<Any> throwed)
+    static Ptr New(const Any::Ptr &throwed)
     {
-        if (!throwed)
-        {
-            throwed = std::shared_ptr<Any>(new NilExc());
-        }
         auto e = Ptr(new Exc);
-        e->throwed_ = throwed;
+        e->throwed_ = throwed ? throwed : Any::Ptr(new NilExc());
         return e;
     }
 };

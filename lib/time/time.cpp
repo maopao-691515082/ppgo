@@ -10,7 +10,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr func_time_us(::std::tuple<::ppgo::tp_int> &ret)
 {
-    ::std::get<0>(ret) = ::ppgo::util::NowUS();
+    ::std::get<0>(ret) = ::lom::NowUS();
     return nullptr;
 }
 
