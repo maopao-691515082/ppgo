@@ -3,78 +3,51 @@
 namespace ppgo
 {
 
-typedef bool        tp_bool;
-typedef uint8_t     tp_byte;
-typedef int64_t     tp_int;
-typedef uint64_t    tp_uint;
-typedef double      tp_float;
+#pragma push_macro("DEF_PPGO_BASE_TYPE")
+#undef DEF_PPGO_BASE_TYPE
 
-typedef int8_t      tp_i8;
-struct tp_u8 { uint8_t v_; };
-typedef int16_t     tp_i16;
-typedef uint16_t    tp_u16;
-typedef int32_t     tp_i32;
-typedef uint32_t    tp_u32;
-struct tp_i64 { int64_t v_; };
-struct tp_u64 { uint64_t v_; };
-typedef float       tp_float32;
-struct tp_float64 { double v_; };
+#define DEF_PPGO_BASE_TYPE(_tp, _ltp) struct tp_##_tp { _ltp v; };
+
+DEF_PPGO_BASE_TYPE(bool, bool)
+DEF_PPGO_BASE_TYPE(byte, uint8_t)
+DEF_PPGO_BASE_TYPE(int, int64_t)
+DEF_PPGO_BASE_TYPE(uint, uint64_t)
+DEF_PPGO_BASE_TYPE(float, double)
+
+#pragma push_macro("DEF_PPGO_BASE_TYPE_INT_BIT")
+#undef DEF_PPGO_BASE_TYPE_INT_BIT
+
+#define DEF_PPGO_BASE_TYPE_INT_BIT(_b)      \
+    DEF_PPGO_BASE_TYPE(i##_b, int##_b##_t)  \
+    DEF_PPGO_BASE_TYPE(u##_b, uint##_b##_t)
+
+DEF_PPGO_BASE_TYPE_INT_BIT(8)
+DEF_PPGO_BASE_TYPE_INT_BIT(16)
+DEF_PPGO_BASE_TYPE_INT_BIT(32)
+DEF_PPGO_BASE_TYPE_INT_BIT(64)
+
+#pragma pop_macro("DEF_PPGO_BASE_TYPE_INT_BIT")
+
+DEF_PPGO_BASE_TYPE(float32, float)
+DEF_PPGO_BASE_TYPE(float64, double)
+
+#pragma pop_macro("DEF_PPGO_BASE_TYPE")
 
 class tp_string final
 {
-    struct LongStr
+    ::lom::Str s_;
+
+    tp_string(std::nullptr_t) = delete;
+
+    tp_string(::lom::Str &&s) : s_(std::move(s))
     {
-        std::atomic<int64_t> rc_;
-        const char *p_;
-
-        LongStr(const char *p) : rc_(1), p_(p)
-        {
-        }
-
-        ~LongStr()
-        {
-            delete[] p_;
-        }
-    };
-
-    int8_t ss_len_;
-    char ss_start_;
-    uint16_t ls_len_high_;
-    uint32_t ls_len_low_;
-    LongStr *lsp_;
-
-    bool IsLongStr() const
-    {
-        static_assert(
-            sizeof(tp_string) == 16 && offsetof(tp_string, ss_len_) == 0 &&
-            offsetof(tp_string, ss_start_) == 1,
-            "unsupportted string fields arrangement");
-
-        return ss_len_ < 0;
     }
-
-    void Destruct() const
-    {
-        if (IsLongStr() && lsp_->rc_.fetch_add(-1) == 1)
-        {
-            delete lsp_;
-        }
-    }
-
-    void Assign(const tp_string &s)
-    {
-        if (s.IsLongStr())
-        {
-            s.lsp_->rc_.fetch_add(1);
-        }
-        memcpy(this, &s, sizeof(tp_string));
-    }
-
-    void AssignLongStr(const char *p, ssize_t len);
 
 public:
 
-    tp_string(const char *p, ssize_t len);
+    tp_string(const char *p, ssize_t len) : s_(p, len)
+    {
+    }
 
     tp_string() : tp_string("", 0)
     {
@@ -84,61 +57,47 @@ public:
     {
     }
 
-    tp_string(const tp_string &s)
-    {
-        Assign(s);
-    }
-
-    ~tp_string()
-    {
-        Destruct();
-    }
-
-    tp_string &operator=(const tp_string &s)
-    {
-        if (this != &s)
-        {
-            Destruct();
-            Assign(s);
-        }
-        return *this;
-    }
-
     const char *Data() const
     {
-        return IsLongStr() ? lsp_->p_ : &ss_start_;
+        return s_.Data();
     }
     ssize_t Len() const
     {
-        return IsLongStr() ? ((ssize_t)ls_len_high_ << 32) + (ssize_t)ls_len_low_ : ss_len_;
+        return s_.Len();
     }
 
     int Cmp(const tp_string &s) const
     {
-        auto data = Data(), s_data = s.Data();
-        auto len = Len(), s_len = s.Len();
-        int ret = memcmp(data, s_data, std::min(len, s_len));
-        if (ret != 0)
-        {
-            return ret;
-        }
-        return len > s_len ? 1 : (len < s_len ? -1 : 0);
+        return s_.Cmp(s.s_);
     }
 
-    uint8_t ByteAt(ssize_t idx) const
+    tp_byte ByteAt(ssize_t idx) const
     {
         Assert(idx >= 0 && idx < Len());
-        return Data()[idx];
+        return tp_byte{static_cast<uint8_t>(Data()[idx])};
     }
 
-    tp_string Hex(bool use_upper_case) const;
+    tp_string Hex(bool upper_case) const
+    {
+        return tp_string(s_.Hex(upper_case));
+    }
 
-    static tp_string Sprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+    static inline
+        __attribute__((always_inline))
+        __attribute__((format(gnu_printf, 1, 2)))
+        tp_string Sprintf(const char *fmt, ...)
+    {
+        return tp_string(::lom::Sprintf(fmt, __builtin_va_arg_pack()));
+    }
 };
 
 #pragma push_macro("DEF_PPGO_BASE_TYPE_NAME_FUNCS")
 #undef DEF_PPGO_BASE_TYPE_NAME_FUNCS
-#define DEF_PPGO_BASE_TYPE_NAME_FUNCS(_tp) inline std::string TypeName(const tp_##_tp *) { return #_tp; }
+
+#define DEF_PPGO_BASE_TYPE_NAME_FUNCS(_tp)          \
+    inline std::string TypeName(const tp_##_tp *) { \
+        return #_tp;                                \
+    }
 
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(bool)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(byte)
@@ -159,10 +118,10 @@ DEF_PPGO_BASE_TYPE_NAME_FUNCS(float64)
 
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(string)
 
-#undef DEF_PPGO_BASE_TYPE_NAME_FUNCS
 #pragma pop_macro("DEF_PPGO_BASE_TYPE_NAME_FUNCS")
 
 class Exc;
+typedef std::shared_ptr<Exc> ExcPtr;
 
 class Any
 {
@@ -177,7 +136,7 @@ public:
     //R_*: methods for reflect
     virtual std::string R_TypeName() const = 0;
 
-    virtual std::shared_ptr<Exc> method_str(std::tuple<tp_string> &ret)
+    virtual ExcPtr method_str(std::tuple<tp_string> &ret)
     {
         std::get<0>(ret) = tp_string::Sprintf(
             "<object of type '%s' at 0x%llX>",
@@ -190,7 +149,7 @@ public:
         return "any";
     }
 
-    static tp_string ToStr(Ptr a)
+    static tp_string ToStr(const Ptr &a)
     {
         if (a)
         {
@@ -201,14 +160,14 @@ public:
         return "<nil>";
     }
 
-    static std::string GetTypeName(Ptr a)
+    static std::string GetTypeName(const Ptr &a)
     {
         return a ? a->R_TypeName() : "<nil>";
     }
 };
 
 template <typename T>
-std::string TypeName(std::shared_ptr<T> *)
+std::string TypeName(const std::shared_ptr<T> *)
 {
     return T::TypeName();
 }
@@ -221,11 +180,11 @@ class Obj final: public virtual Any
 {
     T t_;
 
-    Obj(T t) : t_(t)
+    Obj(const T &t) : t_(t)
     {
     }
 
-    static tp_string ToStr(bool *b)
+    static tp_string ToStr(const bool *b)
     {
         return *b ? "true" : "false";
     }
@@ -233,34 +192,34 @@ class Obj final: public virtual Any
     template <
         typename IT,
         typename std::enable_if_t<std::is_integral_v<IT> && std::is_signed_v<IT>> * = nullptr>
-    static tp_string ToStr(IT *p)
+    static tp_string ToStr(const IT *p)
     {
         char buf[64];
-        snprintf(buf, sizeof(buf), "%lld", (long long)*p);
+        snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(*p));
         return buf;
     }
 
     template <
         typename IT,
         typename std::enable_if_t<std::is_integral_v<IT> && std::is_unsigned_v<IT>> * = nullptr>
-    static tp_string ToStr(IT *p)
+    static tp_string ToStr(const IT *p)
     {
         char buf[64];
-        snprintf(buf, sizeof(buf), "%llu", (unsigned long long)*p);
+        snprintf(buf, sizeof(buf), "%llu", static_cast<unsigned long long>(*p));
         return buf;
     }
 
     template <
         typename FT,
         typename std::enable_if_t<std::is_floating_point_v<FT>> * = nullptr>
-    static tp_string ToStr(FT *p)
+    static tp_string ToStr(const FT *p)
     {
         char buf[64];
-        snprintf(buf, sizeof(buf), "%.17g", (double)*p);
+        snprintf(buf, sizeof(buf), "%.17g", static_cast<double>(*p));
         return buf;
     }
 
-    static tp_string ToStr(tp_string *s)
+    static tp_string ToStr(const tp_string *s)
     {
         return *s;
     }
@@ -277,13 +236,13 @@ public:
         return ::ppgo::TypeName(&t_);
     }
 
-    virtual std::shared_ptr<Exc> method_str(std::tuple<tp_string> &ret) override
+    virtual ExcPtr method_str(std::tuple<tp_string> &ret) override
     {
         std::get<0>(ret) = this->ToStr(&t_);
         return nullptr;
     }
 
-    static Any::Ptr New(T t)
+    static Any::Ptr New(const T &t)
     {
         return Any::Ptr(new Obj<T>(t));
     }
@@ -303,21 +262,23 @@ template <typename E>
 class Set;
 
 template <typename E>
-std::string TypeName(Vec<E> *)
+std::string TypeName(const Vec<E> *)
 {
-    return std::string("[]") + TypeName((E *)nullptr);
+    return std::string("[]") + TypeName(static_cast<const E *>(nullptr));
 }
 
 template <typename K, typename V>
-std::string TypeName(Map<K, V> *)
+std::string TypeName(const Map<K, V> *)
 {
-    return std::string("[") + TypeName((K *)nullptr) + "]" + TypeName((V *)nullptr);
+    return (
+        std::string("[") + TypeName(static_cast<const K *>(nullptr)) + "]" +
+        TypeName(static_cast<const V *>(nullptr)));
 }
 
 template <typename E>
-std::string TypeName(Set<E> *)
+std::string TypeName(const Set<E> *)
 {
-    return std::string("[") + TypeName((E *)nullptr) + "]_";
+    return std::string("[") + TypeName(static_cast<const E *>(nullptr)) + "]_";
 }
 
 template <typename E>
@@ -333,7 +294,7 @@ class Vec final
 
         virtual std::string R_TypeName() const override
         {
-            return ::ppgo::TypeName((Vec<E> *)nullptr);
+            return ::ppgo::TypeName(static_cast<const Vec<E> *>(nullptr));
         }
     };
 
@@ -359,16 +320,16 @@ public:
         v_->v_.emplace_back(e);
     }
 
-    void InsertVec(ssize_t idx, Vec<E> es)
+    void InsertVec(ssize_t idx, const Vec<E> &es)
     {
         Assert(idx >= 0 && idx <= Len());
-        v_->v_.insert(v_->v_.begin() + (size_t)idx, es.v_->v_.begin(), es.v_->v_.end());
+        v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), es.v_->v_.begin(), es.v_->v_.end());
     }
 
     void Insert(ssize_t idx, const E &e)
     {
         Assert(idx >= 0 && idx <= Len());
-        v_->v_.insert(v_->v_.begin() + (size_t)idx, e);
+        v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), e);
     }
 
     E &GetRef(ssize_t idx) const
@@ -391,25 +352,25 @@ public:
     {
         Assert(idx >= 0 && idx < Len());
         E e = v_->v_[idx];
-        v_->v_.erase(v_->v_.begin() + (size_t)idx);
+        v_->v_.erase(v_->v_.begin() + static_cast<size_t>(idx));
         return e;
     }
 
     ssize_t Len() const
     {
-        return (ssize_t)v_->v_.size();
+        return static_cast<ssize_t>(v_->v_.size());
     }
 
     void Resize(ssize_t sz) const
     {
         Assert(sz >= 0 && sz < (1LL << 48));
-        v_->v_.resize(sz);
+        v_->v_.resize(static_cast<size_t>(sz));
     }
 
-    static bool AssertType(Any *a, Vec<E> &v)
+    static bool AssertType(const Any::Ptr &a, Vec<E> &v)
     {
         Assert(a);
-        auto vo = dynamic_cast<VecObj *>(a);
+        auto vo = std::dynamic_pointer_cast<VecObj>(a);
         if (vo)
         {
             v.v_ = vo;
@@ -422,7 +383,7 @@ public:
 template <typename T>
 struct Less
 {
-    bool operator()(T a, T b) const
+    bool operator()(const T &a, const T &b) const
     {
         return a < b;
     }
@@ -431,7 +392,7 @@ struct Less
 template <typename T>
 struct Less<std::shared_ptr<T>>
 {
-    bool operator()(std::shared_ptr<T> a, std::shared_ptr<T> b) const
+    bool operator()(const std::shared_ptr<T> &a, const std::shared_ptr<T> &b) const
     {
         std::tuple<tp_int> ret;
         Assert(!a->method_cmp(ret, b));
@@ -454,7 +415,7 @@ class Map final
 
         virtual std::string R_TypeName() const override
         {
-            return ::ppgo::TypeName((Map<K, V> *)nullptr);
+            return ::ppgo::TypeName(static_cast<const Map<K, V> *>(nullptr));
         }
     };
 
@@ -480,24 +441,24 @@ public:
         return (ssize_t)m_->m_.size();
     }
 
-    V &GetRef(K k) const
+    V &GetRef(const K &k) const
     {
         auto iter = m_->m_.find(k);
         Assert(iter != m_->m_.end());
         return iter->second;
     }
 
-    V &GetForSet(K k) const
+    V &GetForSet(const K &k) const
     {
         return m_->m_[k];
     }
 
-    V Get(K k) const
+    V Get(const K &k) const
     {
         return GetRef(k);
     }
 
-    bool GetOrPop(K k, V *v = nullptr, bool need_pop = false) const
+    bool GetOrPop(const K &k, V *v = nullptr, bool need_pop = false) const
     {
         auto iter = m_->m_.find(k);
         if (iter == m_->m_.end())
@@ -522,7 +483,7 @@ public:
 
     public:
 
-        Iter(Map<K, V> m) : m_(m.m_), it_(m.m_->m_.begin()), end_(m.m_->m_.end())
+        Iter(const Map<K, V> &m) : m_(m.m_), it_(m.m_->m_.begin()), end_(m.m_->m_.end())
         {
         }
 
@@ -552,10 +513,10 @@ public:
         return Iter(*this);
     }
 
-    static bool AssertType(Any *a, Map<K, V> &m)
+    static bool AssertType(const Any::Ptr &a, Map<K, V> &m)
     {
         Assert(a);
-        auto mo = dynamic_cast<MapObj *>(a);
+        auto mo = std::dynamic_pointer_cast<MapObj>(a);
         if (mo)
         {
             m.m_ = mo;
@@ -580,7 +541,7 @@ class Set final
 
         virtual std::string R_TypeName() const override
         {
-            return ::ppgo::TypeName((Set<E> *)nullptr);
+            return ::ppgo::TypeName(static_cast<const Set<E> *>(nullptr));
         }
     };
 
@@ -603,20 +564,20 @@ public:
 
     ssize_t Len() const
     {
-        return (ssize_t)s_->s_.size();
+        return static_cast<ssize_t>(s_->s_.size());
     }
 
-    bool Has(E e) const
+    bool Has(const E &e) const
     {
         return s_->s_.count(e) > 0;
     }
 
-    void Add(E e) const
+    void Add(const E &e) const
     {
         s_->s_.emplace(e);
     }
 
-    void Remove(E e) const
+    void Remove(const E &e) const
     {
         s_->s_.erase(e);
     }
@@ -628,7 +589,7 @@ public:
 
     public:
 
-        Iter(Set<E> s) : s_(s.s_), it_(s.s_->s_.begin()), end_(s.s_->s_.end())
+        Iter(const Set<E> &s) : s_(s.s_), it_(s.s_->s_.begin()), end_(s.s_->s_.end())
         {
         }
 
@@ -653,10 +614,10 @@ public:
         return Iter(*this);
     }
 
-    static bool AssertType(Any *a, Set<E> &s)
+    static bool AssertType(const Any::Ptr &a, Set<E> &s)
     {
         Assert(a);
-        auto so = dynamic_cast<SetObj *>(a);
+        auto so = std::dynamic_pointer_cast<SetObj>(a);
         if (so)
         {
             s.s_ = so;
@@ -666,31 +627,31 @@ public:
     }
 };
 
-std::shared_ptr<Exc> NewTypeAssertionException();
+ExcPtr NewTypeAssertionException();
 
 template <typename E>
-bool _AssertType(Any *a, Vec<E> &v)
+bool _AssertType(const Any::Ptr &a, Vec<E> &v)
 {
     return Vec<E>::AssertType(a, v);
 }
 
 template <typename K, typename V>
-bool _AssertType(Any *a, Map<K, V> &m)
+bool _AssertType(const Any::Ptr &a, Map<K, V> &m)
 {
     return Map<K, V>::AssertType(a, m);
 }
 
 template <typename E>
-bool _AssertType(Any *a, Set<E> &s)
+bool _AssertType(const Any::Ptr &a, Set<E> &s)
 {
     return Set<E>::AssertType(a, s);
 }
 
 template <typename T>
-bool _AssertType(Any *a, std::shared_ptr<T> &t)
+bool _AssertType(const Any::Ptr &a, std::shared_ptr<T> &t)
 {
     Assert(a);
-    auto p = dynamic_cast<T *>(a);
+    auto p = std::dynamic_pointer_cast<T>(a);
     if (p)
     {
         t = p;
@@ -700,10 +661,10 @@ bool _AssertType(Any *a, std::shared_ptr<T> &t)
 }
 
 template <typename T>
-bool _AssertType(Any *a, T &t)
+bool _AssertType(const Any::Ptr &a, T &t)
 {
     Assert(a);
-    auto p = dynamic_cast<base_type_boxing::Obj<T> *>(a);
+    auto p = std::dynamic_pointer_cast<base_type_boxing::Obj<T>>(a);
     if (p)
     {
         t = p->Value();
@@ -713,9 +674,9 @@ bool _AssertType(Any *a, T &t)
 }
 
 template <typename T>
-std::shared_ptr<Exc> AssertType(Any::Ptr a, T &t)
+ExcPtr AssertType(const Any::Ptr &a, T &t)
 {
-    if (a && _AssertType(a.get(), t))
+    if (a && _AssertType(a, t))
     {
         return nullptr;
     }
