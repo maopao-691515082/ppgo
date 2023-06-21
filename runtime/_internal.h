@@ -18,6 +18,7 @@
 #include <tuple>
 #include <initializer_list>
 #include <type_traits>
+#include <memory>
 
 #include <unistd.h>
 #include <sys/errno.h>

@@ -11,11 +11,11 @@ def main():
 
     def _show_usage_and_exit():
         print >> sys.stderr, (
-            "python2 ppgoc.py [-v] [--ST] [-o <OUT_BIN>] [--run] <MAIN_MODULE_SPEC> <ARGS_FOR_RUNNING>")
+            "python2 ppgoc.py [-v] [-o <OUT_BIN>] [--run] <MAIN_MODULE_SPEC> <ARGS_FOR_RUNNING>")
         sys.exit(1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1 :], "vo:", ["ST", "run"])
+        opts, args = getopt.getopt(sys.argv[1 :], "vo:", ["run"])
     except getopt.GetoptError:
         _show_usage_and_exit()
     opts = dict(opts)
@@ -23,7 +23,6 @@ def main():
         ppgoc_util.enable_vmode()
     ppgoc_util.vlog("开始")
     out_bin = opts.get("-o")
-    single_threading_mode = "--ST" in opts
     need_run = "--run" in opts
 
     if len(args) < 1:
@@ -107,7 +106,7 @@ def main():
     ppgoc_out.out_dir = tmp_out_dir + "/" + main_mn
     ppgoc_out.runtime_dir = ppgo_dir + "/runtime"
     ppgoc_out.confs = {
-        "single_threading_mode": single_threading_mode,
+        #confs
     }
     ppgoc_out.output(out_bin, need_run, args_for_run)
 

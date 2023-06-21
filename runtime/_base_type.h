@@ -24,7 +24,7 @@ class tp_string final
 {
     struct LongStr
     {
-        RC rc_;
+        std::atomic<int64_t> rc_;
         const char *p_;
 
         LongStr(const char *p) : rc_(1), p_(p)
@@ -164,16 +164,20 @@ DEF_PPGO_BASE_TYPE_NAME_FUNCS(string)
 
 class Exc;
 
-class Any : public RCObj
+class Any
 {
 public:
 
-    typedef RCPtr<Any> Ptr;
+    typedef std::shared_ptr<Any> Ptr;
+
+    virtual ~Any()
+    {
+    }
 
     //R_*: methods for reflect
     virtual std::string R_TypeName() const = 0;
 
-    virtual RCPtr<Exc> method_str(std::tuple<tp_string> &ret)
+    virtual std::shared_ptr<Exc> method_str(std::tuple<tp_string> &ret)
     {
         std::get<0>(ret) = tp_string::Sprintf(
             "<object of type '%s' at 0x%llX>",
@@ -204,7 +208,7 @@ public:
 };
 
 template <typename T>
-std::string TypeName(RCPtr<T> *)
+std::string TypeName(std::shared_ptr<T> *)
 {
     return T::TypeName();
 }
@@ -273,7 +277,7 @@ public:
         return ::ppgo::TypeName(&t_);
     }
 
-    virtual RCPtr<Exc> method_str(std::tuple<tp_string> &ret) override
+    virtual std::shared_ptr<Exc> method_str(std::tuple<tp_string> &ret) override
     {
         std::get<0>(ret) = this->ToStr(&t_);
         return nullptr;
@@ -281,7 +285,7 @@ public:
 
     static Any::Ptr New(T t)
     {
-        return new Obj<T>(t);
+        return Any::Ptr(new Obj<T>(t));
     }
 };
 
@@ -333,7 +337,7 @@ class Vec final
         }
     };
 
-    RCPtr<VecObj> v_;
+    std::shared_ptr<VecObj> v_;
 
 public:
 
@@ -347,7 +351,7 @@ public:
 
     Any::Ptr AsAny() const
     {
-        return v_.RawPtr();
+        return std::static_pointer_cast<Any>(v_);
     }
 
     void Append(const E &e)
@@ -425,9 +429,9 @@ struct Less
 };
 
 template <typename T>
-struct Less<RCPtr<T>>
+struct Less<std::shared_ptr<T>>
 {
-    bool operator()(RCPtr<T> a, RCPtr<T> b) const
+    bool operator()(std::shared_ptr<T> a, std::shared_ptr<T> b) const
     {
         std::tuple<tp_int> ret;
         Assert(!a->method_cmp(ret, b));
@@ -454,7 +458,7 @@ class Map final
         }
     };
 
-    RCPtr<MapObj> m_;
+    std::shared_ptr<MapObj> m_;
 
 public:
 
@@ -468,7 +472,7 @@ public:
 
     Any::Ptr AsAny() const
     {
-        return m_.RawPtr();
+        return std::static_pointer_cast<Any>(m_);
     }
 
     ssize_t Len() const
@@ -513,7 +517,7 @@ public:
 
     class Iter
     {
-        RCPtr<MapObj> m_;
+        std::shared_ptr<MapObj> m_;
         typename MapObj::map_t::const_iterator it_, end_;
 
     public:
@@ -580,7 +584,7 @@ class Set final
         }
     };
 
-    RCPtr<SetObj> s_;
+    std::shared_ptr<SetObj> s_;
 
 public:
 
@@ -594,7 +598,7 @@ public:
 
     Any::Ptr AsAny() const
     {
-        return s_.RawPtr();
+        return std::static_pointer_cast<Any>(s_);
     }
 
     ssize_t Len() const
@@ -619,7 +623,7 @@ public:
 
     class Iter
     {
-        RCPtr<SetObj> s_;
+        std::shared_ptr<SetObj> s_;
         typename SetObj::set_t::const_iterator it_, end_;
 
     public:
@@ -662,7 +666,7 @@ public:
     }
 };
 
-RCPtr<Exc> NewTypeAssertionException();
+std::shared_ptr<Exc> NewTypeAssertionException();
 
 template <typename E>
 bool _AssertType(Any *a, Vec<E> &v)
@@ -683,7 +687,7 @@ bool _AssertType(Any *a, Set<E> &s)
 }
 
 template <typename T>
-bool _AssertType(Any *a, RCPtr<T> &t)
+bool _AssertType(Any *a, std::shared_ptr<T> &t)
 {
     Assert(a);
     auto p = dynamic_cast<T *>(a);
@@ -709,9 +713,9 @@ bool _AssertType(Any *a, T &t)
 }
 
 template <typename T>
-RCPtr<Exc> AssertType(Any::Ptr a, T &t)
+std::shared_ptr<Exc> AssertType(Any::Ptr a, T &t)
 {
-    if (a && _AssertType(a.RawPtr(), t))
+    if (a && _AssertType(a.get(), t))
     {
         return nullptr;
     }

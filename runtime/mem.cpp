@@ -3,8 +3,4 @@
 namespace ppgo
 {
 
-RCObj::~RCObj()
-{
-}
-
 }

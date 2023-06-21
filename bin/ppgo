@@ -11,20 +11,18 @@ def main():
 
     def _show_usage_and_exit():
         print >> sys.stderr, (
-            "ppgo [-v] [--ST] {-o <OUT_BIN> <MAIN_MOD_PATH> | <MAIN_MOD_PATH> <ARGS_FOR_RUNNING>}")
+            "ppgo [-v] {-o <OUT_BIN> <MAIN_MOD_PATH> | <MAIN_MOD_PATH> <ARGS_FOR_RUNNING>}")
         sys.exit(1)
 
     cmd_args = ["/usr/bin/env", "python2", "%s/compiler/ppgoc.py" % ppgo_dir]
 
     try:
-        opts, args = getopt.getopt(sys.argv[1 :], "vo:", ["ST"])
+        opts, args = getopt.getopt(sys.argv[1 :], "vo:", [])
     except getopt.GetoptError:
         _show_usage_and_exit()
     opts = dict(opts)
     if "-v" in opts:
         cmd_args.append("-v")
-    if "--ST" in opts:
-        cmd_args.append("--ST")
     out_bin = opts.get("-o")
     if out_bin is None:
         cmd_args.append("--run")

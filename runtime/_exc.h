@@ -3,9 +3,9 @@
 namespace ppgo
 {
 
-class Exc : public RCObj
+class Exc
 {
-    RCPtr<Any> throwed_;
+    std::shared_ptr<Any> throwed_;
     std::vector<tp_string> tb_;
 
     class NilExc final : public virtual Any
@@ -17,7 +17,7 @@ class Exc : public RCObj
             return "NilException";
         }
 
-        virtual RCPtr<Exc> method_str(std::tuple<tp_string> &ret) override
+        virtual std::shared_ptr<Exc> method_str(std::tuple<tp_string> &ret) override
         {
             const char *s = "throw(nil) called";
             std::get<0>(ret) = tp_string(s, strlen(s));
@@ -27,14 +27,14 @@ class Exc : public RCObj
 
 public:
 
-    typedef RCPtr<Exc> Ptr;
+    typedef std::shared_ptr<Exc> Ptr;
 
     void PushTB(const char *file, int line, const char *func)
     {
         tb_.emplace_back(tp_string::Sprintf("File [%s] Line [%d] Func [%s]", file, line, func));
     }
 
-    RCPtr<Any> Throwed() const
+    std::shared_ptr<Any> Throwed() const
     {
         return throwed_;
     }
@@ -64,13 +64,13 @@ public:
         return tp_string(buf.data(), buf.size());
     }
 
-    static Ptr New(RCPtr<Any> throwed)
+    static Ptr New(std::shared_ptr<Any> throwed)
     {
         if (!throwed)
         {
-            throwed = new NilExc();
+            throwed = std::shared_ptr<Any>(new NilExc());
         }
-        auto e = new Exc;
+        auto e = Ptr(new Exc);
         e->throwed_ = throwed;
         return e;
     }

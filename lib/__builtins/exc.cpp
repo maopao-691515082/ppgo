@@ -15,9 +15,9 @@ namespace PPGO_THIS_MOD
 
 }
 
-RCPtr<Exc> NewTypeAssertionException()
+std::shared_ptr<Exc> NewTypeAssertionException()
 {
-    return Exc::New(new ::ppgo::PPGO_THIS_MOD::cls_TypeAssertionException);
+    return Exc::New(::ppgo::Any::Ptr(new ::ppgo::PPGO_THIS_MOD::cls_TypeAssertionException));
 }
 
 }

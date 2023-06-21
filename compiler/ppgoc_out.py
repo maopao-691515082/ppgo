@@ -123,7 +123,7 @@ def gen_tp_code(tp):
             break
     else:
         ppgoc_util.raise_bug()
-    return "::ppgo::RCPtr<::ppgo::%s::%s_%s>" % (mnc, prefix, coi.name)
+    return "std::shared_ptr<::ppgo::%s::%s_%s>" % (mnc, prefix, coi.name)
 
 def gen_func_ret_tp_code_from_tps(tps):
     cs = ["::std::tuple<"]
@@ -247,14 +247,13 @@ def gen_wrap_convert(c, c_tp, to_tp):
         return c
     assert to_tp.can_force_convert_from(c_tp)
     if c_tp.is_coi_type:
-        c = "(%s).RawPtr()" % c
         if c_tp.get_coi().is_intf and not to_tp.is_any:
             assert to_tp.is_coi_type and to_tp.get_coi().is_intf
             #intf -> intf and must success
             to_tp_code = gen_tp_code(to_tp)
-            P, S = "::ppgo::RCPtr<", ">"
+            P, S = "std::shared_ptr<", ">"
             assert to_tp_code.startswith(P) and to_tp_code.endswith(S)
-            c = "dynamic_cast<%s *>(%s)" % (to_tp_code[len(P) : -len(S)], c)
+            c = "std::dynamic_pointer_cast<%s>(%s)" % (to_tp_code[len(P) : -len(S)], c)
     if to_tp.is_any:
         if c_tp.is_bool_type or c_tp.is_number_type or c_tp.is_str_type:
             return "::ppgo::base_type_boxing::Obj<%s>::New(%s)" % (gen_tp_code(c_tp), c)
@@ -416,7 +415,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         cs = [
             "({",
             "%s %s;" % (gen_method_ret_tp_code(m), rv),
-            "auto %s = (%s).Copy()->method_%s(%s" % (excv, oec, m.name, rv),
+            "auto %s = %s(%s)->method_%s(%s" % (excv, gen_tp_code(oe.tp), oec, m.name, rv),
         ]
         ecs = ["(%s)" % gen_expr_code(e, pos_info) for e in el]
         if ecs:
@@ -442,7 +441,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         newv = "new_%d" % ppgoc_util.new_id()
         cs = [
             "({",
-            "%s %s = new ::ppgo::%s::cls_%s;" % (gen_tp_code(expr.tp), newv, mncs[cls.mod.name], cls.name),
+            "%s %s(new ::ppgo::%s::cls_%s);" % (gen_tp_code(expr.tp), newv, mncs[cls.mod.name], cls.name),
         ]
         init_method = cls.get_init_method()
         if init_method is not None:
@@ -533,7 +532,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         ec = gen_expr_code(e, pos_info)
         if not e.tp.is_any:
             assert e.tp.is_coi_type
-            ec = "::ppgo::Any::Ptr((%s).RawPtr())" % ec
+            ec = "std::static_pointer_cast<::ppgo::Any>(%s)" % ec
         rv = "ret_%d" % ppgoc_util.new_id()
         excv = "exc_%d" % ppgoc_util.new_id()
         t, fom = pos_info
@@ -1000,8 +999,7 @@ def output_native_src():
 def output_conf_header():
     with Code(out_dir + "/_conf.h") as code:
         code += "#pragma once"
-        if confs["single_threading_mode"]:
-            code += "#define PPGO_SINGLE_THREADING_MODE"
+        #with confs
 
 def cp_runtime():
     for fn in os.listdir(runtime_dir):
