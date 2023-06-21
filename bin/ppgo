@@ -1,7 +1,6 @@
-#!/usr/bin/env python2
-#coding=utf8
+#!/usr/bin/env python3
 
-import os, sys, getopt
+import os, sys, getopt, shutil
 
 def main():
     THIS_SCRIPT_NAME_SUFFIX = "/bin/ppgo"
@@ -10,17 +9,30 @@ def main():
     ppgo_dir = this_script_name[: -len(THIS_SCRIPT_NAME_SUFFIX)]
 
     def _show_usage_and_exit():
-        print >> sys.stderr, (
-            "ppgo [-v] {-o <OUT_BIN> <MAIN_MOD_PATH> | <MAIN_MOD_PATH> <ARGS_FOR_RUNNING>}")
+        print("""Usage:
+    ppgo [-v] -o <OUT_BIN> <MAIN_MOD_PATH>
+    ppgo [-v] <MAIN_MOD_PATH> <ARGS_FOR_RUNNING>
+    ppgo --clean
+""", file = sys.stderr)
         sys.exit(1)
 
-    cmd_args = ["/usr/bin/env", "python2", "%s/compiler/ppgoc.py" % ppgo_dir]
-
     try:
-        opts, args = getopt.getopt(sys.argv[1 :], "vo:", [])
+        opts, args = getopt.getopt(sys.argv[1 :], "vo:", ["clean"])
     except getopt.GetoptError:
         _show_usage_and_exit()
     opts = dict(opts)
+
+    if "--clean" in opts:
+        if len(sys.argv) != 2:
+            _show_usage_and_exit()
+        shutil.rmtree("%s/tmp" % ppgo_dir, True)
+        rc = os.system("make -C %s/deps clean >/dev/null" % ppgo_dir)
+        if rc != 0:
+            sys.exit(rc)
+        return
+
+    cmd_args = ["/usr/bin/env", "python2", "%s/compiler/ppgoc.py" % ppgo_dir]
+
     if "-v" in opts:
         cmd_args.append("-v")
     out_bin = opts.get("-o")
