@@ -8,13 +8,13 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr func_println(::std::tuple<> &ret, ::ppgo::Any::Ptr a)
+::ppgo::Exc::Ptr func_println(::std::tuple<> &ret, const ::ppgo::Any::Ptr &a)
 {
     auto write_to_stdout = [] (const char *p, ssize_t sz) -> ::ppgo::Exc::Ptr {
         ::ppgo::Assert(sz >= 0);
         while (sz > 0)
         {
-            ssize_t n = ::write(1, p, (size_t)sz);
+            ssize_t n = ::write(1, p, static_cast<size_t>(sz));
             if (n == -1)
             {
                 return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(
@@ -32,7 +32,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr func_assert(::std::tuple<> &ret, ::ppgo::tp_bool cond)
 {
-    ::ppgo::Assert(cond);
+    ::ppgo::Assert(cond.v);
     return nullptr;
 }
 

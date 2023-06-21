@@ -8,7 +8,7 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr func_throw(::std::tuple<> &ret, ::ppgo::Any::Ptr a)
+::ppgo::Exc::Ptr func_throw(::std::tuple<> &ret, const ::ppgo::Any::Ptr &a)
 {
     return ::ppgo::Exc::New(a);
 }
