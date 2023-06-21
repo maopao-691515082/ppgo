@@ -680,9 +680,9 @@ public:
         return Slice().Lower();
     }
 
-    Str Hex() const
+    Str Hex(bool upper_case = true) const
     {
-        return Slice().Hex();
+        return Slice().Hex(upper_case);
     }
     bool Unhex(Str &s) const
     {

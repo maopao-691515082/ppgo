@@ -5,6 +5,7 @@ import ppgoc_util, ppgoc_mod, ppgoc_token, ppgoc_type
 
 main_mn = None
 out_dir = None
+deps_dir = None
 runtime_dir = None
 confs = None
 
@@ -301,16 +302,16 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         if literal_type == "nil":
             return "nullptr"
         if literal_type == "bool":
-            return t.value
+            return "::ppgo::tp_bool{%s}" % t.value
         if literal_type == "byte":
             assert 0 <= t.value <= 0xFF
-            return str(t.value)
+            return "::ppgo::tp_byte{%s}" % str(t.value)
         if literal_type == "int":
-            return str(t.value) + "LL"
+            return "::ppgo::tp_int{%s}" % (str(t.value) + "LL")
         if literal_type == "uint":
-            return str(t.value) + "ULL"
+            return "::ppgo::tp_uint{%s}" % (str(t.value) + "ULL")
         if literal_type == "float":
-            return t.value.hex()
+            return "::ppgo::tp_float{%s}" % t.value.hex()
         if literal_type == "str":
             all_str_literals.append(t)
             return "::ppgo::str_literals::s%d" % t.id
@@ -1005,8 +1006,14 @@ def cp_runtime():
     for fn in os.listdir(runtime_dir):
         shutil.copy(runtime_dir + "/" + fn, out_dir)
 
+def make_deps():
+    rc = os.system("make -C %s >/dev/null" % deps_dir)
+    if rc != 0:
+        sys.exit(rc)
+
 def make_prog():
     with Code(out_dir + "/Makefile.def") as code:
+        code += "PPGO_DEPS_DIR := %s" % deps_dir
         assert main_mnc == os.path.basename(exe_file)
         code += "PPGO_MK_OUT := %s" % main_mnc
     rc = os.system("make -C %s >/dev/null" % out_dir)
@@ -1058,6 +1065,9 @@ def output(out_bin, need_run, args_for_run):
     cp_runtime()
 
     ppgoc_util.vlog("C++代码输出完毕，耗时%.2f秒" % (time.time() - output_start_time))
+
+    ppgoc_util.vlog("make deps")
+    make_deps()
 
     make_start_time = time.time()
     ppgoc_util.vlog("开始执行make")

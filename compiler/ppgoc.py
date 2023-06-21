@@ -104,6 +104,7 @@ def main():
 
     ppgoc_out.main_mn = main_mod.name
     ppgoc_out.out_dir = tmp_out_dir + "/" + main_mn
+    ppgoc_out.deps_dir = ppgo_dir + "/deps"
     ppgoc_out.runtime_dir = ppgo_dir + "/runtime"
     ppgoc_out.confs = {
         #confs

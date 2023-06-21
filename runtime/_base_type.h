@@ -369,7 +369,7 @@ public:
 
     static bool AssertType(const Any::Ptr &a, Vec<E> &v)
     {
-        Assert(a);
+        Assert(static_cast<bool>(a));
         auto vo = std::dynamic_pointer_cast<VecObj>(a);
         if (vo)
         {
@@ -396,7 +396,7 @@ struct Less<std::shared_ptr<T>>
     {
         std::tuple<tp_int> ret;
         Assert(!a->method_cmp(ret, b));
-        return std::get<0>(ret) < 0;
+        return std::get<0>(ret).v < 0;
     }
 };
 
@@ -515,7 +515,7 @@ public:
 
     static bool AssertType(const Any::Ptr &a, Map<K, V> &m)
     {
-        Assert(a);
+        Assert(static_cast<bool>(a));
         auto mo = std::dynamic_pointer_cast<MapObj>(a);
         if (mo)
         {
@@ -616,7 +616,7 @@ public:
 
     static bool AssertType(const Any::Ptr &a, Set<E> &s)
     {
-        Assert(a);
+        Assert(static_cast<bool>(a));
         auto so = std::dynamic_pointer_cast<SetObj>(a);
         if (so)
         {
@@ -650,7 +650,7 @@ bool _AssertType(const Any::Ptr &a, Set<E> &s)
 template <typename T>
 bool _AssertType(const Any::Ptr &a, std::shared_ptr<T> &t)
 {
-    Assert(a);
+    Assert(static_cast<bool>(a));
     auto p = std::dynamic_pointer_cast<T>(a);
     if (p)
     {
@@ -663,7 +663,7 @@ bool _AssertType(const Any::Ptr &a, std::shared_ptr<T> &t)
 template <typename T>
 bool _AssertType(const Any::Ptr &a, T &t)
 {
-    Assert(a);
+    Assert(static_cast<bool>(a));
     auto p = std::dynamic_pointer_cast<base_type_boxing::Obj<T>>(a);
     if (p)
     {
