@@ -32,7 +32,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr func_assert(::std::tuple<> &ret, ::ppgo::tp_bool cond)
 {
-    ::ppgo::Assert(cond.v);
+    ::ppgo::Assert(cond);
     return nullptr;
 }
 

@@ -39,7 +39,7 @@ _RESERVED_WORD_SET = set(
      "for", "while", "if", "else", "return", "break", "continue", "with",
      "_"] +
     ["%s%d" % (iou, bc) for iou in "iu" for bc in (8, 16, 32, 64)] +
-    ["float%d" % bc for bc in (32, 64)]
+    ["f%d" % bc for bc in (32, 64)]
 )
 
 class _Token:

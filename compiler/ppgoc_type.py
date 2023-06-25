@@ -4,7 +4,7 @@ import ppgoc_util, ppgoc_mod, ppgoc_token
 
 BASE_TYPES = (["bool", "byte", "int", "uint", "float", "string", "any"] +
     ["%s%d" % (iou, bc) for iou in "iu" for bc in (8, 16, 32, 64)] +
-    ["float%d" % bc for bc in (32, 64)])
+    ["f%d" % bc for bc in (32, 64)])
 
 class Type:
     def __init__(self, t, name, mn = None):
@@ -40,7 +40,7 @@ class Type:
         self.is_unsigned_integer_type = (
             self.is_integer_type and (self.name[0] == "u" or self.name == "byte"))
         self.is_byte_type = self.t.is_reserved("byte")
-        self.is_float_type = self.t.is_reserved and self.name in ("float", "float32", "float64")
+        self.is_float_type = self.t.is_reserved and self.name in ("float", "f32", "f64")
         self.is_number_type = self.is_integer_type or self.is_float_type
         self.can_inc_dec = self.is_integer_type
         self.is_base_type = self.t.is_reserved and self.t.value in BASE_TYPES

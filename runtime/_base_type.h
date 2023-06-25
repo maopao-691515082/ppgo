@@ -3,35 +3,25 @@
 namespace ppgo
 {
 
-#pragma push_macro("DEF_PPGO_BASE_TYPE")
-#undef DEF_PPGO_BASE_TYPE
+//C类型的位数已经在`_internal.h`做了保证
 
-#define DEF_PPGO_BASE_TYPE(_tp, _ltp) struct tp_##_tp { _ltp v; };
+typedef bool                tp_bool;
+typedef char8_t             tp_byte;
+typedef long long           tp_int;
+typedef unsigned long long  tp_uint;
+typedef long double         tp_float;
 
-DEF_PPGO_BASE_TYPE(bool, bool)
-DEF_PPGO_BASE_TYPE(byte, uint8_t)
-DEF_PPGO_BASE_TYPE(int, int64_t)
-DEF_PPGO_BASE_TYPE(uint, uint64_t)
-DEF_PPGO_BASE_TYPE(float, double)
+typedef signed char     tp_i8;
+typedef unsigned char   tp_u8;
+typedef short           tp_i16;
+typedef unsigned short  tp_u16;
+typedef int             tp_i32;
+typedef unsigned int    tp_u32;
+typedef long            tp_i64;
+typedef unsigned long   tp_u64;
 
-#pragma push_macro("DEF_PPGO_BASE_TYPE_INT_BIT")
-#undef DEF_PPGO_BASE_TYPE_INT_BIT
-
-#define DEF_PPGO_BASE_TYPE_INT_BIT(_b)      \
-    DEF_PPGO_BASE_TYPE(i##_b, int##_b##_t)  \
-    DEF_PPGO_BASE_TYPE(u##_b, uint##_b##_t)
-
-DEF_PPGO_BASE_TYPE_INT_BIT(8)
-DEF_PPGO_BASE_TYPE_INT_BIT(16)
-DEF_PPGO_BASE_TYPE_INT_BIT(32)
-DEF_PPGO_BASE_TYPE_INT_BIT(64)
-
-#pragma pop_macro("DEF_PPGO_BASE_TYPE_INT_BIT")
-
-DEF_PPGO_BASE_TYPE(float32, float)
-DEF_PPGO_BASE_TYPE(float64, double)
-
-#pragma pop_macro("DEF_PPGO_BASE_TYPE")
+typedef float   tp_f32;
+typedef double  tp_f64;
 
 class tp_string final
 {
@@ -74,7 +64,7 @@ public:
     tp_byte ByteAt(ssize_t idx) const
     {
         Assert(idx >= 0 && idx < Len());
-        return tp_byte{static_cast<uint8_t>(Data()[idx])};
+        return static_cast<tp_byte>(Data()[idx]);
     }
 
     tp_string Hex(bool upper_case) const
@@ -113,8 +103,8 @@ DEF_PPGO_BASE_TYPE_NAME_FUNCS(i32)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(u32)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(i64)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(u64)
-DEF_PPGO_BASE_TYPE_NAME_FUNCS(float32)
-DEF_PPGO_BASE_TYPE_NAME_FUNCS(float64)
+DEF_PPGO_BASE_TYPE_NAME_FUNCS(f32)
+DEF_PPGO_BASE_TYPE_NAME_FUNCS(f64)
 
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(string)
 
@@ -396,7 +386,7 @@ struct Less<std::shared_ptr<T>>
     {
         std::tuple<tp_int> ret;
         Assert(!a->method_cmp(ret, b));
-        return std::get<0>(ret).v < 0;
+        return std::get<0>(ret) < 0;
     }
 };
 
