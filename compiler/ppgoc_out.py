@@ -3,6 +3,7 @@
 import os, shutil, subprocess, hashlib, time, re, sys, platform
 import ppgoc_util, ppgoc_mod, ppgoc_token, ppgoc_type
 
+ppgo_dir = None
 main_mn = None
 out_dir = None
 deps_dir = None
@@ -1013,7 +1014,7 @@ def make_deps():
 
 def make_prog():
     with Code(out_dir + "/Makefile.def") as code:
-        code += "PPGO_DEPS_DIR := %s" % deps_dir
+        code += "PPGO_DIR := %s" % ppgo_dir
         assert main_mnc == os.path.basename(exe_file)
         code += "PPGO_MK_OUT := %s" % main_mnc
     rc = os.system("make -C %s >/dev/null" % out_dir)

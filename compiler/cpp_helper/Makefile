@@ -1,4 +1,4 @@
-include ../../runtime/defs.mk
+include ../../conf/defs.mk
 
 TARGET := ../../tmp/ppgoc_helper.so
 
