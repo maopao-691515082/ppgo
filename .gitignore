@@ -17,6 +17,7 @@ __pycache__
 *.i
 *.o
 *.s
+*.so
 
 *.log
 *.log.*

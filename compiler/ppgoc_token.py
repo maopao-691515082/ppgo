@@ -1,7 +1,7 @@
 #coding=utf8
 
 import re, math, copy
-import ppgoc_util
+import ppgoc_util, ppgoc_cpp_helper
 
 _TOKEN_RE = re.compile(
     r"""(\d+\.?\d*[eE][+-]?\w+|"""
@@ -256,11 +256,8 @@ def _parse_token(mod_name, src_file, line_no, line, pos):
     if f is not None or hex_f is not None:
         if f is None:
             f = hex_f
-        try:
-            value = float(f) if hex_f is None else float.fromhex(f)
-            if math.isnan(value) or math.isinf(value):
-                raise ValueError
-        except ValueError:
+        value = ppgoc_cpp_helper.parse_long_double(f)
+        if value is None:
             _syntax_err(src_file, line_no, pos, "非法的float字面量'%s'" % f)
         return _Token("literal_float", value, src_file, line_no, pos), len(f)
 

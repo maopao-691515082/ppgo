@@ -311,7 +311,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         if literal_type == "uint":
             return "::ppgo::tp_uint{%s}" % (str(t.value) + "ULL")
         if literal_type == "float":
-            return "::ppgo::tp_float{%s}" % t.value.hex()
+            return "::ppgo::tp_float{%sL}" % t.value
         if literal_type == "str":
             all_str_literals.append(t)
             return "::ppgo::str_literals::s%d" % t.id

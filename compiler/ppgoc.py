@@ -1,7 +1,7 @@
 #coding=utf8
 
-import sys, getopt, os, time, itertools
-import ppgoc_util, ppgoc_mod, ppgoc_token, ppgoc_out
+import sys, getopt, os, time, itertools, ctypes
+import ppgoc_util, ppgoc_mod, ppgoc_token, ppgoc_out, ppgoc_cpp_helper
 
 def main():
     THIS_SCRIPT_NAME_SUFFIX = "/compiler/ppgoc.py"
@@ -52,6 +52,11 @@ def main():
             os.makedirs(tmp_out_dir)
         except OSError:
             ppgoc_util.exit("创建临时输出目录[%s]失败" % tmp_out_dir)
+
+    rc = os.system("make -C %s/cpp_helper >/dev/null" % compiler_dir)
+    if rc != 0:
+        ppgoc_util.exit("构建cpp_helper失败")
+    ppgoc_cpp_helper.so = ctypes.CDLL("%s/ppgoc_helper.so" % tmp_dir)
 
     first_level_std_mod_set = set()
     for fn in os.listdir(slib_dir):
