@@ -31,20 +31,20 @@ namespace PPGO_THIS_MOD
 } while (false)
 
 ::ppgo::Exc::Ptr func_parse_int_with_base(
-    ::std::tuple<::ppgo::tp_int> &ret, const ::ppgo::tp_string &s, ::ppgo::tp_int base)
+    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_string s, ::ppgo::tp_int base)
 {
     CHECK_BASE();
     PARSE_NUM(strtoll(p, const_cast<char **>(&end_ptr), base));
 }
 
 ::ppgo::Exc::Ptr func_parse_uint_with_base(
-    ::std::tuple<::ppgo::tp_uint> &ret, const ::ppgo::tp_string &s, ::ppgo::tp_int base)
+    ::std::tuple<::ppgo::tp_uint> &ret, ::ppgo::tp_string s, ::ppgo::tp_int base)
 {
     CHECK_BASE();
     PARSE_NUM(strtoull(p, const_cast<char **>(&end_ptr), base));
 }
 
-::ppgo::Exc::Ptr func_parse_float(::std::tuple<::ppgo::tp_float> &ret, const ::ppgo::tp_string &s)
+::ppgo::Exc::Ptr func_parse_float(::std::tuple<::ppgo::tp_float> &ret, ::ppgo::tp_string s)
 {
     PARSE_NUM(strtod(p, const_cast<char **>(&end_ptr)));
 }

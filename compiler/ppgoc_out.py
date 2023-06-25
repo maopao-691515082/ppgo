@@ -145,10 +145,7 @@ def gen_func_def(func):
     cs = ["::ppgo::Exc::Ptr func_%s(%s &ret" % (func.name, gen_func_ret_tp_code(func))]
     for name, (_, tp) in func.arg_defs.iteritems():
         cs.append(", ")
-        if tp.is_bool_type or tp.is_number_type or tp.is_func:
-            cs.append("%s l_%s" % (gen_tp_code(tp), name))
-        else:
-            cs.append("const %s &l_%s" % (gen_tp_code(tp), name))
+        cs.append("%s l_%s" % (gen_tp_code(tp), name))
     cs.append(")")
     return "".join(cs)
 
@@ -159,10 +156,7 @@ def gen_method_def(method, with_cls_name = False):
     cs.append("method_%s(%s &ret" % (method.name, gen_method_ret_tp_code(method)))
     for name, (_, tp) in method.arg_defs.iteritems():
         cs.append(", ")
-        if tp.is_bool_type or tp.is_number_type or tp.is_func:
-            cs.append("%s l_%s" % (gen_tp_code(tp), name))
-        else:
-            cs.append("const %s &l_%s" % (gen_tp_code(tp), name))
+        cs.append("%s l_%s" % (gen_tp_code(tp), name))
     cs.append(")")
     return "".join(cs)
 

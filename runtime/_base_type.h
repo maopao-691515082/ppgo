@@ -204,8 +204,10 @@ class Obj final: public virtual Any
         typename std::enable_if_t<std::is_floating_point_v<FT>> * = nullptr>
     static tp_string ToStr(const FT *p)
     {
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%.17g", static_cast<double>(*p));
+        char buf[128];
+        snprintf(
+            buf, sizeof(buf),
+            "%.*Lg", std::numeric_limits<long double>::max_digits10, static_cast<long double>(*p));
         return buf;
     }
 

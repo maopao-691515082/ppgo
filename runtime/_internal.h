@@ -19,6 +19,7 @@
 #include <initializer_list>
 #include <type_traits>
 #include <memory>
+#include <limits>
 
 #include <unistd.h>
 #include <sys/errno.h>

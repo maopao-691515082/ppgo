@@ -19,7 +19,7 @@ class Record
     }
 }
 
-var loops int = 5000000;
+var loops int = 50000000;
 
 final var (
     Ident1 int = 1;
