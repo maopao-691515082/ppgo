@@ -1,14 +1,7 @@
 #coding=utf8
 
-import os, shutil, subprocess, hashlib, time, re, sys, platform
-import ppgoc_util, ppgoc_mod, ppgoc_token, ppgoc_type
-
-ppgo_dir = None
-main_mn = None
-out_dir = None
-deps_dir = None
-runtime_dir = None
-confs = None
+import os, shutil, hashlib, time, re, sys, platform
+import ppgoc_env, ppgoc_util, ppgoc_mod, ppgoc_token, ppgoc_type
 
 main_mod = None
 
@@ -162,7 +155,7 @@ def gen_method_def(method, with_cls_name = False):
     return "".join(cs)
 
 def output_prog_h(native_header_fns):
-    with Code(out_dir + "/_prog.h") as code:
+    with Code(ppgoc_env.out_dir + "/_prog.h") as code:
         code += "#pragma once"
         for fn in native_header_fns:
             code += '#include "%s"' % fn
@@ -903,7 +896,7 @@ def output_stmts(code, stmts):
         ppgoc_util.raise_bug()
 
 def output_str_literals():
-    with Code(out_dir + "/_str_literals.h") as code:
+    with Code(ppgoc_env.out_dir + "/_str_literals.h") as code:
         code += "#pragma once"
         with code.new_blk("namespace ppgo"):
             with code.new_blk("namespace str_literals"):
@@ -921,7 +914,7 @@ def output_fom_named_ret_vars(code, fom):
         code += "auto &l_%s = ::std::get<%d>(%s);" % (name, i, get_ret_var_name())
 
 def output_prog_cpp():
-    with Code(out_dir + "/prog.cpp") as code:
+    with Code(ppgoc_env.out_dir + "/prog.cpp") as code:
         code += '#include "ppgo.h"'
         code += '#include "_str_literals.h"'
         with code.new_blk("namespace ppgo"):
@@ -985,7 +978,7 @@ def output_native_src():
                 out_fn = mnc + "-" + fn
                 if out_fn.endswith(".h"):
                     hfns.append(out_fn)
-                with open(out_dir + "/" + out_fn, "w") as out_f:
+                with open(ppgoc_env.out_dir + "/" + out_fn, "w") as out_f:
                     for line in open(mod.dir + "/" + fn):
                         if re.match(r"^\s*#\s*pragma\s+ppgo\s+define-THIS_MOD\s*$", line):
                             print >> out_f, "#ifdef PPGO_THIS_MOD"
@@ -999,25 +992,25 @@ def output_native_src():
     return hfns
 
 def output_conf_header():
-    with Code(out_dir + "/_conf.h") as code:
+    with Code(ppgoc_env.out_dir + "/_conf.h") as code:
         code += "#pragma once"
-        #with confs
+        #with ppgoc_env.out_confs
 
 def cp_runtime():
-    for fn in os.listdir(runtime_dir):
-        shutil.copy(runtime_dir + "/" + fn, out_dir)
+    for fn in os.listdir(ppgoc_env.runtime_dir):
+        shutil.copy(ppgoc_env.runtime_dir + "/" + fn, ppgoc_env.out_dir)
 
 def make_deps():
-    rc = os.system("make -C %s >/dev/null" % deps_dir)
+    rc = os.system("make -C %s >/dev/null" % ppgoc_env.deps_dir)
     if rc != 0:
         sys.exit(rc)
 
 def make_prog():
-    with Code(out_dir + "/Makefile.def") as code:
-        code += "PPGO_DIR := %s" % ppgo_dir
+    with Code(ppgoc_env.out_dir + "/Makefile.def") as code:
+        code += "PPGO_DIR := %s" % ppgoc_env.ppgo_dir
         assert main_mnc == os.path.basename(exe_file)
         code += "PPGO_MK_OUT := %s" % main_mnc
-    rc = os.system("make -C %s >/dev/null" % out_dir)
+    rc = os.system("make -C %s >/dev/null" % ppgoc_env.out_dir)
     if rc != 0:
         sys.exit(rc)
 
@@ -1047,15 +1040,15 @@ def output(out_bin, need_run, args_for_run):
 
     global main_mod, main_mnc
 
-    main_mod = ppgoc_mod.mods[main_mn]
+    main_mod = ppgoc_mod.mods[ppgoc_env.main_mn]
     main_mnc = gen_mnc(main_mod)
 
-    shutil.rmtree(out_dir, True)
-    os.makedirs(out_dir)
+    shutil.rmtree(ppgoc_env.out_dir, True)
+    os.makedirs(ppgoc_env.out_dir)
 
     global exe_file
 
-    exe_file = "%s/%s" % (out_dir, main_mnc)
+    exe_file = "%s/%s" % (ppgoc_env.out_dir, main_mnc)
 
     native_header_fns = output_native_src()
     output_prog_h(native_header_fns)

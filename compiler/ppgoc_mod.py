@@ -1,10 +1,7 @@
 #coding=utf8
 
 import os
-import ppgoc_util, ppgoc_token, ppgoc_stmt, ppgoc_type, ppgoc_expr
-
-slib_dir = None
-ulib_dir = None
+import ppgoc_env, ppgoc_util, ppgoc_token, ppgoc_stmt, ppgoc_type, ppgoc_expr
 
 builtins_mod = None
 mods = ppgoc_util.OrderedDict()
@@ -17,10 +14,10 @@ def find_mod_dir(mn):
     t = dep_mod_token_map.get(mn)
     err_exit = ppgoc_util.exit if t is None else t.syntax_err
 
-    for d in slib_dir, ulib_dir:
+    for d in ppgoc_env.slib_dir, ppgoc_env.ulib_dir:
         mod_path = d + "/" + mn
         if os.path.isdir(mod_path):
-            return mod_path, d == slib_dir
+            return mod_path, d == ppgoc_env.slib_dir
 
     err_exit("找不到模块：%s" % mn)
 
