@@ -202,8 +202,12 @@ def output_prog_h(native_header_fns):
                             code += "virtual ~cls_%s();" % cls.name
                             with code.new_blk("virtual ::std::string R_TypeName() const override"):
                                 code += "return %s;" % c_str_literal(str(cls))
+                            code += ""
+                            code += "//attrs"
                             for a in cls.attrs.itervalues():
-                                code += "%s attr_%s;" % (gen_tp_code(a.tp), a.name)
+                                code += "%s attr_%s%s;" % (gen_tp_code(a.tp), a.name, gen_var_init_code(a.tp))
+                            code += ""
+                            code += "//methods"
                             for m in cls.methods.itervalues():
                                 code += (
                                     "virtual %s %s;" %
@@ -700,7 +704,7 @@ def output_stmts(code, stmts):
                         "} else { ::std::tie(%s) = %s; }" % (
                             ",".join([
                                 ("::std::ignore" if name.startswith("_.") else "l_" + name)
-                                for name in stmt.new_vars]),
+                                for name in list(stmt.new_vars)[: len(tps)]]),
                             rv))
             else:
                 if len(stmt.new_vars) == 1:
@@ -749,10 +753,13 @@ def output_stmts(code, stmts):
         if stmt.type == "if":
             assert stmt.if_expr_stmts_list
             for i, (e, if_stmts) in enumerate(stmt.if_expr_stmts_list):
-                with code.new_blk("%sif (%s)" % ("" if i == 0 else "else ", gen_expr_code(e))):
+                with code.new_blk(
+                    "%sif (%s)" % ("" if i == 0 else "else ", gen_expr_code(e)),
+                    start_with_blank_line = i == 0
+                ):
                     output_stmts(code, if_stmts)
             if stmt.else_stmts is not None:
-                with code.new_blk("else"):
+                with code.new_blk("else", start_with_blank_line = False):
                     output_stmts(code, stmt.else_stmts)
             continue
 
