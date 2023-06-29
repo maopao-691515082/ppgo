@@ -376,8 +376,14 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
 
     if expr.op in ppgoc_token.BINOCULAR_OP_SYM_SET:
         ea, eb = expr.arg
-        if ea.tp.is_str_type and eb.tp.is_str_type and expr.op in ("==", "!=", "<", ">", "<=", ">="):
-            return "(%s).Cmp(%s) %s 0" % (gen_expr_code(ea, pos_info), gen_expr_code(eb, pos_info), expr.op)
+        if ea.tp.is_str_type and eb.tp.is_str_type:
+            if expr.op == "+":
+                return "(%s).Concat(%s)" % (gen_expr_code(ea, pos_info), gen_expr_code(eb, pos_info))
+            if expr.op in ("==", "!=", "<", ">", "<=", ">="):
+                return (
+                    "(%s).Cmp(%s) %s 0" %
+                    (gen_expr_code(ea, pos_info), gen_expr_code(eb, pos_info), expr.op)
+                )
         return "(%s) %s (%s)" % (gen_expr_code(ea, pos_info), expr.op, gen_expr_code(eb, pos_info))
 
     if expr.op == "str[]":

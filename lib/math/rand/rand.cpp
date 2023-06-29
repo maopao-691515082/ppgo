@@ -10,7 +10,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr func_rand(::std::tuple<::ppgo::tp_float> &ret)
 {
-    ::std::get<0>(ret) = ::lom::Rand();
+    ::std::get<0>(ret) = ::lom::TLSRandGenerator()->Rand01<::ppgo::tp_float>();
     return nullptr;
 }
 

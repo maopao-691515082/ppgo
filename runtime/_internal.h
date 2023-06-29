@@ -32,7 +32,7 @@
 #endif
 
 static_assert(CHAR_BIT == 8, "error: ppgo needs 8-bit `char`");
-static_assert(static_cast<char8_t>('\xFF') == 0xFF, "error: ppgo needs unsigned `char8_t`");
+static_assert(std::is_unsigned_v<char8_t>, "error: ppgo needs unsigned `char8_t`");
 static_assert(
     sizeof(short) == 2 && sizeof(int) == 4 && sizeof(long) == 8 && sizeof(long long) == 8,
     "error: ppgo needs 16-bit `short`, 32-bit `int` and 64-bit `long` & `long long`");

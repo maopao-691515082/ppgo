@@ -9,7 +9,7 @@ namespace PPGO_THIS_MOD
 {
 
 #define CHECK_BASE() do {                                               \
-    if (base < 0 || base == 1 || base > 36) {                           \
+    if (!(base == 0 || (base >= 2 && base <= 36))) {                    \
         return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(  \
             ::ppgo::tp_string("invalid base")));                        \
     }                                                                   \
@@ -46,7 +46,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr func_parse_float(::std::tuple<::ppgo::tp_float> &ret, ::ppgo::tp_string s)
 {
-    PARSE_NUM(strtod(p, const_cast<char **>(&end_ptr)));
+    PARSE_NUM(strtold(p, const_cast<char **>(&end_ptr)));
 }
 
 }

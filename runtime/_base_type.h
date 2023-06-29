@@ -72,6 +72,11 @@ public:
         return tp_string(s_.Hex(upper_case));
     }
 
+    tp_string Concat(const tp_string &s) const
+    {
+        return tp_string(s_.Concat(s.s_));
+    }
+
     static inline
         __attribute__((always_inline))
         __attribute__((format(gnu_printf, 1, 2)))

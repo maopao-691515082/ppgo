@@ -1,3 +1,23 @@
-public func println(a any);
+public func print_to_std(a any, is_println, to_std_err bool);
+
+public func println(a any)
+{
+    print_to_std(a, true, false);
+}
+
+public func print(a any)
+{
+    print_to_std(a, false, false);
+}
+
+public func err_println(a any)
+{
+    print_to_std(a, true, true);
+}
+
+public func err_print(a any)
+{
+    print_to_std(a, false, true);
+}
 
 public func assert(cond bool);
