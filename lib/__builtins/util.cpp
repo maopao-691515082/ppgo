@@ -28,7 +28,12 @@ namespace PPGO_THIS_MOD
     };
 
     auto s = ::ppgo::Any::ToStr(a);
-    return write_to_stdout(s.Data(), s.Len()) ?: (is_println ? write_to_stdout("\n", 1) : nullptr);
+    auto exc = write_to_stdout(s.Data(), s.Len());
+    if (!exc && is_println)
+    {
+        exc = write_to_stdout("\n", 1);
+    }
+    return exc;
 }
 
 ::ppgo::Exc::Ptr func_assert(::std::tuple<> &ret, ::ppgo::tp_bool cond)

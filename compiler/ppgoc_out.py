@@ -980,7 +980,8 @@ def output_prog_cpp():
 
             with code.new_blk("Exc::Ptr main()"):
                 code += "::std::tuple<> ret;"
-                code += "return ::ppgo::%s::init() ?: ::ppgo::%s::func_main(ret);" % (main_mnc, main_mnc)
+                code += "auto exc = ::ppgo::%s::init(); if (exc) { return exc; }" % main_mnc
+                code += "return ::ppgo::%s::func_main(ret);" % main_mnc
 
 def output_native_src():
     hfns = []
