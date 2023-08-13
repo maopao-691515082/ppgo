@@ -29,8 +29,7 @@ template <typename K, typename V>
     {
         return nullptr;
     }
-    return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(
-        ::ppgo::tp_string("map.get: no such key")));
+    return ::ppgo::Exc::Sprintf("map.get: no such key");
 }
 
 template <typename K, typename V>
@@ -40,8 +39,7 @@ template <typename K, typename V>
     {
         return nullptr;
     }
-    return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(
-        ::ppgo::tp_string("map.pop: no such key")));
+    return ::ppgo::Exc::Sprintf("map.pop: no such key");
 }
 
 }

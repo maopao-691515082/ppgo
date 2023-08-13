@@ -8,6 +8,6 @@ int main(int argc, char *argv[])
     {
         auto ftb = exc->FormatWithTB();
         fprintf(stderr, "%s\n", ftb.Data());
-        exit(2);
+        _exit(2);
     }
 }

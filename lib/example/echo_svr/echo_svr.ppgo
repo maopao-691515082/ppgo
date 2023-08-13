@@ -1,0 +1,54 @@
+import (
+    "fiber";
+)
+
+class ClientMain
+{
+    conn fiber.TCPConn;
+
+    func init(conn fiber.TCPConn)
+    {
+        this.conn = conn;
+    }
+
+    public func run()
+    {
+        var buf []byte;
+        buf.resize(1024);
+        while (true)
+        {
+            var n = this.conn.read(buf, 0);
+            if(n == 0)
+            {
+                return;
+            }
+            this.conn.write_timeout(buf, 0, n, 1000);
+        }
+    }
+}
+
+class EchoSvrMain
+{
+    public func run()
+    {
+        var listener = fiber.TCPListener(9999);
+        println("server start");
+        while (true)
+        {
+            var conn, exc, tb = listener.accept();
+            if (exc != nil)
+            {
+                println("accept failed: [%s] [%s]".(exc, tb));
+                continue;
+            }
+            fiber.new(ClientMain(conn));
+        }
+    }
+}
+
+public func main()
+{
+    fiber.init_env();
+    fiber.new(EchoSvrMain());
+    fiber.run();
+}

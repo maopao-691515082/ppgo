@@ -1,0 +1,10 @@
+public func init_env();
+
+public func run();
+
+public interface Fiber
+{
+    public run();
+}
+
+public func new(f Fiber);

@@ -516,7 +516,7 @@ class Parser:
                             e = Expr(".", (oe, a), a.tp)
                         else:
                             assert m is not None
-                            if m.cls.mod is not self.mod and not ppgoc_mod.is_public(m):
+                            if m.mod is not self.mod and not ppgoc_mod.is_public(m):
                                 t.syntax_err("无法使用'%s'的方法'%s'：没有权限" % (oe.tp, m))
                             el = self.parse_exprs_of_calling(vars_stk, m.arg_defs)
                             tps = [tp for _, tp in m.ret_defs.itervalues()]

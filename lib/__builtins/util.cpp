@@ -18,8 +18,7 @@ namespace PPGO_THIS_MOD
             ssize_t n = ::write(to_std_err ? 2 : 1, p, static_cast<size_t>(sz));
             if (n == -1)
             {
-                return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(
-                    ::ppgo::tp_string::Sprintf("IO error, errno [%d]", errno)));
+                return ::ppgo::Exc::Sprintf("IO error, errno [%d]", errno);
             }
             ::ppgo::Assert(n <= sz);
             sz -= n;

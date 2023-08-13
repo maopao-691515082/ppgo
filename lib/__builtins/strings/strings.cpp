@@ -8,26 +8,25 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-#define CHECK_BASE() do {                                               \
-    if (!(base == 0 || (base >= 2 && base <= 36))) {                    \
-        return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(  \
-            ::ppgo::tp_string("invalid base")));                        \
-    }                                                                   \
+#define CHECK_BASE() do {                               \
+    if (!(base == 0 || (base >= 2 && base <= 36))) {    \
+        return ::ppgo::Exc::Sprintf("invalid base");    \
+    }                                                   \
 } while (false)
 
-#define PARSE_NUM(_e) do {                                                                              \
-    auto p = s.Data();                                                                                  \
-    auto len = s.Len();                                                                                 \
-    if (len > 0 && !isspace(*p)) {                                                                      \
-        const char *end_ptr;                                                                            \
-        errno = 0;                                                                                      \
-        auto n = (_e);                                                                                  \
-        if (end_ptr == p + len && errno == 0) {                                                         \
-            ::std::get<0>(ret) = n;                                                                     \
-            return nullptr;                                                                             \
-        }                                                                                               \
-    }                                                                                                   \
-    return ::ppgo::Exc::New(::ppgo::base_type_boxing::StrObj::New(::ppgo::tp_string("parse failed")));  \
+#define PARSE_NUM(_e) do {                          \
+    auto p = s.Data();                              \
+    auto len = s.Len();                             \
+    if (len > 0 && !isspace(*p)) {                  \
+        const char *end_ptr;                        \
+        errno = 0;                                  \
+        auto n = (_e);                              \
+        if (end_ptr == p + len && errno == 0) {     \
+            ::std::get<0>(ret) = n;                 \
+            return nullptr;                         \
+        }                                           \
+    }                                               \
+    return ::ppgo::Exc::Sprintf("parse failed");    \
 } while (false)
 
 ::ppgo::Exc::Ptr func_parse_int_with_base(

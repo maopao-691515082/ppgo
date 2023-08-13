@@ -1,0 +1,19 @@
+public class TCPConn
+{
+    c uptr;
+
+    public func init(ipv4 string, port int, timeout_ms int);
+    public func deinit();
+
+    public func read_timeout(b []byte, start int, timeout_ms int) int;
+    public func read(b []byte, start int) int
+    {
+        return this.read_timeout(b, start, -1);
+    }
+
+    public func write_timeout(b []byte, start int, len int, timeout_ms int);
+    public func write(b []byte, start int, len int)
+    {
+        this.write_timeout(b, start, len, -1);
+    }
+}

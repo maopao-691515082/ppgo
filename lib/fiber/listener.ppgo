@@ -1,0 +1,9 @@
+public class TCPListener
+{
+    l uptr;
+
+    public func init(port int);
+    public func deinit();
+
+    public func accept() TCPConn;
+}

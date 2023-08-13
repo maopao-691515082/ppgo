@@ -23,15 +23,13 @@ typedef unsigned long   tp_u64;
 typedef float   tp_f32;
 typedef double  tp_f64;
 
+typedef void *tp_uptr;
+
 class tp_string final
 {
     ::lom::Str s_;
 
     tp_string(std::nullptr_t) = delete;
-
-    tp_string(::lom::Str &&s) : s_(std::move(s))
-    {
-    }
 
 public:
 
@@ -45,6 +43,19 @@ public:
 
     tp_string(const char *s) : tp_string(s, strlen(s))
     {
+    }
+
+    tp_string(const ::lom::Str &s) : s_(s)
+    {
+    }
+
+    tp_string(::lom::Str &&s) : s_(std::move(s))
+    {
+    }
+
+    const ::lom::Str &RawStr() const
+    {
+        return s_;
     }
 
     const char *Data() const
@@ -110,6 +121,8 @@ DEF_PPGO_BASE_TYPE_NAME_FUNCS(i64)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(u64)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(f32)
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(f64)
+
+DEF_PPGO_BASE_TYPE_NAME_FUNCS(uptr)
 
 DEF_PPGO_BASE_TYPE_NAME_FUNCS(string)
 
@@ -213,6 +226,13 @@ class Obj final: public virtual Any
         snprintf(
             buf, sizeof(buf),
             "%.*Lg", std::numeric_limits<long double>::max_digits10, static_cast<long double>(*p));
+        return buf;
+    }
+
+    static tp_string ToStr(const tp_uptr *p)
+    {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "<@%p>", *p);
         return buf;
     }
 

@@ -34,7 +34,7 @@ _SYM_SET = (
 
 _RESERVED_WORD_SET = set(
     ["import", "public", "final", "class", "interface", "func", "var", "auto",
-     "bool", "byte", "int", "uint", "float", "string", "any",
+     "bool", "byte", "int", "uint", "float", "string", "any", "uptr",
      "nil", "true", "false", "this",
      "for", "while", "if", "else", "return", "break", "continue", "with",
      "_"] +
