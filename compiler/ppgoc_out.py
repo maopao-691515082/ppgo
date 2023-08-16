@@ -607,8 +607,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
     if expr.op == "call_optional_method":
         oe, method_name, el = expr.arg
         return (
-            "::ppgo::util::OptionalMethod::%s(%s, %s)" %
-            (method_name, gen_expr_code(oe, pos_info), ", ".join([gen_expr_code(e, pos_info) for e in el])))
+            "::ppgo::util::optional_type_method::%s(%s)" %
+            (method_name, ", ".join([gen_expr_code(e, pos_info) for e in ([oe] + el)])))
 
     if expr.op == "make_empty_optional":
         tp = expr.arg

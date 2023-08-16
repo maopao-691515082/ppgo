@@ -2,10 +2,29 @@
 一些语法和内建库的测试
 */
 
+class A
+{
+}
+
+func f(a int, /, b int, c int, d A)
+{
+    if (!b.valid())
+    {
+        b.set(10);
+    }
+    if (!c.valid())
+    {
+        c.set(100);
+    }
+    if (!d.valid())
+    {
+        d.set(A());
+    }
+    println("%s %s %s %s".(a, b.get(), c.get(), d.get()));
+}
+
 public func main()
 {
-    println("123".parse_int());
-    println("0x123".parse_int());
-    println("123".parse_int(base = 16));
-    println("0x123".parse_int(base = 16));
+    f(1);
+    f(1, d = nil, c = 13);
 }
