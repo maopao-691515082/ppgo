@@ -12,6 +12,9 @@ class Type:
         self.name = name
         self.mn = mn
 
+        self.optional_arg_name = None
+        self.optional_arg_tp = None
+
         self.vec_elem_tp = None
         self.map_kv_tp = None
         self.set_elem_tp = None
@@ -23,6 +26,7 @@ class Type:
         self._set_is_XXX()
 
     def _set_is_XXX(self):
+        self.is_optional = self.optional_arg_tp is not None
         self.is_vec = self.vec_elem_tp is not None
         self.is_map = self.map_kv_tp is not None
         self.is_set = self.set_elem_tp is not None
@@ -47,6 +51,8 @@ class Type:
         self.is_base_type = self.t.is_reserved and self.t.value in BASE_TYPES
 
     def __repr__(self):
+        if self.optional_arg_tp is not None:
+            return "optional<%s>" % self.optional_arg_tp
         if self.vec_elem_tp is not None:
             return "[]%s" % self.vec_elem_tp
         if self.map_kv_tp is not None:
@@ -83,6 +89,10 @@ class Type:
         self._freeze()
 
     def __eq__(self, other):
+        if self.is_optional or other.is_optional:
+            return (
+                self.is_optional and other.is_optional and
+                self.optional_arg_tp == other.optional_arg_tp)
         if self.is_vec or other.is_vec:
             return self.is_vec and other.is_vec and self.vec_elem_tp == other.vec_elem_tp
         if self.is_map or other.is_map:
@@ -119,6 +129,9 @@ class Type:
             self._set_is_checked()
 
     def _check(self, mod):
+        if self.is_optional:
+            self.optional_arg_tp.check(mod)
+            return
         if self.is_vec:
             self.vec_elem_tp.check(mod)
             return
@@ -175,8 +188,8 @@ class Type:
             #完全一样
             return True
         if self.is_any:
-            #函数类型之外的其他都可以转any
-            return not tp.is_func
+            #函数和可选参数类型之外的其他都可以转any
+            return not (tp.is_optional or tp.is_func)
         if self.is_obj_type:
             if tp.is_nil:
                 #允许nil直接赋值给任何接口或对象类型
@@ -208,8 +221,8 @@ class Type:
         assert not self.can_force_convert_from(tp)
 
         if tp.is_any:
-            #any可以断言至任何下层类型
-            return not self.is_func
+            #any可以断言至任何支持的下层类型
+            return not (tp.is_optional or self.is_func)
 
         #tp不是any，则必须是接口到其他接口或类的断言
         if tp.is_coi_type:
@@ -253,6 +266,15 @@ del tp
 STR_TYPE = STRING_TYPE
 WITHABLE_TYPE = Type(ppgoc_token.make_fake_token_name("Withable"), "Withable", "__builtins")
 WITHABLE_TYPE._set_is_checked()
+
+def make_optional_type(name, tp):
+    t = ppgoc_token.make_fake_token_reserved("optional<>")
+    t.set_pos(tp.t)
+    optional_tp = Type(t, t.value)
+    optional_tp.optional_arg_name = name
+    optional_tp.optional_arg_tp = tp
+    optional_tp._set_is_XXX()
+    return optional_tp
 
 def parse_tp(tl, dep_mns, allow_func = False):
     t = tl.pop()

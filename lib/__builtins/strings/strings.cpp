@@ -29,16 +29,18 @@ namespace PPGO_THIS_MOD
     return ::ppgo::Exc::Sprintf("parse failed");    \
 } while (false)
 
-::ppgo::Exc::Ptr func_parse_int_with_base(
-    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_string s, ::ppgo::tp_int base)
+::ppgo::Exc::Ptr func_parse_int(
+    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_string s, std::optional<::ppgo::tp_int> opt_base)
 {
+    ::ppgo::tp_int base = opt_base.value_or(0);
     CHECK_BASE();
     PARSE_NUM(strtoll(p, const_cast<char **>(&end_ptr), base));
 }
 
 ::ppgo::Exc::Ptr func_parse_uint_with_base(
-    ::std::tuple<::ppgo::tp_uint> &ret, ::ppgo::tp_string s, ::ppgo::tp_int base)
+    ::std::tuple<::ppgo::tp_uint> &ret, ::ppgo::tp_string s, std::optional<::ppgo::tp_int> opt_base)
 {
+    ::ppgo::tp_int base = opt_base.value_or(0);
     CHECK_BASE();
     PARSE_NUM(strtoull(p, const_cast<char **>(&end_ptr), base));
 }

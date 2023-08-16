@@ -91,7 +91,7 @@ class _Token:
                 return self.token.type == "word" and self.token.value in _RESERVED_WORD_SET
             def __call__(self, word):
                 assert word in _RESERVED_WORD_SET, str(word)
-                return self and self.token.value == word
+                return bool(self) and self.token.value == word
         self.is_reserved = IsReserved(self)
         self.is_name = self.type == "word" and self.value not in _RESERVED_WORD_SET
 
@@ -109,11 +109,12 @@ class _Token:
             ppgoc_util.raise_bug()
         del self.__dict__[name]
 
-    def copy_on_pos(self, t):
-        return _Token(self.type, self.value, t.src_file, t.line_no, t.pos)
-
-    def copy(self):
-        return self.copy_on_pos(self)
+    def set_pos(self, t):
+        self._unfreeze()
+        self.src_file = t.src_file
+        self.line_no = t.line_no
+        self.pos = t.pos
+        self._freeze()
 
     def syntax_err(self, msg = ""):
         ppgoc_util.exit("%s %s" % (self.pos_desc(), msg))

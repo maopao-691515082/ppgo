@@ -414,7 +414,23 @@ class Parser:
                     t, name = self.tl.pop_name()
                     oe = parse_stk.pop_expr()
                     e = None
-                    if oe.tp.is_str_type:
+                    if oe.tp.is_optional:
+                        #optional method
+                        arg_defs = ppgoc_util.OrderedDict()
+                        if name == "valid":
+                            ret_tp = ppgoc_type.BOOL_TYPE
+                        elif name == "get":
+                            ret_tp = oe.tp.optional_arg_tp
+                        elif name == "set":
+                            arg_defs["value"] = None, oe.tp.optional_arg_tp
+                            ret_tp = ppgoc_type.make_multi([])
+                        elif name == "clear":
+                            ret_tp = ppgoc_type.make_multi([])
+                        else:
+                            t.syntax_err("可选参数类型没有方法'%s'" % name)
+                        el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                        e = Expr("call_optional_method", (oe, name, el), ret_tp)
+                    elif oe.tp.is_str_type:
                         #str method
                         func = ppgoc_mod.mods[ppgoc_util.MN_BUILTINS + "/strings"].get_func(name)
                         if func is None or not ppgoc_mod.is_public(func):
@@ -461,9 +477,7 @@ class Parser:
                             arg_defs["es"] = None, oe.tp
                             ret_tp = oe.tp
                         elif name == "pop":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            ret_tp = oe.tp.vec_elem_tp
-                        elif name == "pop_last":
+                            arg_defs["idx"] = None, ppgoc_type.make_optional_type("idx", ppgoc_type.INT_TYPE)
                             ret_tp = oe.tp.vec_elem_tp
                         else:
                             t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
@@ -607,26 +621,69 @@ class Parser:
         return self.parse_exprs_of_calling_ex(vars_stk, [tp for _, tp in arg_defs.itervalues()])
 
     def parse_exprs_of_calling_ex(self, vars_stk, tps):
-        tps = tps[:: -1]
+        pos_arg_tps = []
+        opt_arg_tps = ppgoc_util.OrderedDict()
+        for tp in tps:
+            if tp.is_optional:
+                assert tp.optional_arg_name not in opt_arg_tps
+                opt_arg_tps[tp.optional_arg_name] = tp
+            else:
+                assert not opt_arg_tps
+                pos_arg_tps.append(tp)
+
+        #pos args
+        pos_arg_tps = pos_arg_tps[:: -1]
         t = self.tl.peek()
-        el = []
+        pos_arg_el = []
         while True:
             if self.tl.peek().is_sym(")"):
-                self.tl.pop_sym(")")
-                if tps:
+                if pos_arg_tps:
                     t.syntax_err("参数数量错误")
-                return el
+                break
 
-            if not tps:
-                t.syntax_err("参数数量错误")
+            if not pos_arg_tps:
+                break
 
-            el.append(self.parse(vars_stk, tps.pop()))
+            pos_arg_el.append(self.parse(vars_stk, pos_arg_tps.pop()))
 
             t = self.tl.peek()
             if not (t.is_sym and t.value in (")", ",")):
                 t.syntax_err("需要','或')'")
             if t.value == ",":
                 self.tl.pop_sym()
+
+        #opt args
+        opt_arg_el = ppgoc_util.OrderedDict()
+        for name, tp in opt_arg_tps.iteritems():
+            opt_arg_el[name] = Expr("make_empty_optional", tp, tp)
+        passed_opt_arg_names = set()
+        while True:
+            if self.tl.peek().is_sym(")"):
+                break
+
+            t, name = self.tl.pop_name()
+            self.tl.pop_sym("=")
+            if name not in opt_arg_tps:
+                t.syntax_err("未知可选参数")
+            tp = opt_arg_tps[name]
+            if name in passed_opt_arg_names:
+                t.syntax_err("可选参数重复指定")
+            passed_opt_arg_names.add(name)
+            e = self.parse(vars_stk, [tp, tp.optional_arg_tp])
+            if e.tp != tp:
+                assert e.tp == tp.optional_arg_tp
+                e = Expr("make_optional", e, tp)
+            opt_arg_el[name] = e
+
+            t = self.tl.peek()
+            if not (t.is_sym and t.value in (")", ",")):
+                t.syntax_err("需要','或')'")
+            if t.value == ",":
+                self.tl.pop_sym()
+
+        self.tl.pop_sym(")")
+
+        return pos_arg_el + list(opt_arg_el.itervalues())
 
     def parse_str_format(self, vars_stk, fmt_t):
         assert fmt_t.type == "literal_str"

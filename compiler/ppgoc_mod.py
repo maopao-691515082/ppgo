@@ -38,24 +38,34 @@ def parse_decrs(tl):
 def parse_aor_defs(tl, dep_mns, arg_defs = None):
     aor_defs = ppgoc_util.OrderedDict()
     batch_type_args = ppgoc_util.OrderedDict()
+    parsing_opt_arg = False
     while True:
         if tl.peek().is_sym(")"):
             break
 
-        t, name = tl.pop_name()
-        if (arg_defs is not None and name in arg_defs) or name in aor_defs or name in batch_type_args:
-            t.syntax_err("参数名重定义")
+        if tl.peek().is_sym("/"):
+            t = tl.pop_sym("/")
+            if arg_defs is not None:
+                t.syntax_err()
+            if batch_type_args:
+                t.syntax_err("同类型的多参数定义不可越过可选参数分隔符'/'")
+            parsing_opt_arg = True
 
-        batch_type_args[name] = t
+        else:
+            t, name = tl.pop_name()
+            if (arg_defs is not None and name in arg_defs) or name in aor_defs or name in batch_type_args:
+                t.syntax_err("参数名重定义")
 
-        if tl.peek().is_sym(","):
-            tl.pop_sym(",")
-            continue
+            batch_type_args[name] = t
 
-        tp = ppgoc_type.parse_tp(tl, dep_mns, allow_func = arg_defs is None)
-        for name, t in batch_type_args.iteritems():
-            aor_defs[name] = t, tp
-        batch_type_args = ppgoc_util.OrderedDict()
+            if tl.peek().is_sym(","):
+                tl.pop_sym(",")
+                continue
+
+            tp = ppgoc_type.parse_tp(tl, dep_mns, allow_func = arg_defs is None)
+            for name, t in batch_type_args.iteritems():
+                aor_defs[name] = t, (ppgoc_type.make_optional_type(name, tp) if parsing_opt_arg else tp)
+            batch_type_args = ppgoc_util.OrderedDict()
 
         t = tl.peek()
         if t.is_sym(","):
@@ -343,6 +353,10 @@ class Closure:
 
         tl.pop_sym("(")
         self.arg_defs = parse_aor_defs(tl, dep_mns)
+        if self.arg_defs:
+            _, tp = self.arg_defs.value_at(len(self.arg_defs) - 1)
+            if tp.is_optional:
+                self.func_t.syntax_err("闭包函数暂不支持可选参数")
         tl.pop_sym(")")
 
         self.ret_defs = ppgoc_util.OrderedDict()

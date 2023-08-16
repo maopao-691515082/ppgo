@@ -4,4 +4,8 @@
 
 public func main()
 {
+    println("123".parse_int());
+    println("0x123".parse_int());
+    println("123".parse_int(base = 16));
+    println("0x123".parse_int(base = 16));
 }

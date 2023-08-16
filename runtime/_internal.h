@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <memory>
 #include <limits>
+#include <optional>
 
 #include <unistd.h>
 #include <sys/errno.h>

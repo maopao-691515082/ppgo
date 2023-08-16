@@ -92,6 +92,8 @@ def gen_ns_code(mod):
     return "namespace %s /* %s */" % (gen_mnc(mod), mod.name)
 
 def gen_tp_code(tp):
+    if tp.is_optional:
+        return "::std::optional<%s >" % gen_tp_code(tp.optional_arg_tp)
     if tp.is_any:
         return "::ppgo::Any::Ptr"
     if tp.is_base_type:
@@ -601,6 +603,21 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         ret_var_name_stk.pop()
         cs.append("return nullptr;})")
         return "".join(cs)
+
+    if expr.op == "call_optional_method":
+        oe, method_name, el = expr.arg
+        return (
+            "::ppgo::util::OptionalMethod::%s(%s, %s)" %
+            (method_name, gen_expr_code(oe, pos_info), ", ".join([gen_expr_code(e, pos_info) for e in el])))
+
+    if expr.op == "make_empty_optional":
+        tp = expr.arg
+        return "%s()" % gen_tp_code(tp)
+
+    if expr.op == "make_optional":
+        e = expr.arg
+        tp = expr.tp
+        return "%s(%s)" % (gen_tp_code(tp), gen_expr_code(e, pos_info))
 
     print expr.op
     ppgoc_util.raise_bug()

@@ -91,25 +91,16 @@ template <typename E>
 }
 
 template <typename E>
-::ppgo::Exc::Ptr func_pop(::std::tuple<E> &ret, const ::ppgo::Vec<E> &v, ::ppgo::tp_int idx)
+::ppgo::Exc::Ptr func_pop(
+    ::std::tuple<E> &ret, const ::ppgo::Vec<E> &v, std::optional<::ppgo::tp_int> opt_idx)
 {
+    ::ppgo::tp_int idx = opt_idx.value_or(v.Len() - 1);
     if (idx < 0 || idx >= v.Len())
     {
         return ::ppgo::Exc::Sprintf("vector.pop: index out of range");
     }
     ::std::get<0>(ret) = v.Pop(idx);
     return nullptr;
-}
-
-template <typename E>
-::ppgo::Exc::Ptr func_pop_last(::std::tuple<E> &ret, const ::ppgo::Vec<E> &v)
-{
-    auto len = v.Len();
-    if (len == 0)
-    {
-        return ::ppgo::Exc::Sprintf("vector.pop_last: empty");
-    }
-    return func_pop(ret, v, len - 1);
 }
 
 }
