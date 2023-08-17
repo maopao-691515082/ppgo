@@ -34,6 +34,12 @@ T get(const std::optional<T> &opt)
 }
 
 template <typename T>
+T get_or(const std::optional<T> &opt, const T &default_value)
+{
+    return opt.value_or(default_value);
+}
+
+template <typename T>
 void set(std::optional<T> &opt, const T &value)
 {
     opt = value;

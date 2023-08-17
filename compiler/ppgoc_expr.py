@@ -421,6 +421,9 @@ class Parser:
                             ret_tp = ppgoc_type.BOOL_TYPE
                         elif name == "get":
                             ret_tp = oe.tp.optional_arg_tp
+                        elif name == "get_or":
+                            arg_defs["value"] = None, oe.tp.optional_arg_tp
+                            ret_tp = oe.tp.optional_arg_tp
                         elif name == "set":
                             arg_defs["value"] = None, oe.tp.optional_arg_tp
                             ret_tp = ppgoc_type.make_multi([])
