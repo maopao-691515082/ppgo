@@ -50,6 +50,13 @@ namespace PPGO_THIS_MOD
     PARSE_NUM(strtold(p, const_cast<char **>(&end_ptr)));
 }
 
+::ppgo::Exc::Ptr func_contains_byte(
+    ::std::tuple<::ppgo::tp_bool> &ret, ::ppgo::tp_string s, ::ppgo::tp_byte b)
+{
+    std::get<0>(ret) = s.RawStr().ContainsByte(b);
+    return nullptr;
+}
+
 }
 
 }

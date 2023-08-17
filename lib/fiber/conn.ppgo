@@ -2,18 +2,26 @@ public class TCPConn
 {
     c uptr;
 
-    public func init(ipv4 string, port int, timeout_ms int);
-    public func deinit();
-
-    public func read_timeout(b []byte, start int, timeout_ms int) int;
-    public func read(b []byte, start int) int
+    func init_impl(ipv4 string, port u16, timeout_ms int);
+    public func init(ipv4 string, port int, /, timeout float)
     {
-        return this.read_timeout(b, start, -1);
+        check_ip_str(ipv4);
+        this.init_impl(ipv4, check_ipv4_port(port), opt_timeout_to_ms(opt_timeout = timeout));
     }
 
-    public func write_timeout(b []byte, start int, len int, timeout_ms int);
-    public func write(b []byte, start int, len int)
+    public func deinit();
+
+    func read_impl(b []byte, start int, len int, timeout_ms int) int;
+    public func read(b []byte, /, start int, timeout float) int
     {
-        this.write_timeout(b, start, len, -1);
+        var s, l = check_buf_range(b, start = start);
+        return this.read_impl(b, s, l, opt_timeout_to_ms(opt_timeout = timeout));
+    }
+
+    func write_impl(b []byte, start int, len int, timeout_ms int);
+    public func write(b []byte, /, start int, len int, timeout float)
+    {
+        var s, l = check_buf_range(b, start = start, len = len, allow_zero_len = true);
+        this.write_impl(b, s, l, opt_timeout_to_ms(opt_timeout = timeout));
     }
 }

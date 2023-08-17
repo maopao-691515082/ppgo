@@ -1,10 +1,8 @@
-public func init_env();
-
-public func run();
-
 public interface Fiber
 {
     public run();
 }
+
+public func run(main_fiber Fiber);
 
 public func new(f Fiber);

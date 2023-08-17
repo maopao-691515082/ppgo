@@ -8,17 +8,12 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr cls_TCPListener::method_init(::std::tuple<> &ret, ::ppgo::tp_int port)
+::ppgo::Exc::Ptr cls_TCPListener::method_init_impl(::std::tuple<> &ret, ::ppgo::tp_u16 port)
 {
-    if (port < 0 || port > 65535)
-    {
-        return ::ppgo::Exc::Sprintf("invalid port number [%lld]", static_cast<long long>(port));
-    }
-
     auto listener = new ::lom::fiber::Listener;
     attr_l = reinterpret_cast<::ppgo::tp_uptr>(listener);
 
-    *listener = ::lom::fiber::ListenTCP(static_cast<uint16_t>(port));
+    *listener = ::lom::fiber::ListenTCP(port);
     if (!listener->Valid())
     {
         return ::ppgo::Exc::Sprintf(
@@ -39,11 +34,12 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr cls_TCPListener::method_accept(::std::tuple<std::shared_ptr<cls_TCPConn>> &ret)
+::ppgo::Exc::Ptr cls_TCPListener::method_accept_impl(
+    ::std::tuple<std::shared_ptr<cls_TCPConn>> &ret, ::ppgo::tp_int timeout)
 {
     auto listener = reinterpret_cast<::lom::fiber::Listener *>(attr_l);
 
-    auto conn = listener->Accept();
+    auto conn = listener->Accept(timeout);
     if (!conn.Valid())
     {
         return ::ppgo::Exc::Sprintf("failed to accept: %s", ::lom::Err().CStr());

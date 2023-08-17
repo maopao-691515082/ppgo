@@ -1,0 +1,45 @@
+func check_ip_str(ip string)
+{
+    if (ip.contains_byte('\0'))
+    {
+        throw("invalid ip string");
+    }
+}
+
+func check_ipv4_port(port int) u16
+{
+    if (port >= 0 && port <= 65535)
+    {
+        return port.<u16>;
+    }
+    throw("invalid port");
+}
+
+func opt_timeout_to_ms(/, opt_timeout float) int
+{
+    if (!opt_timeout.valid())
+    {
+        return -1;
+    }
+
+    var timeout = opt_timeout.get();
+    if (timeout >= 0.0 && timeout <= 1e18)
+    {
+        return (timeout * 1e3 + 0.01).<int>;
+    }
+
+    throw("invalid timeout");
+}
+
+func check_buf_range(buf []byte, /, start, len int, allow_zero_len bool) (s, l int)
+{
+    var bl = buf.len();
+
+    s = start.get_or(0);
+    l = len.get_or(bl - s);
+    if (s >= 0 && s < bl && l >= (0 if allow_zero_len.get_or(false) else 1) && l <= bl - s)
+    {
+        return;
+    }
+    throw("invalid buf range");
+}

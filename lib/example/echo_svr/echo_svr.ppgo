@@ -17,12 +17,12 @@ class ClientMain
         buf.resize(1024);
         while (true)
         {
-            var n = this.conn.read(buf, 0);
+            var n = this.conn.read(buf);
             if(n == 0)
             {
                 return;
             }
-            this.conn.write_timeout(buf, 0, n, 1000);
+            this.conn.write(buf, len = n, timeout = 1.0);
         }
     }
 }
@@ -48,7 +48,5 @@ class EchoSvrMain
 
 public func main()
 {
-    fiber.init_env();
-    fiber.new(EchoSvrMain());
-    fiber.run();
+    fiber.run(EchoSvrMain());
 }

@@ -8,26 +8,11 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr func_init_env(::std::tuple<> &ret)
-{
-    if (!::lom::fiber::Init())
-    {
-        return ::ppgo::Exc::Sprintf("init fiber env failed: %s", ::lom::Err().CStr());
-    }
-    return nullptr;
-}
-
-::ppgo::Exc::Ptr func_run(::std::tuple<> &ret)
-{
-    ::lom::fiber::Run();
-    return nullptr;
-}
-
-::ppgo::Exc::Ptr func_new(::std::tuple<> &ret, std::shared_ptr<intf_Fiber> f)
+static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
 {
     ::lom::fiber::Create([f] () {
-        ::std::tuple<> r;
-        auto exc = f->method_run(r);
+        ::std::tuple<> ret;
+        auto exc = f->method_run(ret);
         if (exc)
         {
             auto ftb = exc->FormatWithTB();
@@ -35,6 +20,19 @@ namespace PPGO_THIS_MOD
             _exit(2);
         }
     });
+}
+
+::ppgo::Exc::Ptr func_run(::std::tuple<> &ret, std::shared_ptr<intf_Fiber> f)
+{
+    ::lom::fiber::MustInit();
+    new_fiber_impl(f);
+    ::lom::fiber::Run();
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_new(::std::tuple<> &ret, std::shared_ptr<intf_Fiber> f)
+{
+    new_fiber_impl(f);
     return nullptr;
 }
 

@@ -2,8 +2,17 @@ public class TCPListener
 {
     l uptr;
 
-    public func init(port int);
+    func init_impl(port u16);
+    public func init(port int)
+    {
+        this.init_impl(check_ipv4_port(port));
+    }
+
     public func deinit();
 
-    public func accept() TCPConn;
+    func accept_impl(timeout_ms int) TCPConn;
+    public func accept(/, timeout float) TCPConn
+    {
+        return this.accept_impl(opt_timeout_to_ms(opt_timeout = timeout));
+    }
 }
