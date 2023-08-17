@@ -8,21 +8,7 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr cls_TCPListener::method_init_impl(::std::tuple<> &ret, ::ppgo::tp_u16 port)
-{
-    auto listener = new ::lom::fiber::Listener;
-    attr_l = reinterpret_cast<::ppgo::tp_uptr>(listener);
-
-    *listener = ::lom::fiber::ListenTCP(port);
-    if (!listener->Valid())
-    {
-        return ::ppgo::Exc::Sprintf(
-            "failed to listen on port [%lld]: %s", static_cast<long long>(port), ::lom::Err().CStr());
-    }
-    return nullptr;
-}
-
-::ppgo::Exc::Ptr cls_TCPListener::method_deinit(::std::tuple<> &ret)
+::ppgo::Exc::Ptr cls_Listener::method_deinit(::std::tuple<> &ret)
 {
     if (attr_l)
     {
@@ -34,22 +20,41 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr cls_TCPListener::method_accept_impl(
-    ::std::tuple<std::shared_ptr<cls_TCPConn>> &ret, ::ppgo::tp_int timeout)
+::ppgo::Exc::Ptr cls_Listener::method_accept_impl(
+    ::std::tuple<std::shared_ptr<cls_Conn>> &ret, ::ppgo::tp_int timeout)
 {
     auto listener = reinterpret_cast<::lom::fiber::Listener *>(attr_l);
 
-    auto conn = listener->Accept(timeout);
-    if (!conn.Valid())
+    auto lom_conn = listener->Accept(timeout);
+    if (!lom_conn.Valid())
     {
         return ::ppgo::Exc::Sprintf("failed to accept: %s", ::lom::Err().CStr());
     }
 
-    auto tcp_conn = std::make_shared<cls_TCPConn>();
+    auto conn = std::make_shared<cls_Conn>();
     auto c = new ::lom::fiber::Conn;
-    *c = conn;
-    tcp_conn->attr_c = reinterpret_cast<void *>(c);
-    std::get<0>(ret) = tcp_conn;
+    conn->attr_c = reinterpret_cast<::ppgo::tp_uptr>(c);
+    *c = lom_conn;
+
+    std::get<0>(ret) = conn;
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_listen_tcp_impl(
+    ::std::tuple<std::shared_ptr<cls_Listener>> &ret, ::ppgo::tp_u16 port)
+{
+    auto listener = std::make_shared<cls_Listener>();
+    auto l = new ::lom::fiber::Listener;
+    listener->attr_l = reinterpret_cast<::ppgo::tp_uptr>(l);
+
+    *l = ::lom::fiber::ListenTCP(port);
+    if (!l->Valid())
+    {
+        return ::ppgo::Exc::Sprintf(
+            "failed to listen tcp on port [%lld]: %s", static_cast<long long>(port), ::lom::Err().CStr());
+    }
+
+    std::get<0>(ret) = listener;
     return nullptr;
 }
 

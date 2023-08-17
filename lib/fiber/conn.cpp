@@ -8,23 +8,7 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr cls_TCPConn::method_init_impl(
-    ::std::tuple<> &ret, ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port, ::ppgo::tp_int timeout_ms)
-{
-    auto conn = new ::lom::fiber::Conn;
-    attr_c = reinterpret_cast<::ppgo::tp_uptr>(conn);
-
-    *conn = ::lom::fiber::ConnectTCP(ipv4.Data(), port, timeout_ms);
-    if (!conn->Valid())
-    {
-        return ::ppgo::Exc::Sprintf(
-            "connect to [%s:%lld] failed: %s",
-            ipv4.Data(), static_cast<long long>(port), ::lom::Err().CStr());
-    }
-    return nullptr;
-}
-
-::ppgo::Exc::Ptr cls_TCPConn::method_deinit(::std::tuple<> &ret)
+::ppgo::Exc::Ptr cls_Conn::method_deinit(::std::tuple<> &ret)
 {
     if (attr_c)
     {
@@ -36,7 +20,7 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr cls_TCPConn::method_read_impl(
+::ppgo::Exc::Ptr cls_Conn::method_read_impl(
     ::std::tuple<::ppgo::tp_int> &ret,
     ::ppgo::Vec<::ppgo::tp_byte> b, ::ppgo::tp_int start, ::ppgo::tp_int len, ::ppgo::tp_int timeout_ms)
 {
@@ -51,7 +35,7 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr cls_TCPConn::method_write_impl(
+::ppgo::Exc::Ptr cls_Conn::method_write_impl(
     ::std::tuple<> &ret,
     ::ppgo::Vec<::ppgo::tp_byte> b, ::ppgo::tp_int start, ::ppgo::tp_int len, ::ppgo::tp_int timeout_ms)
 {
@@ -60,6 +44,26 @@ namespace PPGO_THIS_MOD
     {
         return ::ppgo::Exc::Sprintf("write failed: %s", ::lom::Err().CStr());
     }
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_connect_tcp_impl(
+    ::std::tuple<std::shared_ptr<cls_Conn>> &ret,
+    ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port, ::ppgo::tp_int timeout_ms)
+{
+    auto conn = std::make_shared<cls_Conn>();
+    auto c = new ::lom::fiber::Conn;
+    conn->attr_c = reinterpret_cast<::ppgo::tp_uptr>(c);
+
+    *c = ::lom::fiber::ConnectTCP(ipv4.Data(), port, timeout_ms);
+    if (!c->Valid())
+    {
+        return ::ppgo::Exc::Sprintf(
+            "connect tcp to [%s:%lld] failed: %s",
+            ipv4.Data(), static_cast<long long>(port), ::lom::Err().CStr());
+    }
+
+    std::get<0>(ret) = conn;
     return nullptr;
 }
 

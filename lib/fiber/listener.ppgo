@@ -1,18 +1,18 @@
-public class TCPListener
+public class Listener
 {
     l uptr;
 
-    func init_impl(port u16);
-    public func init(port int)
-    {
-        this.init_impl(check_ipv4_port(port));
-    }
-
     public func deinit();
 
-    func accept_impl(timeout_ms int) TCPConn;
-    public func accept(/, timeout float) TCPConn
+    func accept_impl(timeout_ms int) Conn;
+    public func accept(/, timeout float) Conn
     {
         return this.accept_impl(opt_timeout_to_ms(opt_timeout = timeout));
     }
+}
+
+func listen_tcp_impl(port u16) Listener;
+public func listen_tcp(port int) Listener
+{
+    return listen_tcp_impl(check_ipv4_port(port));
 }

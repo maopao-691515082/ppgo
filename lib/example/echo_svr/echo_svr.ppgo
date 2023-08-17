@@ -4,9 +4,9 @@ import (
 
 class ClientMain
 {
-    conn fiber.TCPConn;
+    conn fiber.Conn;
 
-    func init(conn fiber.TCPConn)
+    func init(conn fiber.Conn)
     {
         this.conn = conn;
     }
@@ -31,7 +31,7 @@ class EchoSvrMain
 {
     public func run()
     {
-        var listener = fiber.TCPListener(9999);
+        var listener = fiber.listen_tcp(9999);
         println("server start");
         while (true)
         {

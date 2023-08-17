@@ -6,14 +6,22 @@ namespace ppgo
 namespace util
 {
 
-template <typename T>
-std::shared_ptr<T> CopyPtr(const std::shared_ptr<T> &ptr)
+template <
+    typename T,
+    std::enable_if_t<
+        std::is_same_v<T, std::shared_ptr<typename T::element_type>>
+    > * = nullptr
+>
+T CopyPtr(const T &ptr)
 {
     return ptr;
 }
 
-template <typename T>
-T *CopyPtr(T *ptr)
+template <
+    typename T,
+    std::enable_if_t<std::is_pointer_v<T>> * = nullptr
+>
+T CopyPtr(T ptr)
 {
     return ptr;
 }

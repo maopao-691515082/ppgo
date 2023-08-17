@@ -1,13 +1,6 @@
-public class TCPConn
+public class Conn
 {
     c uptr;
-
-    func init_impl(ipv4 string, port u16, timeout_ms int);
-    public func init(ipv4 string, port int, /, timeout float)
-    {
-        check_ip_str(ipv4);
-        this.init_impl(ipv4, check_ipv4_port(port), opt_timeout_to_ms(opt_timeout = timeout));
-    }
 
     public func deinit();
 
@@ -24,4 +17,11 @@ public class TCPConn
         var s, l = check_buf_range(b, start = start, len = len, allow_zero_len = true);
         this.write_impl(b, s, l, opt_timeout_to_ms(opt_timeout = timeout));
     }
+}
+
+func connect_tcp_impl(ipv4 string, port u16, timeout_ms int) Conn;
+public func connect_tcp(ipv4 string, port int, /, timeout float) Conn
+{
+    check_ip_str(ipv4);
+    return connect_tcp_impl(ipv4, check_ipv4_port(port), opt_timeout_to_ms(opt_timeout = timeout));
 }
