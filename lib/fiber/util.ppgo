@@ -23,7 +23,7 @@ func opt_timeout_to_ms(/, opt_timeout float) int
     }
 
     var timeout = opt_timeout.get();
-    if (timeout >= 0.0 && timeout <= 1e18)
+    if (timeout >= 0.0 && timeout <= 1e15)
     {
         return (timeout * 1e3 + 0.01).<int>;
     }
