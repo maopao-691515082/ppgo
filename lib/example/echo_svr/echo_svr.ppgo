@@ -2,27 +2,20 @@ import (
     "fiber";
 )
 
-class ClientMain
+class ClientWorker
 {
-    conn fiber.Conn;
-
-    func init(conn fiber.Conn)
-    {
-        this.conn = conn;
-    }
-
-    public func run()
+    public func run(conn fiber.Conn)
     {
         var buf []byte;
         buf.resize(1024);
         while (true)
         {
-            var n = this.conn.read(buf);
+            var n = conn.read(buf);
             if(n == 0)
             {
                 return;
             }
-            this.conn.write(buf, len = n, timeout = 1.0);
+            conn.write(buf, len = n, timeout = 1.0);
         }
     }
 }
@@ -33,16 +26,7 @@ class EchoSvrMain
     {
         var listener = fiber.listen_tcp(9999);
         println("server start");
-        while (true)
-        {
-            var conn, exc, tb = listener.accept();
-            if (exc != nil)
-            {
-                println("accept failed: [%s] [%s]".(exc, tb));
-                continue;
-            }
-            fiber.new(ClientMain(conn));
-        }
+        listener.serve(ClientWorker(), worker_count = 4);
     }
 }
 

@@ -1,3 +1,8 @@
+interface ClientWorker
+{
+    public run(conn Conn);
+}
+
 public class Listener
 {
     l uptr;
@@ -8,6 +13,18 @@ public class Listener
     public func accept(/, timeout float) Conn
     {
         return this.accept_impl(opt_timeout_to_ms(opt_timeout = timeout));
+    }
+
+    func serve_impl(cw ClientWorker, worker_count uint);
+    public func serve(cw ClientWorker, /, worker_count int)
+    {
+        var wc = worker_count.get_or(0);
+        if (wc < 0)
+        {
+            throw("invalid worker_count");
+        }
+
+        this.serve_impl(cw, wc.<uint>);
     }
 }
 

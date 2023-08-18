@@ -40,6 +40,30 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
+::ppgo::Exc::Ptr cls_Listener::method_serve_impl(
+    ::std::tuple<> &ret, std::shared_ptr<intf_ClientWorker> cw, ::ppgo::tp_uint worker_count)
+{
+    auto listener = reinterpret_cast<::lom::fiber::Listener *>(attr_l);
+
+    listener->Serve(worker_count, [cw] (::lom::fiber::Conn lom_conn) {
+        auto conn = std::make_shared<cls_Conn>();
+        auto c = new ::lom::fiber::Conn;
+        conn->attr_c = reinterpret_cast<::ppgo::tp_uptr>(c);
+        *c = lom_conn;
+
+        std::tuple<> r;
+        auto exc = cw->method_run(r, conn);
+        if (exc)
+        {
+            auto ftb = exc->FormatWithTB();
+            fprintf(stderr, "<Fiber> Uncached Exc: %s\n", ftb.Data());
+            _exit(2);
+        }
+    });
+
+    return nullptr;
+}
+
 ::ppgo::Exc::Ptr func_listen_tcp_impl(
     ::std::tuple<std::shared_ptr<cls_Listener>> &ret, ::ppgo::tp_u16 port)
 {
