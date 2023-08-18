@@ -157,7 +157,7 @@ public:
         return "any";
     }
 
-    static tp_string ToStr(const Ptr &a)
+    static tp_string ToStr(Ptr a)
     {
         if (a)
         {
@@ -168,7 +168,7 @@ public:
         return "<nil>";
     }
 
-    static std::string GetTypeName(const Ptr &a)
+    static std::string GetTypeName(Ptr a)
     {
         return a ? a->R_TypeName() : "<nil>";
     }
@@ -332,18 +332,26 @@ public:
         return std::static_pointer_cast<Any>(v_);
     }
 
-    void Append(const E &e)
+    void Append(E e) const
     {
         v_->v_.emplace_back(e);
     }
 
-    void InsertVec(ssize_t idx, const Vec<E> &es)
+    void InsertVec(ssize_t idx, Vec<E> es) const
     {
         Assert(idx >= 0 && idx <= Len());
-        v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), es.v_->v_.begin(), es.v_->v_.end());
+        if (v_ != es.v_)
+        {
+            v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), es.v_->v_.begin(), es.v_->v_.end());
+            return;
+        }
+
+        //es就是自身，走特殊流程
+        std::vector<E> v(es.v_->v_);
+        v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), v.begin(), v.end());
     }
 
-    void Insert(ssize_t idx, const E &e)
+    void Insert(ssize_t idx, E e) const
     {
         Assert(idx >= 0 && idx <= Len());
         v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), e);
@@ -409,7 +417,7 @@ struct Less
 template <typename T>
 struct Less<std::shared_ptr<T>>
 {
-    bool operator()(const std::shared_ptr<T> &a, const std::shared_ptr<T> &b) const
+    bool operator()(std::shared_ptr<T> a, std::shared_ptr<T> b) const
     {
         std::tuple<tp_int> ret;
         Assert(!a->method_cmp(ret, b));
@@ -500,7 +508,7 @@ public:
 
     public:
 
-        Iter(const Map<K, V> &m) : m_(m.m_), it_(m.m_->m_.begin()), end_(m.m_->m_.end())
+        Iter(Map<K, V> m) : m_(m.m_), it_(m.m_->m_.begin()), end_(m.m_->m_.end())
         {
         }
 
@@ -589,12 +597,12 @@ public:
         return s_->s_.count(e) > 0;
     }
 
-    void Add(const E &e) const
+    void Add(E e) const
     {
         s_->s_.emplace(e);
     }
 
-    void Remove(const E &e) const
+    void Remove(E e) const
     {
         s_->s_.erase(e);
     }
@@ -606,7 +614,7 @@ public:
 
     public:
 
-        Iter(const Set<E> &s) : s_(s.s_), it_(s.s_->s_.begin()), end_(s.s_->s_.end())
+        Iter(Set<E> s) : s_(s.s_), it_(s.s_->s_.begin()), end_(s.s_->s_.end())
         {
         }
 

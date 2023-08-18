@@ -39,3 +39,5 @@ static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
 }
 
 }
+
+#pragma ppgo undef-THIS_MOD

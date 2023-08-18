@@ -9,14 +9,14 @@ namespace PPGO_THIS_MOD
 {
 
 template <typename E>
-::ppgo::Exc::Ptr func_len(::std::tuple<::ppgo::tp_int> &ret, const ::ppgo::Vec<E> &v)
+::ppgo::Exc::Ptr func_len(::std::tuple<::ppgo::tp_int> &ret, ::ppgo::Vec<E> v)
 {
     ::std::get<0>(ret) = v.Len();
     return nullptr;
 }
 
 template <typename E>
-::ppgo::Exc::Ptr func_resize(::std::tuple<::ppgo::Vec<E>> &ret, const ::ppgo::Vec<E> &v, ::ppgo::tp_int sz)
+::ppgo::Exc::Ptr func_resize(::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int sz)
 {
     v.Resize(sz);
     ::std::get<0>(ret) = v;
@@ -24,7 +24,7 @@ template <typename E>
 }
 
 template <typename E>
-::ppgo::Exc::Ptr func_get(::std::tuple<E> &ret, const ::ppgo::Vec<E> &v, ::ppgo::tp_int idx)
+::ppgo::Exc::Ptr func_get(::std::tuple<E> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int idx)
 {
     if (idx < 0 || idx >= v.Len())
     {
@@ -36,7 +36,7 @@ template <typename E>
 
 template <typename E>
 ::ppgo::Exc::Ptr func_set(
-    ::std::tuple<::ppgo::Vec<E>> &ret, const ::ppgo::Vec<E> &v, ::ppgo::tp_int idx, const E &e)
+    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int idx, E e)
 {
     if (idx < 0 || idx >= v.Len())
     {
@@ -48,7 +48,7 @@ template <typename E>
 }
 
 template <typename E>
-::ppgo::Exc::Ptr func_append(::std::tuple<::ppgo::Vec<E>> &ret, const ::ppgo::Vec<E> &v, const E &e)
+::ppgo::Exc::Ptr func_append(::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, E e)
 {
     v.Append(e);
     ::std::get<0>(ret) = v;
@@ -57,7 +57,7 @@ template <typename E>
 
 template <typename E>
 ::ppgo::Exc::Ptr func_extend(
-    ::std::tuple<::ppgo::Vec<E>> &ret, const ::ppgo::Vec<E> &v, const ::ppgo::Vec<E> &es)
+    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::Vec<E> es)
 {
     v.InsertVec(v.Len(), es);
     ::std::get<0>(ret) = v;
@@ -66,7 +66,7 @@ template <typename E>
 
 template <typename E>
 ::ppgo::Exc::Ptr func_insert(
-    ::std::tuple<::ppgo::Vec<E>> &ret, const ::ppgo::Vec<E> &v, ::ppgo::tp_int idx, const E &e)
+    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int idx, E e)
 {
     if (idx < 0 || idx > v.Len())
     {
@@ -79,7 +79,7 @@ template <typename E>
 
 template <typename E>
 ::ppgo::Exc::Ptr func_insert_vec(
-    ::std::tuple<::ppgo::Vec<E>> &ret, const ::ppgo::Vec<E> &v, ::ppgo::tp_int idx, const ::ppgo::Vec<E> &es)
+    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int idx, ::ppgo::Vec<E> es)
 {
     if (idx < 0 || idx > v.Len())
     {
@@ -92,7 +92,7 @@ template <typename E>
 
 template <typename E>
 ::ppgo::Exc::Ptr func_pop(
-    ::std::tuple<E> &ret, const ::ppgo::Vec<E> &v, std::optional<::ppgo::tp_int> opt_idx)
+    ::std::tuple<E> &ret, ::ppgo::Vec<E> v, std::optional<::ppgo::tp_int> opt_idx)
 {
     ::ppgo::tp_int idx = opt_idx.value_or(v.Len() - 1);
     if (idx < 0 || idx >= v.Len())

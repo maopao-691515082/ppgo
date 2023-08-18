@@ -85,3 +85,5 @@ namespace PPGO_THIS_MOD
 }
 
 }
+
+#pragma ppgo undef-THIS_MOD
