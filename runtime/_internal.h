@@ -21,6 +21,9 @@
 #include <memory>
 #include <limits>
 #include <optional>
+#include <chrono>
+#include <thread>
+#include <mutex>
 
 #include <unistd.h>
 #include <sys/errno.h>

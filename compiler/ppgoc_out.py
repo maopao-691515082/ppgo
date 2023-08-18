@@ -962,8 +962,9 @@ def output_prog_cpp():
                                 with code.new_blk("if (exc)", start_with_blank_line = False):
                                     code += "auto ftb = exc->FormatWithTB();"
                                     code += (
-                                        'fprintf(stderr, "Uncached exception in " %s ".deinit: %%s\\n", '
-                                        'ftb.Data());' % c_str_literal(str(cls)))
+                                        '::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf('
+                                        '"Uncached exception in " %s ".deinit: %%s\\n", '
+                                        'ftb.Data()));' % c_str_literal(str(cls)))
                         for m in cls.methods.itervalues():
                             if m.stmts is not None:
                                 with code.new_blk(gen_method_def(m, with_cls_name = True)):

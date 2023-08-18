@@ -16,7 +16,8 @@ static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
         if (exc)
         {
             auto ftb = exc->FormatWithTB();
-            fprintf(stderr, "<Fiber> Uncached Exc: %s\n", ftb.Data());
+            ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
+                "Uncached Exc in fiber main: %s\n", ftb.Data()));
             _exit(2);
         }
     });

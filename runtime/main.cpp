@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
     if (exc)
     {
         auto ftb = exc->FormatWithTB();
-        fprintf(stderr, "%s\n", ftb.Data());
+        ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf("%s\n", ftb.Data()));
         _exit(2);
     }
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "_util.h"
+
 namespace ppgo
 {
 
@@ -29,7 +31,8 @@ public:
         if (exc)
         {
             auto ftb = exc->FormatWithTB();
-            fprintf(stderr, "Uncached exception in with-exit: %s\n", ftb.Data());
+            ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
+                "Uncached exception in with-exit: %s\n", ftb.Data()));
         }
     }
 

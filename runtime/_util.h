@@ -6,6 +6,8 @@ namespace ppgo
 namespace util
 {
 
+void OutputUnexpectedErrMsg(const ::lom::Str &s);
+
 template <
     typename T,
     std::enable_if_t<

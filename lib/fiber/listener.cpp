@@ -56,8 +56,8 @@ namespace PPGO_THIS_MOD
         if (exc)
         {
             auto ftb = exc->FormatWithTB();
-            fprintf(stderr, "<Fiber> Uncached Exc: %s\n", ftb.Data());
-            _exit(2);
+            ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
+                "Uncached Exc in fiber.Listener.ClientWorker.run: %s\n", ftb.Data()));
         }
     });
 
