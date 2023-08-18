@@ -18,12 +18,12 @@ namespace PPGO_THIS_MOD
 {
     if (sec > 0)
     {
-        if (sec > 1e15)
+        if (sec > 1e12)
         {
-            sec = 1e15;
+            sec = 1e12;
         }
-        std::chrono::milliseconds ms{static_cast<uint64_t>(sec * 1e3)};
-        std::this_thread::sleep_for(ms);
+        std::chrono::microseconds us{static_cast<uint64_t>(sec * 1e6)};
+        std::this_thread::sleep_for(us);
     }
     return nullptr;
 }
