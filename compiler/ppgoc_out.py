@@ -697,7 +697,7 @@ def output_stmts(code, stmts):
             ec = gen_expr_code(stmt.expr)
             if stmt.expr.tp.is_multi:
                 tps = stmt.expr.tp.multi_tps
-                assert len(tps) > 1
+                assert len(tps) == 0 or len(tps) > 1
                 if len(stmt.new_vars) == len(tps):
                     code += (
                         "::std::tie(%s) = (%s);" % (
@@ -792,7 +792,7 @@ def output_stmts(code, stmts):
             ec = gen_expr_code(stmt.expr)
             if stmt.expr.tp.is_multi:
                 tps = stmt.expr.tp.multi_tps
-                assert len(tps) > 1
+                assert len(tps) == 0 or len(tps) > 1
                 if len(stmt.lvalues) == len(tps):
                     rv = "ret_%d" % ppgoc_util.new_id()
                     code += "auto %s = (%s);" % (rv, ec)
