@@ -49,7 +49,11 @@ public:
         {
             std::tuple<tp_string> ret;
             auto &s = std::get<0>(ret);
-            Assert(!throwed_->method_str(ret));
+            auto exc = throwed_->method_str(ret);
+            if (exc)
+            {
+                s = "!!!<UNKNOWN EXC IN METHOD `str`>!!!";
+            }
             buf.append(s.Data());
             buf.append("\n");
         }

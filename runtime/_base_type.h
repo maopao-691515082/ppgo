@@ -1,5 +1,7 @@
 #pragma once
 
+#include "_util.h"
+
 namespace ppgo
 {
 
@@ -130,6 +132,7 @@ DEF_PPGO_BASE_TYPE_NAME_FUNCS(string)
 
 class Exc;
 typedef std::shared_ptr<Exc> ExcPtr;
+tp_string ExcFormatWithTB(const ExcPtr exc);
 
 class Any
 {
@@ -162,7 +165,14 @@ public:
         if (a)
         {
             std::tuple<tp_string> ret;
-            Assert(!a->method_str(ret));
+            auto exc = a->method_str(ret);
+            if (exc)
+            {
+                auto ftb = ExcFormatWithTB(exc);
+                ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
+                    "Uncached exception in method `str`: %s\n", ftb.Data()));
+                _exit(2);
+            }
             return std::get<0>(ret);
         }
         return "<nil>";
@@ -420,7 +430,14 @@ struct Less<std::shared_ptr<T>>
     bool operator()(std::shared_ptr<T> a, std::shared_ptr<T> b) const
     {
         std::tuple<tp_int> ret;
-        Assert(!a->method_cmp(ret, b));
+        auto exc = a->method_cmp(ret, b);
+        if (exc)
+        {
+            auto ftb = ExcFormatWithTB(exc);
+            ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
+                "Uncached exception in method `cmp`: %s\n", ftb.Data()));
+            _exit(2);
+        }
         return std::get<0>(ret) < 0;
     }
 };

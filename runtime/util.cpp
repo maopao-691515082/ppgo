@@ -28,4 +28,9 @@ void OutputUnexpectedErrMsg(const ::lom::Str &s)
 
 }
 
+tp_string ExcFormatWithTB(const ExcPtr exc)
+{
+    return exc->FormatWithTB();
+}
+
 }
