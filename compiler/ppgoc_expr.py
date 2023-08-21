@@ -369,25 +369,50 @@ class Parser:
             while self.tl:
                 t = self.tl.pop()
                 if t.is_sym("["):
-                    ie = self.parse(vars_stk, None)
+                    ie = ibe = iee = None
+                    to_parse_iee = self.tl.peek().is_sym(":")
+                    if not to_parse_iee:
+                        ie = self.parse(vars_stk, None)
+                        to_parse_iee = self.tl.peek().is_sym(":")
+                        if to_parse_iee:
+                            ibe = ie
+                            ie = None
+                    if to_parse_iee:
+                        self.tl.pop_sym(":")
+                        if not self.tl.peek().is_sym("]"):
+                            iee = self.parse(vars_stk, None)
                     self.tl.pop_sym("]")
                     oe = parse_stk.pop_expr()
                     e = None
-                    if oe.tp.is_str_type:
-                        if not ie.tp.is_integer_type:
-                            t.syntax_err("需要整数下标")
-                        e = Expr("str[]", (oe, ie), ppgoc_type.BYTE_TYPE)
-                    elif oe.tp.is_vec:
-                        if not ie.tp.is_integer_type:
-                            t.syntax_err("需要整数下标")
-                        e = Expr("vec[]", (oe, ie), oe.tp.vec_elem_tp)
-                    elif oe.tp.is_map:
-                        ktp, vtp = oe.tp.map_kv_tp
-                        if ie.tp != ktp:
-                            t.syntax_err("下标类型'%s'不是键类型'%s'" % (ie.tp, ktp))
-                        e = Expr("map[]", (oe, ie), vtp)
+                    if ie is None:
+                        if oe.tp.is_str_type or oe.tp.is_vec or oe.tp.is_vec_view:
+                            for sie in ibe, iee:
+                                if not (sie is None or sie.tp.is_integer_type):
+                                    t.syntax_err("需要整数下标")
+                            if oe.tp.is_str_type:
+                                e = Expr("str[:]", (oe, ibe, iee), oe.tp)
+                            else:
+                                elem_tp = oe.tp.vec_elem_tp if oe.tp.is_vec else oe.tp.vec_view_elem_tp
+                                vv_type = ppgoc_type.make_vec_view_type(oe.tp.t, elem_tp)
+                                e = Expr("vec[:]", (oe, ibe, iee), vv_type)
+                        else:
+                            t.syntax_err("不能对类型'%s'做切片运算" % oe.tp)
                     else:
-                        t.syntax_err("不能对类型'%s'做下标运算" % oe.tp)
+                        if oe.tp.is_str_type or oe.tp.is_vec or oe.tp.is_vec_view:
+                            if not ie.tp.is_integer_type:
+                                t.syntax_err("需要整数下标")
+                            if oe.tp.is_str_type:
+                                e = Expr("str[]", (oe, ie), ppgoc_type.BYTE_TYPE)
+                            else:
+                                elem_tp = oe.tp.vec_elem_tp if oe.tp.is_vec else oe.tp.vec_view_elem_tp
+                                e = Expr("vec[]", (oe, ie), elem_tp)
+                        elif oe.tp.is_map:
+                            ktp, vtp = oe.tp.map_kv_tp
+                            if ie.tp != ktp:
+                                t.syntax_err("下标类型'%s'不是键类型'%s'" % (ie.tp, ktp))
+                            e = Expr("map[]", (oe, ie), vtp)
+                        else:
+                            t.syntax_err("不能对类型'%s'做下标运算" % oe.tp)
                     assert e is not None
                     parse_stk.push_expr(e)
                 elif t.is_sym("("):
@@ -486,6 +511,28 @@ class Parser:
                             t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
                         el = self.parse_exprs_of_calling(vars_stk, arg_defs)
                         e = Expr("call_vec_method", (oe, name, el), ret_tp)
+                    elif oe.tp.is_vec_view:
+                        #vec view method
+                        arg_defs = ppgoc_util.OrderedDict()
+                        if name == "valid":
+                            ret_tp = ppgoc_type.BOOL_TYPE
+                        elif name == "resolve":
+                            ret_tp = ppgoc_type.make_multi([
+                                ppgoc_type.make_vec_type(oe.tp.t, oe.tp.vec_view_elem_tp),
+                                ppgoc_type.INT_TYPE, ppgoc_type.INT_TYPE])
+                        elif name == "len":
+                            ret_tp = ppgoc_type.INT_TYPE
+                        elif name == "get":
+                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                            ret_tp = oe.tp.vec_view_elem_tp
+                        elif name == "set":
+                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                            arg_defs["e"] = None, oe.tp.vec_view_elem_tp
+                            ret_tp = ppgoc_type.make_multi([])
+                        else:
+                            t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
+                        el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                        e = Expr("call_vec_view_method", (oe, name, el), ret_tp)
                     elif oe.tp.is_map:
                         #map method
                         ktp, vtp = oe.tp.map_kv_tp

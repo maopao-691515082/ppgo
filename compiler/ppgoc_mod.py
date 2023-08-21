@@ -62,7 +62,8 @@ def parse_aor_defs(tl, dep_mns, arg_defs = None):
                 tl.pop_sym(",")
                 continue
 
-            tp = ppgoc_type.parse_tp(tl, dep_mns, allow_func = arg_defs is None)
+            tp = ppgoc_type.parse_tp(
+                tl, dep_mns, allow_func = arg_defs is None, allow_vec_view = arg_defs is None)
             for name, t in batch_type_args.iteritems():
                 aor_defs[name] = t, (ppgoc_type.make_optional_type(name, tp) if parsing_opt_arg else tp)
             batch_type_args = ppgoc_util.OrderedDict()

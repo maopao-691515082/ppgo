@@ -15,7 +15,7 @@ class ClientWorker
             {
                 return;
             }
-            conn.write(buf, len = n, timeout = 1.0);
+            conn.write(buf[: n], timeout = 1.0);
         }
     }
 }

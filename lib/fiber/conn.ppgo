@@ -4,18 +4,20 @@ public class Conn
 
     public func deinit();
 
-    func read_impl(b []byte, start int, len int, timeout_ms int) int;
-    public func read(b []byte, /, start int, timeout float) int
+    func read_impl(b [:]byte, timeout_ms int) int;
+    public func read(b [:]byte, /, timeout float) int
     {
-        var s, l = check_buf_range(b, start = start);
-        return this.read_impl(b, s, l, opt_timeout_to_ms(opt_timeout = timeout));
+        if (b.len() == 0)
+        {
+            throw("empty read buffer");
+        }
+        return this.read_impl(b, opt_timeout_to_ms(opt_timeout = timeout));
     }
 
-    func write_impl(b []byte, start int, len int, timeout_ms int);
-    public func write(b []byte, /, start int, len int, timeout float)
+    func write_impl(b [:]byte, timeout_ms int);
+    public func write(b [:]byte, /, timeout float)
     {
-        var s, l = check_buf_range(b, start = start, len = len, allow_zero_len = true);
-        this.write_impl(b, s, l, opt_timeout_to_ms(opt_timeout = timeout));
+        this.write_impl(b, opt_timeout_to_ms(opt_timeout = timeout));
     }
 }
 

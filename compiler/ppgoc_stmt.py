@@ -76,11 +76,11 @@ class Parser:
                     if len(names) != 1:
                         var_t.syntax_err("循环变量数量错误")
                     new_vars[new_vars.key_at(0)] = ea.tp
-                elif e.tp.is_vec:
+                elif e.tp.is_vec or e.tp.is_vec_view:
                     if len(names) != 2:
                         var_t.syntax_err("循环变量数量错误")
                     new_vars[new_vars.key_at(0)] = ppgoc_type.INT_TYPE
-                    new_vars[new_vars.key_at(1)] = e.tp.vec_elem_tp
+                    new_vars[new_vars.key_at(1)] = e.tp.vec_elem_tp or e.tp.vec_view_elem_tp
                 elif e.tp.is_map:
                     ktp, vtp = e.tp.map_kv_tp
                     if len(names) != 2:
@@ -104,7 +104,7 @@ class Parser:
                 if is_range:
                     stmts.append(Stmt(
                         "for..", var_name = new_vars.key_at(0), ep = (ea, eb), stmts = for_stmts))
-                elif e.tp.is_vec:
+                elif e.tp.is_vec  or e.tp.is_vec_view:
                     stmts.append(Stmt(
                         "for_vec", idx_var_name = new_vars.key_at(0), value_var_name = new_vars.key_at(1),
                         expr = e, stmts = for_stmts))
@@ -178,7 +178,13 @@ class Parser:
                     vars_stk = vars_stk[: -1] + (new_curr_vars,)
 
                     if e is not None:
-                        stmts.append(Stmt("var_init", new_vars = new_vars, expr = e))
+                        if (len(new_vars) == 1 and not new_vars.key_at(0).startswith("_.") and
+                            not e.tp.is_multi):
+                            stmt = stmts.pop()
+                            assert stmt.name == new_vars.key_at(0) and stmt.tp == new_vars.value_at(0)
+                            stmts.append(Stmt("var_with_init", name = stmt.name, tp = stmt.tp, expr = e))
+                        else:
+                            stmts.append(Stmt("var_init", new_vars = new_vars, expr = e))
 
                     if not is_batch_def:
                         break

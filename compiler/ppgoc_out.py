@@ -100,6 +100,8 @@ def gen_tp_code(tp):
         return "::ppgo::tp_%s" % tp.name
     if tp.is_vec:
         return "::ppgo::Vec<%s >" % gen_tp_code(tp.vec_elem_tp)
+    if tp.is_vec_view:
+        return "::ppgo::VecView<%s >" % gen_tp_code(tp.vec_view_elem_tp)
     if tp.is_map:
         ktp, vtp = tp.map_kv_tp
         return "::ppgo::Map<%s, %s >" % (gen_tp_code(ktp), gen_tp_code(vtp))
@@ -322,9 +324,11 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         ec = gen_expr_code(e, pos_info)
         return gen_wrap_convert(ec, e.tp, tp)
 
-    if expr.op in ("call_vec_method", "call_map_method", "call_set_method"):
+    if expr.op in ("call_vec_method", "call_vec_view_method", "call_map_method", "call_set_method"):
         if expr.op == "call_vec_method":
             mnc = mncs[ppgoc_util.MN_BUILTINS + "/vecs"]
+        elif expr.op == "call_vec_view_method":
+            mnc = mncs[ppgoc_util.MN_BUILTINS + "/vec_views"]
         elif expr.op == "call_map_method":
             mnc = mncs[ppgoc_util.MN_BUILTINS + "/maps"]
         elif expr.op == "call_set_method":
@@ -392,6 +396,15 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         se, ie = expr.arg
         return "(%s).ByteAt(%s)" % (gen_expr_code(se, pos_info), gen_expr_code(ie, pos_info))
 
+    if expr.op == "str[:]":
+        se, ibe, iee = expr.arg
+        sec = gen_expr_code(se, pos_info)
+        ibec = "0" if ibe is None else gen_expr_code(ibe, pos_info)
+        if iee is None:
+            return "(%s).SliceSubString(%s)" % (sec, ibec)
+        else:
+            return "(%s).SliceSubString(%s, %s)" % (sec, ibec, gen_expr_code(iee, pos_info))
+
     if expr.op == "if-else":
         e_cond, ea, eb = expr.arg
         return (
@@ -408,6 +421,16 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
             assert mode == "rw"
             method = "GetRef"
         return "(%s).%s(%s)" % (gen_expr_code(oe, pos_info), method, gen_expr_code(ie, pos_info))
+
+    if expr.op == "vec[:]":
+        oe, ibe, iee = expr.arg
+        etpc = gen_tp_code(expr.tp)
+        oec = gen_expr_code(oe, pos_info)
+        ibec = "0" if ibe is None else gen_expr_code(ibe, pos_info)
+        if iee is None:
+            return "%s(%s, %s)" % (etpc, oec, ibec)
+        else:
+            return "%s(%s, %s, %s)" % (etpc, oec, ibec, gen_expr_code(iee, pos_info))
 
     if expr.op == ".":
         oe, a = expr.arg
@@ -654,7 +677,8 @@ def output_stmts(code, stmts):
                     if not stmt.value_var_name.startswith("_."):
                         code += (
                             "%s l_%s = %s.Get(%s);" %
-                            (gen_tp_code(stmt.expr.tp.vec_elem_tp), stmt.value_var_name, vv, viv))
+                            (gen_tp_code(stmt.expr.tp.vec_elem_tp or stmt.expr.tp.vec_view_elem_tp),
+                             stmt.value_var_name, vv, viv))
                     output_stmts(code, stmt.stmts)
             continue
 
@@ -691,6 +715,10 @@ def output_stmts(code, stmts):
 
         if stmt.type == "var":
             code += "%s l_%s%s;" % (gen_tp_code(stmt.tp), stmt.name, gen_var_init_code(stmt.tp))
+            continue
+
+        if stmt.type == "var_with_init":
+            code += "%s l_%s = (%s);" % (gen_tp_code(stmt.tp), stmt.name, gen_expr_code(stmt.expr))
             continue
 
         if stmt.type == "var_init":

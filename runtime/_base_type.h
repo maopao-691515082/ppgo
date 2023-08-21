@@ -90,6 +90,16 @@ public:
         return tp_string(s_.Concat(s.s_));
     }
 
+    tp_string SliceSubString(ssize_t begin, ssize_t end) const
+    {
+        Assert(begin >= 0 && begin <= end && end <= Len());
+        return tp_string(::lom::Str(s_.Slice().Slice(begin, end - begin)));
+    }
+    tp_string SliceSubString(ssize_t begin) const
+    {
+        return SliceSubString(begin, Len());
+    }
+
     static inline
         __attribute__((always_inline))
         __attribute__((format(gnu_printf, 1, 2)))
@@ -412,6 +422,76 @@ public:
             return true;
         }
         return false;
+    }
+};
+
+template <typename E>
+class VecView final
+{
+    Vec<E> v_;
+    ssize_t begin_, end_;
+
+public:
+
+    VecView(Vec<E> v, ssize_t begin, ssize_t end) : v_(v), begin_(begin), end_(end)
+    {
+        Assert(Valid());
+    }
+
+    VecView(Vec<E> v, ssize_t begin) : VecView(v, begin, v.Len())
+    {
+    }
+
+    VecView(Vec<E> v) : VecView(v, 0)
+    {
+    }
+
+    VecView(VecView<E> vv, ssize_t begin, ssize_t end) : VecView(vv.v_, vv.begin_ + begin, vv.begin_ + end)
+    {
+    }
+
+    VecView(VecView<E> vv, ssize_t begin) : VecView(vv, begin, vv.Len())
+    {
+    }
+
+    VecView(const VecView<E> &vv) = default;
+    VecView(VecView<E> &&vv) = default;
+    VecView<E> &operator=(const VecView<E> &vv) = default;
+    VecView<E> &operator=(VecView<E> &&vv) = default;
+
+    bool Valid() const
+    {
+        return begin_ >= 0 && begin_ <= end_ && end_ <= v_.Len();
+    }
+
+    void Resolve(Vec<E> &v, ::ppgo::tp_int &begin, ::ppgo::tp_int &end) const
+    {
+        Assert(Valid());
+        v = v_;
+        begin = begin_;
+        end = end_;
+    }
+
+    ssize_t Len() const
+    {
+        Assert(Valid());
+        return end_ - begin_;
+    }
+
+    E &GetRef(ssize_t idx) const
+    {
+        Assert(idx >= 0 && idx < Len());
+        return v_.GetRef(begin_ + idx);
+    }
+
+    E &GetForSet(ssize_t idx) const
+    {
+        return GetRef(idx);
+    }
+
+    E Get(ssize_t idx) const
+    {
+        return GetRef(idx);
     }
 };
 

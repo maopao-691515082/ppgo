@@ -16,6 +16,7 @@ class Type:
         self.optional_arg_tp = None
 
         self.vec_elem_tp = None
+        self.vec_view_elem_tp = None
         self.map_kv_tp = None
         self.set_elem_tp = None
         self.func_arg_ret_tps = None
@@ -28,6 +29,7 @@ class Type:
     def _set_is_XXX(self):
         self.is_optional = self.optional_arg_tp is not None
         self.is_vec = self.vec_elem_tp is not None
+        self.is_vec_view = self.vec_view_elem_tp is not None
         self.is_map = self.map_kv_tp is not None
         self.is_set = self.set_elem_tp is not None
         self.is_func = self.func_arg_ret_tps is not None
@@ -55,6 +57,8 @@ class Type:
             return "optional<%s>" % self.optional_arg_tp
         if self.vec_elem_tp is not None:
             return "[]%s" % self.vec_elem_tp
+        if self.vec_view_elem_tp is not None:
+            return "[:]%s" % self.vec_view_elem_tp
         if self.map_kv_tp is not None:
             return "[%s]%s" % self.map_kv_tp
         if self.func_arg_ret_tps is not None:
@@ -95,6 +99,8 @@ class Type:
                 self.optional_arg_tp == other.optional_arg_tp)
         if self.is_vec or other.is_vec:
             return self.is_vec and other.is_vec and self.vec_elem_tp == other.vec_elem_tp
+        if self.is_vec_view or other.is_vec_view:
+            return self.is_vec_view and other.is_vec_view and self.vec_view_elem_tp == other.vec_view_elem_tp
         if self.is_map or other.is_map:
             return self.is_map and other.is_map and self.map_kv_tp == other.map_kv_tp
         if self.is_set or other.is_set:
@@ -134,6 +140,9 @@ class Type:
             return
         if self.is_vec:
             self.vec_elem_tp.check(mod)
+            return
+        if self.is_vec_view:
+            self.vec_view_elem_tp.check(mod)
             return
         if self.is_map:
             ktp, vtp = self.map_kv_tp
@@ -188,8 +197,9 @@ class Type:
             #完全一样
             return True
         if self.is_any:
-            #函数和可选参数类型之外的其他都可以转any
-            return not (tp.is_optional or tp.is_func)
+            return not (tp.is_optional or tp.is_func or tp.is_vec_view)
+        if self.is_vec_view and tp.is_vec and self.vec_view_elem_tp == tp.vec_elem_tp:
+            return True
         if self.is_obj_type:
             if tp.is_nil:
                 #允许nil直接赋值给任何接口或对象类型
@@ -222,7 +232,7 @@ class Type:
 
         if tp.is_any:
             #any可以断言至任何支持的下层类型
-            return not (tp.is_optional or self.is_func)
+            return not (tp.is_optional or self.is_func or tp.is_vec_view)
 
         #tp不是any，则必须是接口到其他接口或类的断言
         if tp.is_coi_type:
@@ -276,7 +286,19 @@ def make_optional_type(name, tp):
     optional_tp._set_is_XXX()
     return optional_tp
 
-def parse_tp(tl, dep_mns, allow_func = False):
+def make_vec_type(t, elem_tp):
+    tp = Type(t, "[]")
+    tp.vec_elem_tp = elem_tp
+    tp._set_is_XXX()
+    return tp
+
+def make_vec_view_type(t, elem_tp):
+    tp = Type(t, "[:]")
+    tp.vec_view_elem_tp = elem_tp
+    tp._set_is_XXX()
+    return tp
+
+def parse_tp(tl, dep_mns, allow_func = False, allow_vec_view = False):
     t = tl.pop()
 
     if t.is_sym("["):
@@ -285,6 +307,14 @@ def parse_tp(tl, dep_mns, allow_func = False):
             elem_tp = parse_tp(tl, dep_mns)
             tp = Type(t, "[]")
             tp.vec_elem_tp = elem_tp
+        elif tl.peek().is_sym(":"):
+            if not allow_vec_view:
+                t.syntax_err("vector-view类型只能用于显式声明函数参数类型")
+            tl.pop_sym(":")
+            tl.pop_sym("]")
+            elem_tp = parse_tp(tl, dep_mns)
+            tp = Type(t, "[:]")
+            tp.vec_view_elem_tp = elem_tp
         else:
             ktp = parse_tp(tl, dep_mns)
             tl.pop_sym("]")
@@ -313,7 +343,7 @@ def parse_tp(tl, dep_mns, allow_func = False):
                 tl.pop_sym(")")
                 break
 
-            atps.append(parse_tp(tl, dep_mns, allow_func = True))
+            atps.append(parse_tp(tl, dep_mns, allow_func = True, allow_vec_view = True))
 
             t = tl.peek()
             if t.is_sym(","):

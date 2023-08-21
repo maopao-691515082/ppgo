@@ -30,16 +30,3 @@ func opt_timeout_to_ms(/, opt_timeout float) int
 
     throw("invalid timeout");
 }
-
-func check_buf_range(buf []byte, /, start, len int, allow_zero_len bool) (s, l int)
-{
-    var bl = buf.len();
-
-    s = start.get_or(0);
-    l = len.get_or(bl - s);
-    if (s >= 0 && s < bl && l >= (0 if allow_zero_len.get_or(false) else 1) && l <= bl - s)
-    {
-        return;
-    }
-    throw("invalid buf range");
-}

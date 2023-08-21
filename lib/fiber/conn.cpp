@@ -21,11 +21,10 @@ namespace PPGO_THIS_MOD
 }
 
 ::ppgo::Exc::Ptr cls_Conn::method_read_impl(
-    ::std::tuple<::ppgo::tp_int> &ret,
-    ::ppgo::Vec<::ppgo::tp_byte> b, ::ppgo::tp_int start, ::ppgo::tp_int len, ::ppgo::tp_int timeout_ms)
+    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_int timeout_ms)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
-    auto n = conn->Read(reinterpret_cast<char *>(&b.GetRef(start)), len, timeout_ms);
+    auto n = conn->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), timeout_ms);
     if (n < 0)
     {
         return ::ppgo::Exc::Sprintf("read failed: %s", ::lom::Err().CStr());
@@ -36,11 +35,10 @@ namespace PPGO_THIS_MOD
 }
 
 ::ppgo::Exc::Ptr cls_Conn::method_write_impl(
-    ::std::tuple<> &ret,
-    ::ppgo::Vec<::ppgo::tp_byte> b, ::ppgo::tp_int start, ::ppgo::tp_int len, ::ppgo::tp_int timeout_ms)
+    ::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_int timeout_ms)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
-    if (conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(start)), len, timeout_ms) < 0)
+    if (conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len(), timeout_ms) < 0)
     {
         return ::ppgo::Exc::Sprintf("write failed: %s", ::lom::Err().CStr());
     }

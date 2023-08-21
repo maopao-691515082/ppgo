@@ -1,0 +1,9 @@
+/*
+
+public func valid<E>(vv [:]E) bool;
+public func resolve<E>(vv [:]E) (v []E, begin, end int);
+public func len<E>(vv [:]E) int;
+public func get<E>(vv [:]E, idx int) E;
+public func set<E>(vv [:]E, idx int, e E);
+
+*/
