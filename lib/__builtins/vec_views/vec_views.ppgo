@@ -1,6 +1,7 @@
 /*
 
 public func valid<E>(vv [:]E) bool;
+public func check_valid<E>(vv [:]E);
 public func resolve<E>(vv [:]E) (v []E, begin, end int);
 public func len<E>(vv [:]E) int;
 public func get<E>(vv [:]E, idx int) E;

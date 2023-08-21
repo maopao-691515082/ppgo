@@ -17,6 +17,7 @@ public class Conn
     func write_impl(b [:]byte, timeout_ms int);
     public func write(b [:]byte, /, timeout float)
     {
+        b.check_valid();
         this.write_impl(b, opt_timeout_to_ms(opt_timeout = timeout));
     }
 }

@@ -14,14 +14,14 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr func_rand_n(::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_int n)
+::ppgo::Exc::Ptr func_rand_n_impl(::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_int n)
 {
     ::ppgo::Assert(n > 0);
     ::std::get<0>(ret) = static_cast<::ppgo::tp_int>(::lom::RandN(static_cast<uint64_t>(n)));
     return nullptr;
 }
 
-::ppgo::Exc::Ptr func_fast_rand_n(::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_int n)
+::ppgo::Exc::Ptr func_fast_rand_n_impl(::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_int n)
 {
     ::ppgo::Assert(n > 0);
     static thread_local uint64_t r = static_cast<uint64_t>(::lom::NowUS());

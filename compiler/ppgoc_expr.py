@@ -516,6 +516,8 @@ class Parser:
                         arg_defs = ppgoc_util.OrderedDict()
                         if name == "valid":
                             ret_tp = ppgoc_type.BOOL_TYPE
+                        elif name == "check_valid":
+                            ret_tp = ppgoc_type.make_multi([])
                         elif name == "resolve":
                             ret_tp = ppgoc_type.make_multi([
                                 ppgoc_type.make_vec_type(oe.tp.t, oe.tp.vec_view_elem_tp),
