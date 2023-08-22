@@ -27,6 +27,18 @@ typedef double  tp_f64;
 
 typedef void *tp_uptr;
 
+template <typename E>
+class Vec;
+
+template <typename E>
+class VecView;
+
+template <typename K, typename V>
+class Map;
+
+template <typename E>
+class Set;
+
 class tp_string final
 {
     ::lom::Str s_;
@@ -54,6 +66,9 @@ public:
     tp_string(::lom::Str &&s) : s_(std::move(s))
     {
     }
+
+    tp_string(const Vec<char8_t> &v);
+    tp_string(const VecView<char8_t> &vv);
 
     const ::lom::Str &RawStr() const
     {
@@ -290,15 +305,6 @@ typedef Obj<tp_string> StrObj;
 }
 
 template <typename E>
-class Vec;
-
-template <typename K, typename V>
-class Map;
-
-template <typename E>
-class Set;
-
-template <typename E>
 std::string TypeName(const Vec<E> *)
 {
     return std::string("[]") + TypeName(static_cast<const E *>(nullptr));
@@ -329,6 +335,10 @@ class Vec final
         {
         }
 
+        VecObj(const E *p, ssize_t sz) : v_(p, p + sz)
+        {
+        }
+
         virtual std::string R_TypeName() const override
         {
             return ::ppgo::TypeName(static_cast<const Vec<E> *>(nullptr));
@@ -344,6 +354,17 @@ public:
     }
 
     Vec(std::initializer_list<E> l) : v_(new VecObj(l))
+    {
+    }
+
+    template <
+        typename S,
+        std::enable_if_t<
+            std::is_same_v<E, tp_byte> &&
+            std::is_same_v<S, tp_string>
+        > * = nullptr
+    >
+    Vec(const S &s) : v_(new VecObj(reinterpret_cast<const tp_byte *>(s.Data()), s.Len()))
     {
     }
 

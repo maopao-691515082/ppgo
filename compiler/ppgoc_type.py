@@ -223,6 +223,17 @@ class Type:
         if self.is_number_type and tp.is_number_type:
             return True
 
+        #[]byte和[:]byte可以转string
+        if self.is_str_type:
+            if tp.is_vec:
+                return tp.vec_elem_tp.is_byte_type
+            if tp.is_vec_view:
+                return tp.vec_view_elem_tp.is_byte_type
+
+        #string可以转[]byte
+        if self.is_vec and self.vec_elem_tp.is_byte_type:
+            return tp.is_str_type
+
         #其余情况不能强转
         return False
 
@@ -284,18 +295,24 @@ def make_optional_type(name, tp):
     optional_tp.optional_arg_name = name
     optional_tp.optional_arg_tp = tp
     optional_tp._set_is_XXX()
+    if tp.is_checked:
+        optional_tp._set_is_checked()
     return optional_tp
 
 def make_vec_type(t, elem_tp):
     tp = Type(t, "[]")
     tp.vec_elem_tp = elem_tp
     tp._set_is_XXX()
+    if elem_tp.is_checked:
+        tp._set_is_checked()
     return tp
 
 def make_vec_view_type(t, elem_tp):
     tp = Type(t, "[:]")
     tp.vec_view_elem_tp = elem_tp
     tp._set_is_XXX()
+    if elem_tp.is_checked:
+        tp._set_is_checked()
     return tp
 
 def parse_tp(tl, dep_mns, allow_func = False, allow_vec_view = False):
