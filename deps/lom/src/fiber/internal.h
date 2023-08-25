@@ -8,22 +8,21 @@ namespace lom
 namespace fiber
 {
 
-void SetError(const Str &s, CodePos _cp = CodePos());
 void SilentClose(int fd);
 
 void AssertInited();
-bool InitFdEnv();
-bool InitSched();
+::lom::Err::Ptr InitFdEnv();
+::lom::Err::Ptr InitSched();
 
-bool RegRawFdToSched(int fd);
-bool UnregRawFdFromSched(int fd);
+::lom::Err::Ptr RegRawFdToSched(int fd);
+::lom::Err::Ptr UnregRawFdFromSched(int fd);
 
 void RegSemToSched(Sem sem, uint64_t value);
-bool UnregSemFromSched(Sem sem);
+::lom::Err::Ptr UnregSemFromSched(Sem sem);
 bool IsSemInSched(Sem sem);
 uint64_t TryAcquireSem(Sem sem, uint64_t acquire_value);
 void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value);
-int ReleaseSem(Sem sem, uint64_t release_value);
+::lom::Err::Ptr ReleaseSem(Sem sem, uint64_t release_value);
 
 struct WaitingEvents
 {
@@ -96,8 +95,8 @@ void RegFiber(Fiber *fiber);
 Fiber *GetCurrFiber();
 jmp_buf *GetSchedCtx();
 
-bool PathToUnixSockAddr(const char *path, struct sockaddr_un &addr, socklen_t &addr_len);
-bool AbstractPathToUnixSockAddr(const Str &path, struct sockaddr_un &addr, socklen_t &addr_len);
+::lom::Err::Ptr PathToUnixSockAddr(const char *path, struct sockaddr_un &addr, socklen_t &addr_len);
+::lom::Err::Ptr AbstractPathToUnixSockAddr(const Str &path, struct sockaddr_un &addr, socklen_t &addr_len);
 
 }
 

@@ -27,7 +27,11 @@ static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
 {
     ::lom::fiber::MustInit();
     new_fiber_impl(f);
-    ::lom::fiber::Run();
+    auto err = ::lom::fiber::Run();
+    if (err)
+    {
+        return ::ppgo::Exc::Sprintf("fiber.run exit: %s", err->Msg().CStr());
+    }
     return nullptr;
 }
 

@@ -41,7 +41,7 @@ protected:
     由于新的`Fd`对象是无效的，因此对新对象也可以不判断`Reg`方法的返回值，而是判断注册之后的`Valid()`方法调用
     需要注意`Reg`只能被成功调用一次，若对一个合法`Fd`对象`Reg`，则失败，并且不会影响当前值
     */
-    bool Reg(int fd);
+    ::lom::Err::Ptr Reg(int fd);
 
 public:
 
@@ -64,13 +64,13 @@ public:
     }
 
     //注销此fd，在fiber环境中等同于被关闭了，但是`RawFd()`返回的依然可被外部使用
-    bool Unreg() const;
+    ::lom::Err::Ptr Unreg() const;
 
     //判断此fd是否有效
     bool Valid() const;
 
     //关闭一个fd，同时会将其注销，注意方法是const的，并不会修改此对象的值，后续继续使用此对象则行为未定义
-    bool Close() const;
+    ::lom::Err::Ptr Close() const;
 };
 
 }

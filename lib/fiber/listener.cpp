@@ -25,10 +25,11 @@ namespace PPGO_THIS_MOD
 {
     auto listener = reinterpret_cast<::lom::fiber::Listener *>(attr_l);
 
-    auto lom_conn = listener->Accept(timeout);
-    if (!lom_conn.Valid())
+    ::lom::fiber::Conn lom_conn;
+    auto err = listener->Accept(lom_conn, timeout);
+    if (err)
     {
-        return ::ppgo::Exc::Sprintf("failed to accept: %s", ::lom::Err().CStr());
+        return ::ppgo::Exc::Sprintf("failed to accept: %s", err->Msg().CStr());
     }
 
     auto conn = std::make_shared<cls_Conn>();
@@ -45,7 +46,7 @@ namespace PPGO_THIS_MOD
 {
     auto listener = reinterpret_cast<::lom::fiber::Listener *>(attr_l);
 
-    listener->Serve(worker_count, [cw] (::lom::fiber::Conn lom_conn) {
+    auto err = listener->Serve(worker_count, [cw] (::lom::fiber::Conn lom_conn) {
         auto conn = std::make_shared<cls_Conn>();
         auto c = new ::lom::fiber::Conn;
         conn->attr_c = reinterpret_cast<::ppgo::tp_uptr>(c);
@@ -60,6 +61,10 @@ namespace PPGO_THIS_MOD
                 "Uncached Exc in fiber.Listener.ClientWorker.run: %s\n", ftb.Data()));
         }
     });
+    if (err)
+    {
+        return ::ppgo::Exc::Sprintf("fiber.Listener.serve exit: %s", err->Msg().CStr());
+    }
 
     return nullptr;
 }
@@ -71,11 +76,11 @@ namespace PPGO_THIS_MOD
     auto l = new ::lom::fiber::Listener;
     listener->attr_l = reinterpret_cast<::ppgo::tp_uptr>(l);
 
-    *l = ::lom::fiber::ListenTCP(port);
-    if (!l->Valid())
+    auto err = ::lom::fiber::ListenTCP(port, *l);
+    if (err)
     {
         return ::ppgo::Exc::Sprintf(
-            "failed to listen tcp on port [%lld]: %s", static_cast<long long>(port), ::lom::Err().CStr());
+            "failed to listen tcp on port [%lld]: %s", static_cast<long long>(port), err->Msg().CStr());
     }
 
     std::get<0>(ret) = listener;

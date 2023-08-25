@@ -27,3 +27,5 @@
 #include "lom/fiber/fiber.h"
 
 #include "lom/thread/thread.h"
+
+#include "lom/ckv/ckv.h"

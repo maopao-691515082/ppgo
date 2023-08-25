@@ -17,14 +17,21 @@ public:
         return seq_ < other.seq_;
     }
 
-    bool Destroy() const;
+    ::lom::Err::Ptr Destroy() const;
 
     bool Valid() const;
 
-    int Acquire(uint64_t acquire_value = 1, int64_t timeout_ms = -1) const;
-    int Release(uint64_t release_value = 1) const;
+    /*
+    获取和释放信号量
+        获取的错误只有信号量无效、超时、中断或信号量被其他fiber销毁等
+        释放的错误只有溢出
+        一般在使用者可控的情况下不需要判断返回
+    */
+    ::lom::Err::Ptr Acquire(uint64_t acquire_value = 1, int64_t timeout_ms = -1) const;
+    ::lom::Err::Ptr Release(uint64_t release_value = 1) const;
 
-    static Sem New(uint64_t value);
+    //指定初值创建信号量
+    static ::lom::Err::Ptr New(uint64_t value, Sem &sem);
 };
 
 }

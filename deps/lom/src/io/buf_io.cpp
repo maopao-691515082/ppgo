@@ -11,12 +11,10 @@ static ssize_t AdjustBufSize(ssize_t sz)
     return std::min<ssize_t>(std::max<ssize_t>(sz, 4 * 1024), 4 * 1024 * 1024);
 }
 
-#define LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(_sz) do {  \
-        if (_sz <= 0) {                                 \
-            SetErr("non-positive size");                \
-            errno = EINVAL;                             \
-            return -1;                                  \
-        }                                               \
+#define LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(_sz) do {          \
+        if (_sz <= 0) {                                         \
+            return ::lom::Err::Sprintf("non-positive size");    \
+        }                                                       \
     } while (false)
 
 class BufReaderImpl : public BufReader
@@ -27,40 +25,42 @@ class BufReaderImpl : public BufReader
     ssize_t start_ = 0;
     ssize_t len_ = 0;
 
-    int Fill()
+    ::lom::Err::Ptr Fill()
     {
         if (len_ == 0)
         {
             start_ = 0;
-            auto ret = do_read_(buf_, buf_sz_);
-            if (ret < 0)
+            ssize_t rsz;
+            auto err = do_read_(buf_, buf_sz_, rsz);
+            if (err)
             {
-                return static_cast<int>(ret);
+                return err;
             }
-            if (ret > 0)
+            if (rsz > 0)
             {
-                Assert(ret <= buf_sz_);
-                len_ = ret;
+                Assert(rsz <= buf_sz_);
+                len_ = rsz;
             }
         }
-        return 0;
+        return nullptr;
     }
 
-    ssize_t ReadFullOrUntil(char *buf, ssize_t sz, const char *end_ch)
+    ::lom::Err::Ptr ReadFullOrUntil(char *buf, ssize_t sz, const char *end_ch, ssize_t &rsz)
     {
         LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
 
         for (ssize_t i = 0; i < sz;)
         {
-            int ret = Fill();
-            if (ret < 0)
+            auto err = Fill();
+            if (err)
             {
-                return ret;
+                return err;
             }
             if (len_ == 0)
             {
                 //EOF
-                return i;
+                rsz = i;
+                return nullptr;
             }
 
             auto fill_len = std::min(len_, sz - i);
@@ -83,11 +83,13 @@ class BufReaderImpl : public BufReader
             len_ -= fill_len;
             if (is_end_ch_found)
             {
-                return i;
+                rsz = i;
+                return nullptr;
             }
         }
 
-        return sz;
+        rsz = sz;
+        return nullptr;
     }
 
 public:
@@ -102,34 +104,37 @@ public:
         delete[] buf_;
     }
 
-    virtual ssize_t Read(char *buf, ssize_t sz) override
+    virtual ::lom::Err::Ptr Read(char *buf, ssize_t sz, ssize_t &rsz) override
     {
         LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
 
-        int ret = Fill();
-        if (ret < 0)
+        auto err = Fill();
+        if (err)
         {
-            return static_cast<ssize_t>(ret);
+            return err;
         }
         if (len_ == 0)
         {
-            return 0;
+            rsz = 0;
+            return nullptr;
         }
         auto copy_len = std::min(len_, sz);
         memcpy(buf, buf_ + start_, copy_len);
         start_ += copy_len;
         len_ -= copy_len;
-        return copy_len;
+
+        rsz = copy_len;
+        return nullptr;
     }
 
-    virtual ssize_t ReadUntil(char end_ch, char *buf, ssize_t sz) override
+    virtual ::lom::Err::Ptr ReadUntil(char end_ch, char *buf, ssize_t sz, ssize_t &rsz) override
     {
-        return ReadFullOrUntil(buf, sz, &end_ch);
+        return ReadFullOrUntil(buf, sz, &end_ch, rsz);
     }
 
-    virtual ssize_t ReadFull(char *buf, ssize_t sz) override
+    virtual ::lom::Err::Ptr ReadFull(char *buf, ssize_t sz, ssize_t &rsz) override
     {
-        return ReadFullOrUntil(buf, sz, nullptr);
+        return ReadFullOrUntil(buf, sz, nullptr, rsz);
     }
 };
 
@@ -146,27 +151,28 @@ class BufWriterImpl : public BufWriter
     ssize_t start_ = 0;
     ssize_t len_ = 0;
 
-    int DoWrite()
+    ::lom::Err::Ptr DoWrite()
     {
         Assert(start_ < buf_sz_ && len_ <= buf_sz_);
         auto send_len = std::min(len_, buf_sz_ - start_);
         Assert(send_len > 0);
-        auto ret = do_write_(buf_ + start_, send_len);
-        if (ret < 0)
+        ssize_t wsz;
+        auto err = do_write_(buf_ + start_, send_len, wsz);
+        if (err)
         {
-            return static_cast<int>(ret);
+            return err;
         }
 
-        Assert(ret > 0 && ret <= send_len);
-        start_ += ret;
-        len_ -= ret;
+        Assert(wsz > 0 && wsz <= send_len);
+        start_ += wsz;
+        len_ -= wsz;
         if (start_ == buf_sz_ || len_ == 0)
         {
             //回绕的情况下写完了半段数据，或者没有回绕时所有数据写完，复位`start_`
             start_ = 0;
         }
 
-        return 0;
+        return nullptr;
     }
 
 public:
@@ -181,13 +187,11 @@ public:
         delete[] buf_;
     }
 
-    virtual int WriteAll(const char *buf, ssize_t sz) override
+    virtual ::lom::Err::Ptr WriteAll(const char *buf, ssize_t sz) override
     {
         if (sz < 0)
         {
-            SetErr("negative size");
-            errno = EINVAL;
-            return -1;
+            return ::lom::Err::Sprintf("negative size");
         }
 
         while (sz > 0)
@@ -195,10 +199,10 @@ public:
             Assert(len_ <= buf_sz_);
             if (len_ == buf_sz_)
             {
-                int ret = DoWrite();
-                if (ret != 0)
+                auto err = DoWrite();
+                if (err)
                 {
-                    return ret;
+                    return err;
                 }
                 Assert(len_ < buf_sz_);
             }
@@ -222,20 +226,20 @@ public:
             sz -= copy_len;
         }
 
-        return 0;
+        return nullptr;
     }
 
-    virtual int Flush() override
+    virtual ::lom::Err::Ptr Flush() override
     {
         while (len_ > 0)
         {
-            int ret = DoWrite();
-            if (ret != 0)
+            auto err = DoWrite();
+            if (err)
             {
-                return ret;
+                return err;
             }
         }
-        return 0;
+        return nullptr;
     }
 };
 

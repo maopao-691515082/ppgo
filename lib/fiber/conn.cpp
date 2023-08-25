@@ -24,10 +24,11 @@ namespace PPGO_THIS_MOD
     ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_int timeout_ms)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
-    auto n = conn->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), timeout_ms);
-    if (n < 0)
+    ssize_t n;
+    auto err = conn->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n, timeout_ms);
+    if (err)
     {
-        return ::ppgo::Exc::Sprintf("read failed: %s", ::lom::Err().CStr());
+        return ::ppgo::Exc::Sprintf("read failed: %s", err->Msg().CStr());
     }
 
     std::get<0>(ret) = n;
@@ -38,9 +39,10 @@ namespace PPGO_THIS_MOD
     ::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_int timeout_ms)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
-    if (conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len(), timeout_ms) < 0)
+    auto err = conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len(), timeout_ms);
+    if (err)
     {
-        return ::ppgo::Exc::Sprintf("write failed: %s", ::lom::Err().CStr());
+        return ::ppgo::Exc::Sprintf("write failed: %s", err->Msg().CStr());
     }
     return nullptr;
 }
@@ -53,12 +55,12 @@ namespace PPGO_THIS_MOD
     auto c = new ::lom::fiber::Conn;
     conn->attr_c = reinterpret_cast<::ppgo::tp_uptr>(c);
 
-    *c = ::lom::fiber::ConnectTCP(ipv4.Data(), port, timeout_ms);
-    if (!c->Valid())
+    auto err = ::lom::fiber::ConnectTCP(ipv4.Data(), port, *c, timeout_ms);
+    if (err)
     {
         return ::ppgo::Exc::Sprintf(
             "connect tcp to [%s:%lld] failed: %s",
-            ipv4.Data(), static_cast<long long>(port), ::lom::Err().CStr());
+            ipv4.Data(), static_cast<long long>(port), err->Msg().CStr());
     }
 
     std::get<0>(ret) = conn;

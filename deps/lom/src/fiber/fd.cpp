@@ -16,63 +16,60 @@ static uint32_t &FdSeq(int fd)
     return fd >= 0 && fd < kFastFdSeqMapSizeMax ? fast_fd_seq_map[fd] : slow_fd_seq_map[fd];
 }
 
-bool InitFdEnv()
+::lom::Err::Ptr InitFdEnv()
 {
     fast_fd_seq_map = new uint32_t[kFastFdSeqMapSizeMax];
     for (auto i = 0; i < kFastFdSeqMapSizeMax; ++ i)
     {
         fast_fd_seq_map[i] = 0;
     }
-    return true;
+    return nullptr;
 }
 
-bool Fd::Reg(int fd)
+::lom::Err::Ptr Fd::Reg(int fd)
 {
     AssertInited();
 
     if (fd_ != -1)
     {
-        SetError("Fd object is already used");
-        return false;
+        return ::lom::Err::Sprintf("Fd object is already used");
     }
 
     if (fd < 0)
     {
-        SetError(Sprintf("invalid fd [%d]", fd));
-        return false;
+        return ::lom::Err::Sprintf("invalid fd [%d]", fd);
     }
 
     int flags = 1;
     if (ioctl(fd, FIONBIO, &flags) == -1)
     {
-        SetError("set fd nonblocking failed");
-        return false;
+        return ::lom::Err::Sprintf("set fd nonblocking failed");
     }
 
-    if (!RegRawFdToSched(fd))
+    auto err = RegRawFdToSched(fd);
+    if (err)
     {
-        return false;
+        return err;
     }
 
     fd_ = fd;
     seq_ = FdSeq(fd_);
 
-    return true;
+    return nullptr;
 }
 
-bool Fd::Unreg() const
+::lom::Err::Ptr Fd::Unreg() const
 {
     AssertInited();
 
     if (!Valid())
     {
-        SetError("fd is invalid");
-        return false;
+        return ::lom::Err::Sprintf("fd is invalid");
     }
 
-    bool ok = UnregRawFdFromSched(fd_);
+    auto err = UnregRawFdFromSched(fd_);
     ++ FdSeq(fd_);
-    return ok;
+    return err;
 }
 
 bool Fd::Valid() const
@@ -80,21 +77,20 @@ bool Fd::Valid() const
     return fd_ >= 0 && seq_ == FdSeq(fd_);
 }
 
-bool Fd::Close() const
+::lom::Err::Ptr Fd::Close() const
 {
     if (!Valid())
     {
-        SetError("fd is invalid");
-        return false;
+        return ::lom::Err::Sprintf("fd is invalid");
     }
 
-    bool ok = Unreg();
+    auto err = Unreg();
     if (close(fd_) == -1)
     {
-        SetError("close fd failed");
-        ok = false;
+        auto unreg_err_msg = err ? err->Msg().Concat(" & ") : "";
+        err = ::lom::Err::Sprintf("%sclose fd failed", unreg_err_msg.CStr());
     }
-    return ok;
+    return err;
 }
 
 void SilentClose(int fd)

@@ -123,22 +123,20 @@ static bool RegCurrFiberWaitingEvs(const WaitingEvents &evs)
 
 static thread_local int ep_fd = -1;
 
-bool InitSched()
+::lom::Err::Ptr InitSched()
 {
     ep_fd = epoll_create1(0);
     if (ep_fd == -1)
     {
-        SetError("create epoll fd failed");
-        return false;
+        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create epoll fd failed");
     }
 
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     {
-        SetError("ignore SIGPIPE failed");
-        return false;
+        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "ignore SIGPIPE failed");
     }
 
-    return true;
+    return nullptr;
 }
 
 jmp_buf *GetSchedCtx()
@@ -156,12 +154,11 @@ Fiber *GetCurrFiber()
     return curr_fiber;
 }
 
-bool RegRawFdToSched(int fd)
+::lom::Err::Ptr RegRawFdToSched(int fd)
 {
     if (io_waiting_fibers.find(fd) != io_waiting_fibers.end())
     {
-        SetError(Sprintf("fd [%d] is already registered", fd));
-        return false;
+        return ::lom::Err::Sprintf("fd [%d] is already registered", fd);
     }
 
     struct epoll_event ev;
@@ -169,15 +166,14 @@ bool RegRawFdToSched(int fd)
     ev.data.fd = fd;
     if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
     {
-        SetError("epoll_ctl EPOLL_CTL_ADD failed");
-        return false;
+        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_ADD failed");
     }
 
     io_waiting_fibers.insert(std::make_pair(fd, FdWaitingFibers()));
-    return true;
+    return nullptr;
 }
 
-bool UnregRawFdFromSched(int fd)
+::lom::Err::Ptr UnregRawFdFromSched(int fd)
 {
     auto fd_waiting_fibers_iter = io_waiting_fibers.find(fd);
     Assert(fd_waiting_fibers_iter != io_waiting_fibers.end());
@@ -200,11 +196,10 @@ bool UnregRawFdFromSched(int fd)
     struct epoll_event ev;  //must specify an ev struct in old-version epoll
     if (epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, &ev) == -1)
     {
-        SetError("epoll_ctl EPOLL_CTL_DEL failed");
-        return false;
+        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_DEL failed");
     }
 
-    return true;
+    return nullptr;
 }
 
 void RegSemToSched(Sem sem, uint64_t value)
@@ -214,15 +209,14 @@ void RegSemToSched(Sem sem, uint64_t value)
     sem_infos[sem].value_ = value;
 }
 
-bool UnregSemFromSched(Sem sem)
+::lom::Err::Ptr UnregSemFromSched(Sem sem)
 {
     AssertInited();
 
     auto sem_infos_iter = sem_infos.find(sem);
     if (sem_infos_iter == sem_infos.end())
     {
-        SetError("sem is invalid");
-        return false;
+        return ::lom::Err::Sprintf("sem is invalid");
     }
 
     SemInfo &sem_info = sem_infos_iter->second;
@@ -232,7 +226,7 @@ bool UnregSemFromSched(Sem sem)
     WakeUpFibers(fibers_to_wake_up);
 
     sem_infos.erase(sem_infos_iter);
-    return true;
+    return nullptr;
 }
 
 bool IsSemInSched(Sem sem)
@@ -314,13 +308,12 @@ void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value)
     WakeUpFibers(fibers_to_wake_up);
 }
 
-int ReleaseSem(Sem sem, uint64_t release_value)
+::lom::Err::Ptr ReleaseSem(Sem sem, uint64_t release_value)
 {
     auto sem_infos_iter = sem_infos.find(sem);
     if (sem_infos_iter == sem_infos.end())
     {
-        SetError("sem is invalid");
-        return err_code::kInvalid;
+        return ::lom::Err::Sprintf("sem is invalid");
     }
 
     SemInfo &sem_info = sem_infos_iter->second;
@@ -328,8 +321,7 @@ int ReleaseSem(Sem sem, uint64_t release_value)
     Assert(kUInt64Max - sem_info.value_ >= sem_info.acquiring_value_);
     if (kUInt64Max - sem_info.value_ - sem_info.acquiring_value_ < release_value)
     {
-        SetError("releasing sem cause value-overflow");
-        return err_code::kOverflow;
+        return ::lom::Err::Sprintf("releasing sem cause value-overflow");
     }
     sem_info.value_ += release_value;
 
@@ -337,7 +329,7 @@ int ReleaseSem(Sem sem, uint64_t release_value)
     sem_info.fibers_.clear();
     WakeUpFibers(fibers_to_wake_up);
 
-    return 0;
+    return nullptr;
 }
 
 void SwitchToSchedFiber(const WaitingEvents &evs)
@@ -364,7 +356,7 @@ void Yield()
     SwitchToSchedFiber(evs);
 }
 
-int SleepMS(int64_t ms)
+::lom::Err::Ptr SleepMS(int64_t ms)
 {
     AssertInited();
     if (ms > 0)
@@ -373,10 +365,10 @@ int SleepMS(int64_t ms)
         evs.expire_at_ = NowMS() + ms;
         SwitchToSchedFiber(evs);
     }
-    return 0;
+    return nullptr;
 }
 
-void Run()
+::lom::Err::Ptr Run()
 {
     AssertInited();
     for (;;)
@@ -439,8 +431,7 @@ void Run()
             {
                 if (errno != EINTR)
                 {
-                    SetError("epoll_wait failed");
-                    return;
+                    return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_wait failed");
                 }
                 ev_count = 0;
             }

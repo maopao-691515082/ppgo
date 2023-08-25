@@ -8,22 +8,28 @@ namespace fiber
 
 #define LOM_FIBER_CONN_INIT_EXPIRE_AT() int64_t expire_at = timeout_ms < 0 ? -1 : NowMS() + timeout_ms
 
+#define LOM_FIBER_CONN_CHECK_VALID() do {           \
+    if (!conn.Valid()) {                            \
+        return ::lom::Err::Sprintf("invalid conn"); \
+    }                                               \
+} while (false)
+
 #define LOM_FIBER_CONN_ON_IO_SYS_CALL_ERR(_r_or_w) do {             \
     Assert(ret == -1 && errno != 0);                                \
     if (errno == ECONNRESET) {                                      \
-        SetError("connection reset by peer");                       \
-        return err_code::kConnReset;                                \
+        return ::lom::SysCallErr::Maker().Make(                     \
+            err_code::kConnReset, "connection reset by peer");      \
     }                                                               \
     if (errno == EWOULDBLOCK) {                                     \
         errno = EAGAIN;                                             \
     }                                                               \
     if (errno != EAGAIN && errno != EINTR) {                        \
-        SetError("syscall error");                                  \
-        return err_code::kSysCallFailed;                            \
+        return ::lom::SysCallErr::Maker().Make(                     \
+            err_code::kSysCallFailed, "syscall error");             \
     }                                                               \
     if (expire_at >= 0 && expire_at <= NowMS()) {                   \
-        SetError("timeout");                                        \
-        return err_code::kTimeout;                                  \
+        return ::lom::SysCallErr::Maker().Make(                     \
+            err_code::kTimeout, "timeout");                         \
     }                                                               \
     if (errno == EAGAIN) {                                          \
         WaitingEvents evs;                                          \
@@ -31,54 +37,47 @@ namespace fiber
         evs.waiting_fds_##_r_or_w##_.emplace_back(conn.RawFd());    \
         SwitchToSchedFiber(evs);                                    \
         if (!conn.Valid()) {                                        \
-            SetError("conn closed by other fiber");                 \
-            return err_code::kClosed;                               \
+        return ::lom::SysCallErr::Maker().Make(                     \
+            err_code::kClosed, "conn closed by other fiber");       \
         }                                                           \
     }                                                               \
 } while (false)
 
-static ssize_t InternalRead(Conn conn, char *buf, ssize_t sz, int64_t expire_at)
+static ::lom::Err::Ptr InternalRead(Conn conn, char *buf, ssize_t sz, int64_t expire_at, ssize_t &rsz)
 {
-    if (!conn.Valid())
-    {
-        SetError("invalid conn");
-        return err_code::kInvalid;
-    }
+    LOM_FIBER_CONN_CHECK_VALID();
 
     for (;;)
     {
-        ssize_t ret = read(conn.RawFd(), buf, (size_t)sz);
+        ssize_t ret = read(conn.RawFd(), buf, static_cast<size_t>(sz));
         if (ret >= 0)
         {
-            return ret;
+            rsz = ret;
+            return nullptr;
         }
         LOM_FIBER_CONN_ON_IO_SYS_CALL_ERR(r);
     }
 }
 
-static ssize_t InternalWrite(Conn conn, const char *buf, ssize_t sz, int64_t expire_at)
+static ::lom::Err::Ptr InternalWrite(Conn conn, const char *buf, ssize_t sz, int64_t expire_at, ssize_t &wsz)
 {
-    if (!conn.Valid())
-    {
-        SetError("invalid conn");
-        return err_code::kInvalid;
-    }
+    LOM_FIBER_CONN_CHECK_VALID();
 
     if (sz > 0)
     {
         for (;;)
         {
-            ssize_t ret = write(conn.RawFd(), buf, (size_t)sz);
+            ssize_t ret = write(conn.RawFd(), buf, static_cast<size_t>(sz));
             if (ret > 0)
             {
-                return ret;
+                wsz = ret;
+                return nullptr;
             }
             if (ret == 0)
             {
                 if (expire_at >= 0 && expire_at <= NowMS())
                 {
-                    SetError("timeout");
-                    return err_code::kTimeout;
+                    return ::lom::SysCallErr::Maker().Make(err_code::kTimeout, "timeout");
                 }
                 continue;
             }
@@ -86,20 +85,16 @@ static ssize_t InternalWrite(Conn conn, const char *buf, ssize_t sz, int64_t exp
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
-static int InternalWriteAll(Conn conn, const char *buf, ssize_t sz, int64_t expire_at)
+static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz, int64_t expire_at)
 {
-    if (!conn.Valid())
-    {
-        SetError("invalid conn");
-        return err_code::kInvalid;
-    }
+    LOM_FIBER_CONN_CHECK_VALID();
 
     while (sz > 0)
     {
-        ssize_t ret = write(conn.RawFd(), buf, (size_t)sz);
+        ssize_t ret = write(conn.RawFd(), buf, static_cast<size_t>(sz));
         if (ret > 0)
         {
             Assert(ret <= sz);
@@ -111,69 +106,63 @@ static int InternalWriteAll(Conn conn, const char *buf, ssize_t sz, int64_t expi
         {
             if (expire_at >= 0 && expire_at <= NowMS())
             {
-                SetError("timeout");
-                return err_code::kTimeout;
+                return ::lom::SysCallErr::Maker().Make(err_code::kTimeout, "timeout");
             }
             continue;
         }
         LOM_FIBER_CONN_ON_IO_SYS_CALL_ERR(w);
     }
 
-    return 0;
+    return nullptr;
 }
 
-ssize_t Conn::Read(char *buf, ssize_t sz, int64_t timeout_ms) const
+::lom::Err::Ptr Conn::Read(char *buf, ssize_t sz, ssize_t &rsz, int64_t timeout_ms) const
 {
     if (sz <= 0)
     {
-        return err_code::kInvalid;
+        return ::lom::Err::Sprintf("invalid buf size");
     }
 
     LOM_FIBER_CONN_INIT_EXPIRE_AT();
-    return InternalRead(*this, buf, sz, expire_at);
+    return InternalRead(*this, buf, sz, expire_at, rsz);
 }
 
-ssize_t Conn::Write(const char *buf, ssize_t sz, int64_t timeout_ms) const
+::lom::Err::Ptr Conn::Write(const char *buf, ssize_t sz, ssize_t &wsz, int64_t timeout_ms) const
 {
     if (sz < 0)
     {
-        return err_code::kInvalid;
+        return ::lom::Err::Sprintf("invalid buf size");
     }
 
     LOM_FIBER_CONN_INIT_EXPIRE_AT();
-    return InternalWrite(*this, buf, sz, expire_at);
+    return InternalWrite(*this, buf, sz, expire_at, wsz);
 }
 
-int Conn::WriteAll(const char *buf, ssize_t sz, int64_t timeout_ms) const
+::lom::Err::Ptr Conn::WriteAll(const char *buf, ssize_t sz, int64_t timeout_ms) const
 {
     if (sz < 0)
     {
-        return err_code::kInvalid;
+        return ::lom::Err::Sprintf("invalid buf size");
     }
 
     LOM_FIBER_CONN_INIT_EXPIRE_AT();
     return InternalWriteAll(*this, buf, sz, expire_at);
 }
 
-Conn Conn::FromRawFd(int fd)
+::lom::Err::Ptr Conn::NewFromRawFd(int fd, Conn &conn)
 {
-    Conn conn;
-    conn.Reg(fd);
-    return conn;
+    return conn.Reg(fd);
 }
 
-static Conn ConnectStreamSock(
-    int socket_family, struct sockaddr *addr, socklen_t addr_len, int64_t timeout_ms, int *err_code)
+static ::lom::Err::Ptr ConnectStreamSock(
+    int socket_family, struct sockaddr *addr, socklen_t addr_len, int64_t timeout_ms, Conn &conn)
 {
     LOM_FIBER_CONN_INIT_EXPIRE_AT();
 
-#define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do { \
-    SetError(_err_msg);                                     \
-    if (err_code != nullptr) {                              \
-        *err_code = (err_code::_err_code);                  \
-    }                                                       \
-    SilentClose(conn_sock);                                 \
-    return Conn();                                          \
+#define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do {                         \
+    auto _err = ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg)); \
+    SilentClose(conn_sock);                                                         \
+    return _err;                                                                    \
 } while (false)
 
     int conn_sock = socket(socket_family, SOCK_STREAM, 0);
@@ -196,25 +185,17 @@ static Conn ConnectStreamSock(
 
 #undef LOM_FIBER_CONN_ERR_RETURN
 
-    Conn conn = Conn::FromRawFd(conn_sock);
-    if (!conn.Valid())
+    auto err = Conn::NewFromRawFd(conn_sock, conn);
+    if (err)
     {
         SilentClose(conn_sock);
-        if (err_code != nullptr)
-        {
-            *err_code = err_code::kSysCallFailed;
-        }
-        return conn;
+        return err;
     }
 
     if (ret == 0)
     {
         //success
-        if (err_code != nullptr)
-        {
-            *err_code = 0;
-        }
-        return conn;
+        return nullptr;
     }
 
     WaitingEvents evs;
@@ -222,15 +203,10 @@ static Conn ConnectStreamSock(
     evs.waiting_fds_w_.emplace_back(conn_sock);
     SwitchToSchedFiber(evs);
 
-#define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do { \
-    SetError(_err_msg);                                     \
-    if (err_code != nullptr) {                              \
-        *err_code = (err_code::_err_code);                  \
-    }                                                       \
-    int save_errno = errno;                                 \
-    conn.Close();                                           \
-    errno = save_errno;                                     \
-    return conn;                                            \
+#define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do {                         \
+    auto _err = ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg)); \
+    conn.Close();                                                                   \
+    return _err;                                                                    \
 } while (false)
 
     if (expire_at >= 0 && expire_at <= NowMS())
@@ -238,15 +214,15 @@ static Conn ConnectStreamSock(
         LOM_FIBER_CONN_ERR_RETURN("timeout", kTimeout);
     }
 
-    int err;
-    socklen_t len = sizeof(err);
-    if (getsockopt(conn_sock, SOL_SOCKET, SO_ERROR, &err, &len) == -1)
+    int sock_opt_err;
+    socklen_t len = sizeof(sock_opt_err);
+    if (getsockopt(conn_sock, SOL_SOCKET, SO_ERROR, &sock_opt_err, &len) == -1)
     {
         LOM_FIBER_CONN_ERR_RETURN("getsockopt failed", kSysCallFailed);
     }
-    if (err != 0)
+    if (sock_opt_err != 0)
     {
-        errno = err;
+        errno = sock_opt_err;
         LOM_FIBER_CONN_ERR_RETURN("connect failed", kSysCallFailed);
     }
 
@@ -256,68 +232,50 @@ static Conn ConnectStreamSock(
 
 #undef LOM_FIBER_CONN_ERR_RETURN
 
-    return conn;
+    return nullptr;
 }
 
-Conn ConnectTCP(const char *ip, uint16_t port, int64_t timeout_ms, int *err_code)
+::lom::Err::Ptr ConnectTCP(const char *ip, uint16_t port, Conn &conn, int64_t timeout_ms)
 {
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     if (inet_aton(ip, &addr.sin_addr) == 0)
     {
-        /*
-        `inet_aton`不是sys call，但这里将其模拟为一个sys call的返回行为
-        参考`man inet_aton`:
-            inet_aton() returns 1 if the supplied string was successfully interpreted,
-            or 0 if the string is invalid (errno is not set on error).
-        */
-        errno = EINVAL;
-        SetError(Sprintf("invalid ip [%s]", ip));
-        if (err_code != nullptr)
-        {
-            *err_code = err_code::kSysCallFailed;
-        }
-        return Conn();
+        return ::lom::Err::Sprintf("invalid ip [%s]", ip);
     }
     addr.sin_port = htons(port);
 
     return ConnectStreamSock(
-        AF_INET, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr), timeout_ms, err_code);
+        AF_INET, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr), timeout_ms, conn);
 }
 
-Conn ConnectUnixSockStream(const char *path, int64_t timeout_ms, int *err_code)
+::lom::Err::Ptr ConnectUnixSockStream(const char *path, Conn &conn, int64_t timeout_ms)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    if (!PathToUnixSockAddr(path, addr, addr_len))
+    auto err = PathToUnixSockAddr(path, addr, addr_len);
+    if (err)
     {
-        if (err_code != nullptr)
-        {
-            *err_code = err_code::kSysCallFailed;
-        }
-        return Conn();
+        return err;
     }
 
     return ConnectStreamSock(
-        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, timeout_ms, err_code);
+        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, timeout_ms, conn);
 }
 
-Conn ConnectUnixSockStreamWithAbstractPath(const Str &path, int64_t timeout_ms, int *err_code)
+::lom::Err::Ptr ConnectUnixSockStreamWithAbstractPath(const Str &path, Conn &conn, int64_t timeout_ms)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    if (!AbstractPathToUnixSockAddr(path, addr, addr_len))
+    auto err = AbstractPathToUnixSockAddr(path, addr, addr_len);
+    if (err)
     {
-        if (err_code != nullptr)
-        {
-            *err_code = err_code::kSysCallFailed;
-        }
-        return Conn();
+        return err;
     }
 
     return ConnectStreamSock(
-        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, timeout_ms, err_code);
+        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, timeout_ms, conn);
 }
 
 }

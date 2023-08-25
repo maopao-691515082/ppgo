@@ -299,16 +299,19 @@ bool DecodeUInt(const char *&p, ssize_t &sz, uint64_t &n)
     return false;
 }
 
-static bool LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
+static ::lom::Err::Ptr LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
 {
     s.resize(1);
-    ssize_t ret = br->ReadFull(&s[0], 1);
-    if (ret != 1)
+    ssize_t rsz;
+    auto err = br->ReadFull(&s[0], 1, rsz);
+    if (err)
     {
-        ret < 0 ?
-            PushErrBT() :
-            SetErr("ReadFull first byte failed: EOF");
-        return false;
+        return err;
+    }
+    if (rsz != 1)
+    {
+        Assert(rsz == 0);
+        return ::lom::Err::Sprintf("ReadFull first byte failed: EOF");
     }
 
     ssize_t remain_len = 0;
@@ -339,62 +342,63 @@ static bool LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
     }
     else
     {
-        SetErr(Sprintf("invalid first byte [0x%02X]", b));
-        return false;
+        return ::lom::Err::Sprintf("invalid first byte [0x%02X]", b);
     }
 
     if (remain_len > 0)
     {
         s.resize(1 + static_cast<size_t>(remain_len));
-        ret = br->ReadFull(&s[1], remain_len);
-        if (ret != remain_len)
+        err = br->ReadFull(&s[1], remain_len, rsz);
+        if (err)
         {
-            ret < 0 ?
-                PushErrBT() :
-                SetErr(Sprintf("ReadFull remain_len [%zd] failed, ret [%zd]", remain_len, ret));
-            return false;
+            return err;
+        }
+        if (rsz != remain_len)
+        {
+            Assert(rsz >= 0);
+            return ::lom::Err::Sprintf("ReadFull remain_len [%zd] failed, ret [%zd]", remain_len, rsz);
         }
     }
 
-    return true;
+    return nullptr;
 }
 
-bool LoadFrom(const io::BufReader::Ptr &br, int64_t &n)
+::lom::Err::Ptr LoadFrom(const io::BufReader::Ptr &br, int64_t &n)
 {
     std::string s;
-    if (!LoadEncodedFrom(br, s))
+    auto err = LoadEncodedFrom(br, s);
+    if (err)
     {
-        PushErrBT();
-        return false;
+        err->PushTB();
+        return err;
     }
     const char *p = s.data();
     ssize_t sz = static_cast<ssize_t>(s.size());
     if (!Decode(p, sz, n))
     {
-        SetErr(Sprintf("decode int64 failed"));
-        return false;
+        return ::lom::Err::Sprintf("decode int64 failed");
     }
     Assert(sz == 0);
-    return true;
+    return nullptr;
 }
 
-bool LoadUIntFrom(const io::BufReader::Ptr &br, uint64_t &n)
+::lom::Err::Ptr LoadUIntFrom(const io::BufReader::Ptr &br, uint64_t &n)
 {
     std::string s;
-    if (!LoadEncodedFrom(br, s))
+    auto err = LoadEncodedFrom(br, s);
+    if (err)
     {
-        PushErrBT();
-        return false;
+        err->PushTB();
+        return err;
     }
     const char *p = s.data();
     ssize_t sz = static_cast<ssize_t>(s.size());
     if (!DecodeUInt(p, sz, n))
     {
-        SetErr(Sprintf("decode uint64 failed"));
-        return false;
+        return ::lom::Err::Sprintf("decode uint64 failed");
     }
     Assert(sz == 0);
-    return true;
+    return nullptr;
 }
 
 }

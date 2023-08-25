@@ -6,15 +6,11 @@ namespace lom
 namespace fiber
 {
 
-Conn Listener::Accept(int64_t timeout_ms, int *err_code) const
+::lom::Err::Ptr Listener::Accept(Conn &conn, int64_t timeout_ms) const
 {
 
-#define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg, _err_code) do { \
-    SetError(_err_msg);                                         \
-    if (err_code != nullptr) {                                  \
-        *err_code = (err_code::_err_code);                      \
-    }                                                           \
-    return Conn();                                              \
+#define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg, _err_code) do {                 \
+    return ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg));  \
 } while (false)
 
     if (!Valid())
@@ -29,27 +25,18 @@ Conn Listener::Accept(int64_t timeout_ms, int *err_code) const
         int fd = accept(RawFd(), nullptr, nullptr);
         if (fd >= 0)
         {
-            Conn conn = Conn::FromRawFd(fd);
-            if (conn.Valid())
-            {
-                //set tcp nodelay as possible
-                int enable = 1;
-                setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
-
-                if (err_code != nullptr)
-                {
-                    *err_code = 0;
-                }
-            }
-            else
+            auto err = Conn::NewFromRawFd(fd, conn);
+            if (err)
             {
                 SilentClose(fd);
-                if (err_code != nullptr)
-                {
-                    *err_code = -1;
-                }
+                return err;
             }
-            return conn;
+
+            //set tcp nodelay as possible
+            int enable = 1;
+            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+
+            return nullptr;
         }
         Assert(fd == -1 && errno != 0);
         if (errno == EWOULDBLOCK)
@@ -86,7 +73,7 @@ class ServeWorker
     size_t idx_;
     std::function<void (size_t)> init_worker_;
     std::function<void (Conn)> work_with_conn_;
-    std::function<void (const Str &)> err_log_;
+    std::function<void (::lom::Err::Ptr)> err_log_;
 
     std::mutex lock_;
     std::vector<int> conn_fds_;
@@ -118,14 +105,15 @@ class ServeWorker
 
                 for (int fd : conn_fds)
                 {
-                    Conn conn = Conn::FromRawFd(fd);
-                    if (!conn.Valid())
+                    Conn conn;
+                    auto err = Conn::NewFromRawFd(fd, conn);
+                    if (err)
                     {
                         if (err_log_)
                         {
-                            err_log_(Sprintf(
-                                "lom.fiber.Listener.ServeWorker: register new conn fd failed [%s]",
-                                ::lom::Err().CStr()));
+                            err_log_(::lom::Err::Sprintf(
+                                "lom.fiber.Listener.ServeWorker: register new conn fd failed: %s",
+                                err->Msg().CStr()));
                         }
                         close(fd);
                         continue;
@@ -147,7 +135,7 @@ public:
 
     ServeWorker(
         size_t idx, std::function<void (size_t)> init_worker, std::function<void (Conn)> work_with_conn,
-        std::function<void (const Str &)> err_log
+        std::function<void (::lom::Err::Ptr)> err_log
     ) :
         idx_(idx), init_worker_(init_worker), work_with_conn_(work_with_conn), err_log_(err_log)
     {
@@ -161,9 +149,9 @@ public:
     }
 };
 
-int Listener::Serve(
+::lom::Err::Ptr Listener::Serve(
     size_t worker_count, std::function<void (Conn)> work_with_conn,
-    std::function<void (const Str &)> err_log, std::function<void (size_t)> init_worker) const
+    std::function<void (::lom::Err::Ptr)> err_log, std::function<void (size_t)> init_worker) const
 {
     if (worker_count > kWorkerCountMax)
     {
@@ -175,21 +163,22 @@ int Listener::Serve(
         workers[i] = new ServeWorker(i, init_worker, work_with_conn, err_log);
     }
 
-    int err_code;
     size_t next_worker_idx = 0;
     for (;;)
     {
-        Conn conn = Accept(-1, &err_code);
-        if (!conn.Valid())
+        Conn conn;
+        auto err = Accept(conn, -1);
+        if (err)
         {
-            if (err_code == ::lom::fiber::err_code::kClosed)
+            auto syscall_err = err->DynCast<::lom::SysCallErr>();
+            if (syscall_err && syscall_err->Code() == ::lom::fiber::err_code::kClosed)
             {
-                break;
+                return err;
             }
             if (err_log)
             {
-                err_log(Sprintf(
-                    "lom.fiber.Listener.Serve: accept new client failed: %s", ::lom::Err().CStr()));
+                err_log(::lom::Err::Sprintf(
+                    "lom.fiber.Listener.Serve: accept new client failed: %s", err->Msg().CStr()));
             }
             ::lom::fiber::SleepMS(1);
             continue;
@@ -203,14 +192,15 @@ int Listener::Serve(
             continue;
         }
 
-        if (!conn.Unreg())
+        err = conn.Unreg();
+        if (err)
         {
             if (err_log)
             {
-                err_log(Sprintf(
+                err_log(::lom::Err::Sprintf(
                     "lom.fiber.Listener.Serve: "
                     "unreg new client fd from listener thread fiber sched failed: %s",
-                    ::lom::Err().CStr()));
+                    err->Msg().CStr()));
             }
             conn.Close();
             continue;
@@ -219,33 +209,29 @@ int Listener::Serve(
         workers.at(next_worker_idx)->DeliverConnFd(conn.RawFd());
         next_worker_idx = (next_worker_idx + 1) % workers.size();
     }
-
-    return err_code;
 }
 
-Listener Listener::FromRawFd(int fd)
+::lom::Err::Ptr Listener::NewFromRawFd(int fd, Listener &listener)
 {
-    Listener listener;
-    listener.Reg(fd);
-    return listener;
+    return listener.Reg(fd);
 }
 
-static Listener ListenStream(int socket_family, struct sockaddr *addr, socklen_t addr_len, int listen_fd = -1)
+static ::lom::Err::Ptr ListenStream(
+    int socket_family, struct sockaddr *addr, socklen_t addr_len, Listener &listener, int listen_fd = -1)
 {
     if (listen_fd < 0)
     {
         listen_fd = socket(socket_family, SOCK_STREAM, 0);
         if (listen_fd == -1)
         {
-            SetError("create listen socket failed");
-            return Listener();
+            return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "listen socket create failed");
         }
     }
 
-#define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg) do {    \
-    SetError(_err_msg);                                 \
-    SilentClose(listen_fd);                             \
-    return Listener();                                  \
+#define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg) do {                                    \
+    auto _err = ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, (_err_msg));  \
+    SilentClose(listen_fd);                                                             \
+    return _err;                                                                        \
 } while (false)
 
     if (bind(listen_fd, addr, addr_len) == -1)
@@ -260,30 +246,31 @@ static Listener ListenStream(int socket_family, struct sockaddr *addr, socklen_t
 
 #undef LOM_FIBER_LISTENER_ERR_RETURN
 
-    Listener listener = Listener::FromRawFd(listen_fd);
-    if (!listener.Valid())
+    auto err = Listener::NewFromRawFd(listen_fd, listener);
+    if (err)
     {
         SilentClose(listen_fd);
+        return err;
     }
 
-    return listener;
+    return nullptr;
 }
 
-Listener ListenTCP(uint16_t port)
+::lom::Err::Ptr ListenTCP(uint16_t port, Listener &listener)
 {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd == -1)
     {
-        SetError("create listen socket failed");
-        return Listener();
+        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "listen socket create failed");
     }
 
     int reuseaddr_on = 1;
     if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on, sizeof(reuseaddr_on)) == -1)
     {
-        SetError("set listen socket reuse-addr failed");
+        auto err = ::lom::SysCallErr::Maker().Make(
+            err_code::kSysCallFailed, "set listen socket reuse-addr failed");
         SilentClose(listen_fd);
-        return Listener();
+        return err;
     }
 
     struct sockaddr_in listen_addr;
@@ -293,31 +280,33 @@ Listener ListenTCP(uint16_t port)
     listen_addr.sin_port = htons(port);
 
     return ListenStream(
-        AF_INET, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr), listen_fd);
+        AF_INET, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr), listener, listen_fd);
 }
 
-Listener ListenUnixSockStream(const char *path)
+::lom::Err::Ptr ListenUnixSockStream(const char *path, Listener &listener)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    if (!PathToUnixSockAddr(path, addr, addr_len))
+    auto err = PathToUnixSockAddr(path, addr, addr_len);
+    if (err)
     {
-        return Listener();
+        return err;
     }
 
-    return ListenStream(AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len);
+    return ListenStream(AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, listener);
 }
 
-Listener ListenUnixSockStreamWithAbstractPath(const Str &path)
+::lom::Err::Ptr ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    if (!AbstractPathToUnixSockAddr(path, addr, addr_len))
+    auto err = AbstractPathToUnixSockAddr(path, addr, addr_len);
+    if (err)
     {
-        return Listener();
+        return err;
     }
 
-    return ListenStream(AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len);
+    return ListenStream(AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, listener);
 }
 
 }

@@ -13,11 +13,7 @@ class Listener : public Fd
 {
 public:
 
-    /*
-    接收连接，返回连接对象，如果出错，连接对象`Valid()`为false
-    若`err_code`不为nullptr，则将错误代码存入
-    */
-    Conn Accept(int64_t timeout_ms = -1, int *err_code = nullptr) const;
+    ::lom::Err::Ptr Accept(Conn &conn, int64_t timeout_ms = -1) const;
 
     /*
     调用`Serve`方法进入监听服务
@@ -28,7 +24,7 @@ public:
         - `work_with_conn`函数用于回调处理新链接，由于可能在其他worker线程环境中执行，调用者自己处理好相关问题
         - 若指定`init_worker`，则它会在每个worker线程做完fiber初始化后调用
     错误和退出处理机制：
-        - 只有当外部关闭Listener，或通过任何等价方式要求停止执行时，`Serve`才会退出，并返回对应的错误码
+        - 只有当外部关闭Listener，或通过任何等价方式要求停止执行时，`Serve`才会退出，并返回对应的错误
         - `Accept`接收链接失败，或传递链接给worker线程出错时`Serve`不会退出，
           而是会调用`err_log`函数（若指定），然后继续运行
             - `Accept`失败时会短暂睡眠一下，防止监听的fd出现问题时无限打印日志
@@ -38,31 +34,28 @@ public:
               一般来说使用`Serve`的场景也都是永久服务，就先简单处理
     */
     static const size_t kWorkerCountMax = 1024;
-    int Serve(
+    ::lom::Err::Ptr Serve(
         size_t worker_count, std::function<void (Conn)> work_with_conn,
-        std::function<void (const Str &)> err_log = nullptr,
+        std::function<void (::lom::Err::Ptr)> err_log = nullptr,
         std::function<void (size_t)> init_worker = nullptr) const;
 
-    //从一个原始fd创建新的`Listener`对象，如果出错，其`Valid()`为false
-    static Listener FromRawFd(int fd);
+    //从一个原始fd创建新的`Listener`对象
+    static ::lom::Err::Ptr NewFromRawFd(int fd, Listener &listener);
 };
 
-/*
-监听TCP端口（IPv4）
-返回`Listener`对象，如果出错，其`Valid()`为false
-*/
-Listener ListenTCP(uint16_t port);
+//监听TCP端口（IPv4）
+::lom::Err::Ptr ListenTCP(uint16_t port, Listener &listener);
 
 /*
 监听Unix域流式socket，`path`必须是一个普通的文件路径，不能是空串或长度超过`sockaddr_un.sun_path`的大小减一
 */
-Listener ListenUnixSockStream(const char *path);
+::lom::Err::Ptr ListenUnixSockStream(const char *path, Listener &listener);
 
 /*
 类似`ListenUnixSockStream`，但是使用Linux的抽象路径机制，输入的`path`不需要带首位的`\0`，接口会自动补上，
 因此`path`的长度不能超过`sockaddr_un.sun_path`的大小减一
 */
-Listener ListenUnixSockStreamWithAbstractPath(const Str &path);
+::lom::Err::Ptr ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener);
 
 }
 

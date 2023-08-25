@@ -13,20 +13,31 @@ bool IsInited()
     return inited;
 }
 
-bool Init()
+::lom::Err::Ptr Init()
 {
     if (!inited)
     {
-        inited = InitFdEnv() && InitSched();
+        auto err = InitFdEnv();
+        if (err)
+        {
+            return err;
+        }
+        err = InitSched();
+        if (err)
+        {
+            return err;
+        }
+        inited = true;
     }
-    return inited;
+    return nullptr;
 }
 
 void MustInit()
 {
-    if (!Init())
+    auto err = Init();
+    if (err)
     {
-        Die(Str("lom::fiber::MustInit: init fiber env failed: ").Concat(Err()));
+        Die(Str("lom::fiber::MustInit: init fiber env failed: ").Concat(err->Msg()));
     }
 }
 

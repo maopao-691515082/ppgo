@@ -9,11 +9,11 @@ namespace fiber
 namespace err_code
 {
 
-enum
+//错误码定义
+enum : int
 {
-    kSysCallFailed  = -1,   //兼容系统调用的风格
+    kSysCallFailed  = -1,
 
-    //标准错误代码
     kTimeout    = -2,
     kClosed     = -3,
     kIntr       = -4,

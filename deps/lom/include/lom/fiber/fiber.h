@@ -20,7 +20,7 @@ static const ssize_t
     kStkSizeMax = 8 * 1024 * 1024;
 
 bool IsInited();
-bool Init();
+::lom::Err::Ptr Init();
 void MustInit();    //init or die
 
 /*
@@ -30,11 +30,11 @@ void MustInit();    //init or die
 */
 void Create(std::function<void ()> run, ssize_t stk_sz = kStkSizeMin);
 
-//开始运行，除非出现内部错误，否则永远不退出
-void Run();
+//开始运行，除非出现内部错误（一般就是系统异常导致epoll_wait失败），否则永远不退出
+::lom::Err::Ptr Run();
 
 void Yield();
-int SleepMS(int64_t ms);
+::lom::Err::Ptr SleepMS(int64_t ms);
 
 }
 

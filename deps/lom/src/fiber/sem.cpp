@@ -6,7 +6,7 @@ namespace lom
 namespace fiber
 {
 
-bool Sem::Destroy() const
+::lom::Err::Ptr Sem::Destroy() const
 {
     return UnregSemFromSched(*this);
 }
@@ -16,12 +16,11 @@ bool Sem::Valid() const
     return seq_ >= 0 && IsSemInSched(*this);
 }
 
-int Sem::Acquire(uint64_t acquire_value, int64_t timeout_ms) const
+::lom::Err::Ptr Sem::Acquire(uint64_t acquire_value, int64_t timeout_ms) const
 {
     if (!Valid())
     {
-        SetError("invalid sem");
-        return err_code::kInvalid;
+        return ::lom::Err::Sprintf("invalid sem");
     }
 
     int64_t expire_at = timeout_ms < 0 ? -1 : NowMS() + timeout_ms;
@@ -37,7 +36,7 @@ int Sem::Acquire(uint64_t acquire_value, int64_t timeout_ms) const
         done_value += TryAcquireSem(*this, acquire_value - done_value);
         if (done_value == acquire_value)
         {
-            return 0;
+            return nullptr;
         }
 
         //没有扣完，需要阻塞等待
@@ -49,8 +48,7 @@ int Sem::Acquire(uint64_t acquire_value, int64_t timeout_ms) const
                 //已经申请了一部分了，返还
                 RestoreAcquiringSem(*this, done_value);
             }
-            SetError("timeout");
-            return err_code::kTimeout;
+            return ::lom::SysCallErr::Maker().Make(err_code::kTimeout, "timeout");
         }
 
         WaitingEvents evs;
@@ -60,28 +58,26 @@ int Sem::Acquire(uint64_t acquire_value, int64_t timeout_ms) const
 
         if (!Valid())
         {
-            SetError("sem destroyed by another fiber");
-            return err_code::kClosed;
+            return ::lom::SysCallErr::Maker().Make(err_code::kClosed, "sem destroyed by another fiber");
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
-int Sem::Release(uint64_t release_value) const
+::lom::Err::Ptr Sem::Release(uint64_t release_value) const
 {
     return ReleaseSem(*this, release_value);
 }
 
-Sem Sem::New(uint64_t value)
+::lom::Err::Ptr Sem::New(uint64_t value, Sem &sem)
 {
     static thread_local int64_t next_sem_seq = 1;
 
-    Sem sem;
     sem.seq_ = next_sem_seq;
     ++ next_sem_seq;
     RegSemToSched(sem, value);
-    return sem;
+    return nullptr;
 }
 
 }
