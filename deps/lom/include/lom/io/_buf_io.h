@@ -20,9 +20,7 @@ public:
 
     typedef std::shared_ptr<BufReader> Ptr;
 
-    virtual ~BufReader()
-    {
-    }
+    virtual ~BufReader() = default;
 
     /*
     下层的读函数类型
@@ -71,9 +69,7 @@ public:
 
     typedef std::shared_ptr<BufWriter> Ptr;
 
-    virtual ~BufWriter()
-    {
-    }
+    virtual ~BufWriter() = default;
 
     /*
     下层的写函数类型

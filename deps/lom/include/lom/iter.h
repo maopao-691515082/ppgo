@@ -31,9 +31,7 @@ public:
 
     typedef std::shared_ptr<Iterator<T>> Ptr;
 
-    virtual ~Iterator()
-    {
-    }
+    virtual ~Iterator() = default;
 
     //创建一个当前迭代器的拷贝，可用于反复迭代一个目标，若具体实现不支持重复迭代，则可返回空指针
     virtual Ptr Copy() const = 0;

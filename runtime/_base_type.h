@@ -165,9 +165,7 @@ public:
 
     typedef std::shared_ptr<Any> Ptr;
 
-    virtual ~Any()
-    {
-    }
+    virtual ~Any() = default;
 
     //R_*: methods for reflect
     virtual std::string R_TypeName() const = 0;

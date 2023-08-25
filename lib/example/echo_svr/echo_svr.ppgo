@@ -11,7 +11,7 @@ class ClientWorker
         while (true)
         {
             var n = conn.read(buf);
-            if(n == 0)
+            if (n == 0)
             {
                 return;
             }

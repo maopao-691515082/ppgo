@@ -202,9 +202,7 @@ protected:
 
 public:
 
-    virtual ~RCObjDyn()
-    {
-    }
+    virtual ~RCObjDyn() = default;
 
     template <typename T>
     RCPtr<T> DynCast()
