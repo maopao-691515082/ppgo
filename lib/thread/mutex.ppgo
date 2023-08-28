@@ -1,0 +1,20 @@
+public class Mutex
+{
+    l uptr;
+
+    public func init();
+    public func deinit();
+
+    public func lock();
+    public func unlock();
+
+    public func enter()
+    {
+        this.lock();
+    }
+
+    public func exit()
+    {
+        this.unlock();
+    }
+}

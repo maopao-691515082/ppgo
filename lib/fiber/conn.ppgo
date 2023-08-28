@@ -20,6 +20,12 @@ public class Conn
         b.check_valid();
         this.write_impl(b, opt_timeout_to_ms(opt_timeout = timeout));
     }
+
+    func write_str_impl(s string, timeout_ms int);
+    public func write_str(s string, /, timeout float)
+    {
+        this.write_str_impl(s, opt_timeout_to_ms(opt_timeout = timeout));
+    }
 }
 
 func connect_tcp_impl(ipv4 string, port u16, timeout_ms int) Conn;

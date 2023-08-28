@@ -47,6 +47,18 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
+::ppgo::Exc::Ptr cls_Conn::method_write_str_impl(
+    ::std::tuple<> &ret, ::ppgo::tp_string s, ::ppgo::tp_int timeout_ms)
+{
+    auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
+    auto err = conn->WriteAll(s.Data(), s.Len(), timeout_ms);
+    if (err)
+    {
+        return ::ppgo::Exc::Sprintf("write failed: %s", err->Msg().CStr());
+    }
+    return nullptr;
+}
+
 ::ppgo::Exc::Ptr func_connect_tcp_impl(
     ::std::tuple<std::shared_ptr<cls_Conn>> &ret,
     ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port, ::ppgo::tp_int timeout_ms)

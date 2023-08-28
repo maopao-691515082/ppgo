@@ -939,8 +939,10 @@ def output_stmts(code, stmts):
         if stmt.type == "with":
             with code.new_blk(""):
                 wv = "with_%d" % ppgoc_util.new_id()
-                code += "::ppgo::WithGuard<%s> %s(%s);" % (
-                    gen_tp_code(ppgoc_type.WITHABLE_TYPE), wv, gen_expr_code(stmt.expr))
+                wtpc = gen_tp_code(ppgoc_type.WITHABLE_TYPE)
+                P, S = "std::shared_ptr<", ">"
+                assert wtpc.startswith(P) and wtpc.endswith(S)
+                code += "::ppgo::WithGuard<%s> %s(%s);" % (wtpc[len(P):-len(S)], wv, gen_expr_code(stmt.expr))
                 excv = "exc_%d" % ppgoc_util.new_id()
                 code += "auto %s = %s.ExcOfEnter();" % (excv, wv)
                 with code.new_blk("if (%s)" % excv):

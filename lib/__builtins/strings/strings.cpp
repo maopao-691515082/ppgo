@@ -8,6 +8,30 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
+::ppgo::Exc::Ptr func_len(::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_string s)
+{
+    std::get<0>(ret) = s.Len();
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_repr(::std::tuple<::ppgo::tp_string> &ret, ::ppgo::tp_string s)
+{
+    std::get<0>(ret) = ::ppgo::tp_string(s.RawStr().Repr());
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_upper(::std::tuple<::ppgo::tp_string> &ret, ::ppgo::tp_string s)
+{
+    std::get<0>(ret) = ::ppgo::tp_string(s.RawStr().Upper());
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_lower(::std::tuple<::ppgo::tp_string> &ret, ::ppgo::tp_string s)
+{
+    std::get<0>(ret) = ::ppgo::tp_string(s.RawStr().Lower());
+    return nullptr;
+}
+
 #define CHECK_BASE() do {                               \
     if (!(base == 0 || (base >= 2 && base <= 36))) {    \
         return ::ppgo::Exc::Sprintf("invalid base");    \

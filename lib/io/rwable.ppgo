@@ -1,0 +1,10 @@
+public interface Readable
+{
+    public read(b [:]byte) int;
+}
+
+public interface Writable
+{
+    public write(b [:]byte);
+    public write_str(s string);
+}

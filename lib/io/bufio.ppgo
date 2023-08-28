@@ -1,0 +1,172 @@
+final var (
+    kBufSzMin int = 4 * 1024;
+    kBufSzMax int = 4 * 1024 * 1024;
+
+    kSmallStrLenMax int = 1024;
+)
+
+func standardize_buf_sz(buf_sz int) int
+{
+    if (buf_sz < kBufSzMin) {
+        return kBufSzMin;
+    }
+    if (buf_sz > kBufSzMax) {
+        return kBufSzMax;
+    }
+    return buf_sz;
+}
+
+public class BufReader
+{
+    r Readable;
+    buf []byte;
+    start, len int;
+
+    public func init(r Readable, /, buf_sz int)
+    {
+        this.r = r;
+        this.buf.resize(standardize_buf_sz(buf_sz.get_or(kBufSzMin)));
+    }
+
+    func fill()
+    {
+        if (this.len == 0)
+        {
+            this.start = 0;
+            this.len = this.r.read(this.buf);
+        }
+    }
+
+    public func read(b [:]byte) int
+    {
+        if (b.len() == 0)
+        {
+            throw("empty read buffer");
+        }
+
+        this.fill();
+        if (this.len == 0)
+        {
+            return 0;
+        }
+
+        var copy_len = b.copy_from(this.buf[this.start : this.start + this.len]);
+        this.start += copy_len;
+        this.len -= copy_len;
+        return copy_len;
+    }
+
+    public func read_until(c byte, b [:]byte) int
+    {
+        var b_len = b.len();
+        if (b_len == 0)
+        {
+            throw("empty read buffer");
+        }
+
+        var read_len = 0;
+        while (read_len < b_len)
+        {
+            this.fill();
+            if (this.len == 0)
+            {
+                return read_len;
+            }
+
+            var copy_len = b_len - read_len;
+            if (copy_len > this.len)
+            {
+                copy_len = this.len;
+            }
+            var c_idx = this.buf[this.start : this.start + this.len].index_byte(c);
+            if (c_idx >= 0)
+            {
+                copy_len = c_idx + 1;
+            }
+            b[read_len :].copy_from(this.buf[this.start : this.start + copy_len]);
+            read_len += copy_len;
+            this.start += copy_len;
+            this.len -= copy_len;
+            if (c_idx >= 0)
+            {
+                return read_len;
+            }
+        }
+        return read_len;
+    }
+
+    public func read_full(b [:]byte) int
+    {
+        var b_len = b.len();
+        if (b_len == 0)
+        {
+            throw("empty read buffer");
+        }
+
+        var read_len = 0;
+        while (read_len < b_len)
+        {
+            this.fill();
+            if (this.len == 0)
+            {
+                return read_len;
+            }
+
+            var copy_len = b[read_len :].copy_from(this.buf[this.start : this.start + this.len]);
+            read_len += copy_len;
+            this.start += copy_len;
+            this.len -= copy_len;
+        }
+        return read_len;
+    }
+}
+
+public class BufWriter
+{
+    w Writable;
+    buf []byte;
+    len int;
+
+    public func init(w Writable, /, buf_sz int)
+    {
+        this.w = w;
+        this.buf.resize(standardize_buf_sz(buf_sz.get_or(kBufSzMin)));
+    }
+
+    public func write(b [:]byte)
+    {
+        while (b.len() > 0)
+        {
+            if (this.len == this.buf.len())
+            {
+                this.flush();
+            }
+
+            var copy_len = this.buf[this.len :].copy_from(b);
+            this.len += copy_len;
+            b = b[copy_len :];
+        }
+    }
+
+    public func write_str(s string)
+    {
+        if (s.len() > kSmallStrLenMax)
+        {
+            this.flush();
+            this.w.write_str(s);
+        }
+        else
+        {
+            this.write(s.<[]byte>);
+        }
+    }
+
+    public func flush()
+    {
+        if (this.len > 0)
+        {
+            this.w.write(this.buf[: this.len]);
+            this.len = 0;
+        }
+    }
+}

@@ -75,6 +75,11 @@ public:
         return s_;
     }
 
+    bool operator<(const tp_string &s) const
+    {
+        return s_ < s.s_;
+    }
+
     const char *Data() const
     {
         return s_.Data();

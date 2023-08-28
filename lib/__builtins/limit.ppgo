@@ -1,0 +1,47 @@
+func float_min() float;
+func float_max() float;
+
+public final var (
+
+    kByteMin byte = '\0';
+    kByteMax byte = '\xFF';
+
+    kIntMin int = -9223372036854775807 - 1;
+    kIntMax int = 9223372036854775807;
+
+    kUIntMin uint = 0u;
+    kUIntMax uint = 18446744073709551615u;
+
+    kFloatMin float = float_min();
+    kFloatMax float = float_max();
+
+    kI8Min i8 = (-128).<i8>;
+    kI8Max i8 = (127).<i8>;
+
+    kU8Min u8 = (0).<u8>;
+    kU8Max u8 = (255).<u8>;
+
+    kI16Min i16 = (-32768).<i16>;
+    kI16Max i16 = (32767).<i16>;
+
+    kU16Min u16 = (0).<u16>;
+    kU16Max u16 = (65535).<u16>;
+
+    kI32Min i32 = (-2147483648).<i32>;
+    kI32Max i32 = (2147483647).<i32>;
+
+    kU32Min u32 = (0).<u32>;
+    kU32Max u32 = (4294967295).<u32>;
+
+    kI64Min i64 = kIntMin.<i64>;
+    kI64Max i64 = kIntMax.<i64>;
+
+    kU64Min u64 = kUIntMin.<u64>;
+    kU64Max u64 = kUIntMax.<u64>;
+
+    kF32Min f32 = (0x1p-126).<f32>;
+    kF32Max f32 = (0x1.FFFFFEp127).<f32>;
+
+    kF64Min f64 = (0x1p-1022).<f64>;
+    kF64Max f64 = (0x1.FFFFFFFFFFFFFp1023).<f64>;
+)

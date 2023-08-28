@@ -476,65 +476,105 @@ class Parser:
                             (func, [oe] + el),
                             tps[0] if len(tps) == 1 else ppgoc_type.make_multi(tps))
                     elif oe.tp.is_vec:
-                        #vec method
-                        arg_defs = ppgoc_util.OrderedDict()
-                        if name == "resize":
-                            arg_defs["sz"] = None, ppgoc_type.INT_TYPE
-                            ret_tp = oe.tp
-                        elif name == "len":
-                            ret_tp = ppgoc_type.INT_TYPE
-                        elif name == "get":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            ret_tp = oe.tp.vec_elem_tp
-                        elif name == "set":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            arg_defs["e"] = None, oe.tp.vec_elem_tp
-                            ret_tp = oe.tp
-                        elif name == "append":
-                            arg_defs["e"] = None, oe.tp.vec_elem_tp
-                            ret_tp = oe.tp
-                        elif name == "extend":
-                            arg_defs["es"] = None, oe.tp
-                            ret_tp = oe.tp
-                        elif name == "insert":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            arg_defs["e"] = None, oe.tp.vec_elem_tp
-                            ret_tp = oe.tp
-                        elif name == "insert_vec":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            arg_defs["es"] = None, oe.tp
-                            ret_tp = oe.tp
-                        elif name == "pop":
-                            arg_defs["idx"] = None, ppgoc_type.make_optional_type("idx", ppgoc_type.INT_TYPE)
-                            ret_tp = oe.tp.vec_elem_tp
-                        else:
-                            t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
-                        el = self.parse_exprs_of_calling(vars_stk, arg_defs)
-                        e = Expr("call_vec_method", (oe, name, el), ret_tp)
+                        bytes_method_ok = False
+                        if oe.tp.vec_elem_tp.is_byte_type:
+                            #try bytes method
+                            func = ppgoc_mod.mods[ppgoc_util.MN_BUILTINS + "/bytes"].get_func(name)
+                            bytes_method_ok = func is not None and ppgoc_mod.is_public(func)
+                            if bytes_method_ok:
+                                #found
+                                assert func.arg_defs
+                                _, tp = func.arg_defs.value_at(0)
+                                assert tp == oe.tp
+                                arg_defs = ppgoc_util.OrderedDict()
+                                for k, v in list(func.arg_defs.iteritems())[1 :]:
+                                    arg_defs[k] = v
+                                el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                                tps = [tp for _, tp in func.ret_defs.itervalues()]
+                                e = Expr(
+                                    "call_func",
+                                    (func, [oe] + el),
+                                    tps[0] if len(tps) == 1 else ppgoc_type.make_multi(tps))
+                        if not bytes_method_ok:
+                            #vec method
+                            arg_defs = ppgoc_util.OrderedDict()
+                            if name == "resize":
+                                arg_defs["sz"] = None, ppgoc_type.INT_TYPE
+                                ret_tp = oe.tp
+                            elif name == "len":
+                                ret_tp = ppgoc_type.INT_TYPE
+                            elif name == "get":
+                                arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                                ret_tp = oe.tp.vec_elem_tp
+                            elif name == "set":
+                                arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                                arg_defs["e"] = None, oe.tp.vec_elem_tp
+                                ret_tp = oe.tp
+                            elif name == "append":
+                                arg_defs["e"] = None, oe.tp.vec_elem_tp
+                                ret_tp = oe.tp
+                            elif name == "extend":
+                                arg_defs["es"] = None, oe.tp
+                                ret_tp = oe.tp
+                            elif name == "insert":
+                                arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                                arg_defs["e"] = None, oe.tp.vec_elem_tp
+                                ret_tp = oe.tp
+                            elif name == "insert_vec":
+                                arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                                arg_defs["es"] = None, oe.tp
+                                ret_tp = oe.tp
+                            elif name == "pop":
+                                arg_defs["idx"] = None, ppgoc_type.make_optional_type("idx", ppgoc_type.INT_TYPE)
+                                ret_tp = oe.tp.vec_elem_tp
+                            else:
+                                t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
+                            el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                            e = Expr("call_vec_method", (oe, name, el), ret_tp)
                     elif oe.tp.is_vec_view:
-                        #vec view method
-                        arg_defs = ppgoc_util.OrderedDict()
-                        if name == "valid":
-                            ret_tp = ppgoc_type.BOOL_TYPE
-                        elif name == "check_valid":
-                            ret_tp = ppgoc_type.make_multi([])
-                        elif name == "resolve":
-                            ret_tp = ppgoc_type.make_multi([
-                                ppgoc_type.make_vec_type(oe.tp.t, oe.tp.vec_view_elem_tp),
-                                ppgoc_type.INT_TYPE, ppgoc_type.INT_TYPE])
-                        elif name == "len":
-                            ret_tp = ppgoc_type.INT_TYPE
-                        elif name == "get":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            ret_tp = oe.tp.vec_view_elem_tp
-                        elif name == "set":
-                            arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                            arg_defs["e"] = None, oe.tp.vec_view_elem_tp
-                            ret_tp = ppgoc_type.make_multi([])
-                        else:
-                            t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
-                        el = self.parse_exprs_of_calling(vars_stk, arg_defs)
-                        e = Expr("call_vec_view_method", (oe, name, el), ret_tp)
+                        bytes_view_method_ok = False
+                        if oe.tp.vec_view_elem_tp.is_byte_type:
+                            #try bytes-view method
+                            func = ppgoc_mod.mods[ppgoc_util.MN_BUILTINS + "/bytes_views"].get_func(name)
+                            bytes_view_method_ok = func is not None and ppgoc_mod.is_public(func)
+                            if bytes_view_method_ok:
+                                #found
+                                assert func.arg_defs
+                                _, tp = func.arg_defs.value_at(0)
+                                assert tp == oe.tp
+                                arg_defs = ppgoc_util.OrderedDict()
+                                for k, v in list(func.arg_defs.iteritems())[1 :]:
+                                    arg_defs[k] = v
+                                el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                                tps = [tp for _, tp in func.ret_defs.itervalues()]
+                                e = Expr(
+                                    "call_func",
+                                    (func, [oe] + el),
+                                    tps[0] if len(tps) == 1 else ppgoc_type.make_multi(tps))
+                        if not bytes_view_method_ok:
+                            #vec view method
+                            arg_defs = ppgoc_util.OrderedDict()
+                            if name == "valid":
+                                ret_tp = ppgoc_type.BOOL_TYPE
+                            elif name == "check_valid":
+                                ret_tp = ppgoc_type.make_multi([])
+                            elif name == "resolve":
+                                ret_tp = ppgoc_type.make_multi([
+                                    ppgoc_type.make_vec_type(oe.tp.t, oe.tp.vec_view_elem_tp),
+                                    ppgoc_type.INT_TYPE, ppgoc_type.INT_TYPE])
+                            elif name == "len":
+                                ret_tp = ppgoc_type.INT_TYPE
+                            elif name == "get":
+                                arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                                ret_tp = oe.tp.vec_view_elem_tp
+                            elif name == "set":
+                                arg_defs["idx"] = None, ppgoc_type.INT_TYPE
+                                arg_defs["e"] = None, oe.tp.vec_view_elem_tp
+                                ret_tp = ppgoc_type.make_multi([])
+                            else:
+                                t.syntax_err("'%s'没有伪方法'%s'" % (oe.tp, name))
+                            el = self.parse_exprs_of_calling(vars_stk, arg_defs)
+                            e = Expr("call_vec_view_method", (oe, name, el), ret_tp)
                     elif oe.tp.is_map:
                         #map method
                         ktp, vtp = oe.tp.map_kv_tp

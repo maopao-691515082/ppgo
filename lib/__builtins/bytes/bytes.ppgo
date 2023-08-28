@@ -1,0 +1,6 @@
+public func copy_from(b []byte, from_b [:]byte);
+
+public func index_byte(b []byte, c byte) int
+{
+    return b[:].index_byte(c);
+}

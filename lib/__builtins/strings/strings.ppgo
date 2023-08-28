@@ -1,6 +1,11 @@
+public func len(s string) int;
+public func repr(s string) string;
+
+public func upper(s string) string;
+public func lower(s string) string;
+
 public func parse_int(s string, /, base int) int;
 public func parse_uint(s string, /, base int) uint;
-
 public func parse_float(s string) float;
 
 public func contains_byte(s string, b byte) bool;
