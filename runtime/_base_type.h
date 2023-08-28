@@ -79,6 +79,10 @@ public:
     {
         return s_ < s.s_;
     }
+    bool operator==(const tp_string &s) const
+    {
+        return s_ < s.s_;
+    }
 
     const char *Data() const
     {
@@ -172,8 +176,21 @@ public:
 
     virtual ~Any() = default;
 
+
     //R_*: methods for reflect
+
     virtual std::string R_TypeName() const = 0;
+
+    //only base-type-boxing classes can override these
+    virtual bool R_IsBaseType() const
+    {
+        return false;
+    }
+    virtual bool R_BaseTypeEquals(Ptr other) const
+    {
+        Assert(false);
+        return false;
+    }
 
     virtual ExcPtr method_str(std::tuple<tp_string> &ret)
     {
@@ -209,6 +226,20 @@ public:
     static std::string GetTypeName(Ptr a)
     {
         return a ? a->R_TypeName() : "<nil>";
+    }
+
+    static bool IsBaseTypeBoxing(Ptr a)
+    {
+        return a && a->R_IsBaseType();
+    }
+
+    static bool Equal(Ptr a, Ptr b)
+    {
+        if (IsBaseTypeBoxing(a) && IsBaseTypeBoxing(b))
+        {
+            return a->R_BaseTypeEquals(b);
+        }
+        return a == b;
     }
 };
 
@@ -289,6 +320,17 @@ public:
     virtual std::string R_TypeName() const override
     {
         return ::ppgo::TypeName(&t_);
+    }
+
+    virtual bool R_IsBaseType() const override
+    {
+        return true;
+    }
+    virtual bool R_BaseTypeEquals(Any::Ptr other) const override
+    {
+        Assert(static_cast<bool>(other));
+        auto other_boxing = dynamic_cast<Obj<T> *>(other.get());
+        return other_boxing && t_ == other_boxing->t_;
     }
 
     virtual ExcPtr method_str(std::tuple<tp_string> &ret) override

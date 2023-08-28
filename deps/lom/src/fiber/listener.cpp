@@ -170,8 +170,8 @@ public:
         auto err = Accept(conn, -1);
         if (err)
         {
-            auto syscall_err = err->DynCast<::lom::SysCallErr>();
-            if (syscall_err && syscall_err->Code() == ::lom::fiber::err_code::kClosed)
+            auto sys_call_err = dynamic_cast<::lom::SysCallErr *>(err.RawPtr());
+            if (sys_call_err && sys_call_err->Code() == ::lom::fiber::err_code::kClosed)
             {
                 return err;
             }

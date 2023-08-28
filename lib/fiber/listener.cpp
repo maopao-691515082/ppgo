@@ -29,6 +29,11 @@ namespace PPGO_THIS_MOD
     auto err = listener->Accept(lom_conn, timeout);
     if (err)
     {
+        auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
+        if (exc)
+        {
+            return exc;
+        }
         return ::ppgo::Exc::Sprintf("failed to accept: %s", err->Msg().CStr());
     }
 

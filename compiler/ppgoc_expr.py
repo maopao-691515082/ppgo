@@ -131,12 +131,10 @@ class ParseStk:
                             ea = Expr("convert", (eb.tp, ea), eb.tp)
                         else:
                             raise _InvalidBinocularOp()
-                    elif ea.tp.is_bool_type and eb.tp.is_bool_type:
-                        pass #bool类型也可直接比较
-                    elif ea.tp.is_number_type and eb.tp.is_number_type and ea.tp == eb.tp:
-                        normal_binocular_op = True
-                    elif ea.tp.is_str_type and eb.tp.is_str_type:
-                        normal_binocular_op = True
+                    elif (
+                        ea.tp.is_bool_type or ea.tp.is_number_type or ea.tp.is_str_type or ea.tp.is_any or
+                        ea.tp.is_coi_type):
+                        pass
                     else:
                         raise _InvalidBinocularOp()
                     tp = ppgoc_type.BOOL_TYPE

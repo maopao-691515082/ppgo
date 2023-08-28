@@ -28,6 +28,11 @@ namespace PPGO_THIS_MOD
     auto err = conn->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n, timeout_ms);
     if (err)
     {
+        auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
+        if (exc)
+        {
+            return exc;
+        }
         return ::ppgo::Exc::Sprintf("read failed: %s", err->Msg().CStr());
     }
 
@@ -42,6 +47,11 @@ namespace PPGO_THIS_MOD
     auto err = conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len(), timeout_ms);
     if (err)
     {
+        auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
+        if (exc)
+        {
+            return exc;
+        }
         return ::ppgo::Exc::Sprintf("write failed: %s", err->Msg().CStr());
     }
     return nullptr;
@@ -54,6 +64,11 @@ namespace PPGO_THIS_MOD
     auto err = conn->WriteAll(s.Data(), s.Len(), timeout_ms);
     if (err)
     {
+        auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
+        if (exc)
+        {
+            return exc;
+        }
         return ::ppgo::Exc::Sprintf("write failed: %s", err->Msg().CStr());
     }
     return nullptr;
@@ -70,6 +85,11 @@ namespace PPGO_THIS_MOD
     auto err = ::lom::fiber::ConnectTCP(ipv4.Data(), port, *c, timeout_ms);
     if (err)
     {
+        auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
+        if (exc)
+        {
+            return exc;
+        }
         return ::ppgo::Exc::Sprintf(
             "connect tcp to [%s:%lld] failed: %s",
             ipv4.Data(), static_cast<long long>(port), err->Msg().CStr());

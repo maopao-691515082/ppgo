@@ -388,8 +388,13 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
             if expr.op in ("==", "!=", "<", ">", "<=", ">="):
                 return (
                     "(%s).Cmp(%s) %s 0" %
-                    (gen_expr_code(ea, pos_info), gen_expr_code(eb, pos_info), expr.op)
-                )
+                    (gen_expr_code(ea, pos_info), gen_expr_code(eb, pos_info), expr.op))
+        if ea.tp.is_any and eb.tp.is_any:
+            if expr.op in ("==", "!="):
+                return (
+                    "%s::ppgo::Any::Equal((%s), (%s))" %
+                    ("" if expr.op == "==" else "!",
+                     gen_expr_code(ea, pos_info), gen_expr_code(eb, pos_info)))
         return "(%s) %s (%s)" % (gen_expr_code(ea, pos_info), expr.op, gen_expr_code(eb, pos_info))
 
     if expr.op == "str[]":

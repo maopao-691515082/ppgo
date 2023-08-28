@@ -1,0 +1,20 @@
+class InternalExc
+{
+    s string;
+
+    func init(s string)
+    {
+        this.s = s;
+    }
+
+    public func str() string
+    {
+        return this.s;
+    }
+}
+
+public final var (
+    kExcTimeout     any = InternalExc("timeout");
+    kExcClosed      any = InternalExc("closed");
+    kExcConnReset   any = InternalExc("connect reset by peer");
+)
