@@ -34,7 +34,7 @@ public:
         b.Append("Error: ");
         b.Append(Msg());
         b.Append("\n");
-        for (auto &s : tb_)
+        for (auto const &s : tb_)
         {
             b.Append("  from ");
             b.Append(s);

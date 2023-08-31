@@ -25,6 +25,7 @@
 #include <limits>
 #include <thread>
 #include <mutex>
+#include <optional>
 
 #include <sys/types.h>
 
