@@ -28,4 +28,5 @@
 
 #include "lom/thread/thread.h"
 
-#include "lom/ckv/ckv.h"
+#include "lom/ordered_kv/ckv/ckv.h"
+#include "lom/ordered_kv/zkv/zkv.h"
