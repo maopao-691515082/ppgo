@@ -49,10 +49,52 @@ namespace ordered_kv
     return nullptr;
 }
 
+class SnapshotIteratorImpl : public Iterator
+{
+    Snapshot::Ptr snapshot_;
+
+    WriteBatch::RawOpsMap::const_iterator wb_iter_;
+    bool before_begin_ = false;
+
+    Iterator::Ptr db_iter_;
+
+protected:
+
+    virtual bool ValidImpl() const override
+    {
+        return db_iter_->Valid();
+    }
+
+    virtual std::function<std::pair<StrSlice /*k*/, StrSlice /*v*/> ()> KVGetterImpl() const = 0;
+
+    virtual void SeekFirstImpl() = 0;
+    virtual void SeekLastImpl() = 0;
+    virtual void SeekImpl(const Str &k) = 0;
+    virtual void RSeekImpl(const Str &k) = 0;
+
+    virtual ssize_t MoveImpl(ssize_t step, const std::optional<Str> &stop_at) = 0;
+
+public:
+
+    SnapshotIteratorImpl(Snapshot::Ptr snapshot, Iterator::Ptr db_iter) :
+        snapshot_(snapshot), wb_iter_(snapshot->wb.RawOps().begin()), db_iter_(db_iter)
+    {
+    }
+};
+
 Iterator::Ptr Snapshot::NewIterator() const
 {
-    //todo
-    return nullptr;
+    auto db_iter = DBNewIterator();
+    if (db_iter->Err() || wb.RawOps().empty())
+    {
+        return db_iter;
+    }
+
+    if (!db_iter->Valid())
+    {
+        db_iter = nullptr;
+    }
+    return Iterator::Ptr(new SnapshotIteratorImpl(shared_from_this(), db_iter));
 }
 
 }

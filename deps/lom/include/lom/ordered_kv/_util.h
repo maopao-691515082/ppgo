@@ -86,7 +86,7 @@ protected:
     }
 
     virtual bool ValidImpl() const = 0;
-    virtual std::function<std::pair<StrSlice /*k*/, StrSlice /*v*/>()> KVGetterImpl() const = 0;
+    virtual std::function<std::pair<StrSlice /*k*/, StrSlice /*v*/> ()> KVGetterImpl() const = 0;
 
     virtual void SeekFirstImpl() = 0;
     virtual void SeekLastImpl() = 0;
@@ -164,7 +164,7 @@ public:
     /*
     移动迭代器
     通过`step`指定步数，正数向右移动，负数向左
-    若`stop_at`不含值，则移动到边界为止
+    若`stop_at`不含值，则到达边界停止
     若`stop_at`含值，则在遇到或越过它处停下，即：
         - 若向右移动，则在第一个大于等于它的K处停下
         - 若向左移动，则在第一个小于等于它的K处停下
@@ -174,6 +174,14 @@ public:
     */
     ssize_t Move(ssize_t step, const std::optional<Str> &stop_at = nullptr)
     {
+        if (step > kSSizeSoftMax)
+        {
+            step = kSSizeSoftMax;
+        }
+        if (step < -kSSizeSoftMax)
+        {
+            step = -kSSizeSoftMax;
+        }
         return !err_ && step != 0 ? MoveImpl(step, stop_at) : 0;
     }
 
@@ -212,7 +220,7 @@ public:
     - 快照对象需要保证总是可用，一般实现方式就是保存一份到对应库的引用，由于各库的实现差异，
       就不在这个接口类显式做`DBBase`的引用了
 */
-class Snapshot
+class Snapshot : public std::enable_shared_from_this<Snapshot>
 {
 protected:
 
