@@ -81,6 +81,40 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
+::ppgo::Exc::Ptr func_join(
+    ::std::tuple<::ppgo::tp_string> &ret, ::ppgo::tp_string s, ::ppgo::VecView<::ppgo::tp_string> v)
+{
+    if (!v.Valid())
+    {
+        return ::ppgo::Exc::Sprintf("invalid view");
+    }
+
+    auto s_len = s.Len(), v_len = v.Len(), total_len = -s_len;
+    for (ssize_t i = 0; i < v_len; ++ i)
+    {
+        total_len += s_len;
+        total_len += v.GetRef(i).Len();
+    }
+    if (total_len > 0)
+    {
+        ssize_t i = 0;
+        std::get<0>(ret) = s.RawStr().Slice().Join(
+            [v, v_len, &i] (::lom::StrSlice &part) -> bool {
+                if (i == v_len)
+                {
+                    return false;
+                }
+                part = v.GetRef(i).RawStr().Slice();
+                ++ i;
+                return true;
+            },
+            total_len
+        );
+    }
+
+    return nullptr;
+}
+
 }
 
 }
