@@ -11,8 +11,6 @@ main_mnc = None
 
 exe_file = None
 
-all_str_literals = []
-
 class Code:
     class CodeBlk:
         def __init__(self, code, is_namespace):
@@ -315,8 +313,10 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         if literal_type == "float":
             return "::ppgo::tp_float{%sL}" % t.value
         if literal_type == "str":
-            all_str_literals.append(t)
-            return "::ppgo::str_literals::s%d" % t.id
+            slid = ppgoc_util.new_id()
+            return (
+                "({static const ::ppgo::tp_string _str_literal_%d(%s, %d); _str_literal_%d;})" %
+                (slid, c_str_literal(t.value), len(t.value), slid))
         ppgoc_util.raise_bug()
 
     if expr.op == "convert":
@@ -962,17 +962,6 @@ def output_stmts(code, stmts):
         print stmt.type
         ppgoc_util.raise_bug()
 
-def output_str_literals():
-    with Code(ppgoc_env.out_dir + "/_str_literals.h") as code:
-        code += "#pragma once"
-        with code.new_blk("namespace ppgo"):
-            with code.new_blk("namespace str_literals"):
-                for t in all_str_literals:
-                    assert t.is_literal("str")
-                    code += (
-                        "static ::ppgo::tp_string s%d(%s, %d);" %
-                        (t.id, c_str_literal(t.value), len(t.value)))
-
 def output_fom_named_ret_vars(code, fom):
     if len(fom.ret_defs) == 1 and None in fom.ret_defs:
         return
@@ -981,12 +970,10 @@ def output_fom_named_ret_vars(code, fom):
         code += "auto &l_%s = ::std::get<%d>(%s);" % (name, i, get_ret_var_name())
 
 def output_prog_cpp():
-    with Code(ppgoc_env.out_dir + "/prog.cpp") as code:
-        code += '#include "ppgo.h"'
-        code += '#include "_str_literals.h"'
-        with code.new_blk("namespace ppgo"):
-
-            for mod in ppgoc_mod.mods.itervalues():
+    for mod in ppgoc_mod.mods.itervalues():
+        with Code(ppgoc_env.out_dir + "/prog-%s.cpp" % gen_mnc(mod)) as code:
+            code += '#include "ppgo.h"'
+            with code.new_blk("namespace ppgo"):
                 with code.new_blk(gen_ns_code(mod)):
 
                     for cls in mod.clses.itervalues():
@@ -1033,6 +1020,9 @@ def output_prog_cpp():
                         else:
                             code += "return nullptr;"
 
+    with Code(ppgoc_env.out_dir + "/prog-main.cpp") as code:
+        code += '#include "ppgo.h"'
+        with code.new_blk("namespace ppgo"):
             with code.new_blk("Exc::Ptr main()"):
                 code += "::std::tuple<> ret;"
                 code += "auto exc = ::ppgo::%s::init(); if (exc) { return exc; }" % main_mnc
@@ -1122,7 +1112,6 @@ def output(out_bin, need_run, args_for_run):
     native_header_fns = output_native_src()
     output_prog_h(native_header_fns)
     output_prog_cpp()
-    output_str_literals()
     output_conf_header()
 
     cp_runtime()
