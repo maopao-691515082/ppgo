@@ -11,7 +11,11 @@ main_mnc = None
 
 exe_file = None
 
-all_str_literals = []
+unique_id = None
+def new_id():
+    global unique_id
+    unique_id += 1
+    return unique_id
 
 class Code:
     class CodeBlk:
@@ -32,8 +36,10 @@ class Code:
                 self.code.indent = self.code.indent[: -4]
             self.code += "}"
 
-    def __init__(self, fn):
+    def __init__(self, fn, use_id = False):
         self.fn = fn
+        self.use_id = use_id
+
         self.lines = []
         self.indent = ""
 
@@ -42,9 +48,17 @@ class Code:
         return self
 
     def __enter__(self):
+        global unique_id
+        if self.use_id:
+            assert unique_id is None
+            unique_id = 0
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        global unique_id
+        if self.use_id:
+            assert unique_id is not None
+            unique_id = None
         if exc_type is not None:
             return
         if self.fn is None:
@@ -271,8 +285,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
 
     if expr.op == "call_func":
         func, el = expr.arg
-        rv = "ret_%d" % ppgoc_util.new_id()
-        excv = "exc_%d" % ppgoc_util.new_id()
+        rv = "ret_%d" % new_id()
+        excv = "exc_%d" % new_id()
         cs = [
             "({",
             "%s %s;" % (gen_func_ret_tp_code(func), rv),
@@ -315,8 +329,10 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         if literal_type == "float":
             return "::ppgo::tp_float{%sL}" % t.value
         if literal_type == "str":
-            all_str_literals.append(t)
-            return "::ppgo::str_literals::s%d" % t.id
+            slid = new_id()
+            return (
+                "({static const ::ppgo::tp_string _str_literal_%d(%s, %d); _str_literal_%d;})" %
+                (slid, c_str_literal(t.value), len(t.value), slid))
         ppgoc_util.raise_bug()
 
     if expr.op == "convert":
@@ -339,8 +355,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         el = [oe] + el
         tps = expr.tp.multi_tps if expr.tp.is_multi else [expr.tp]
 
-        rv = "ret_%d" % ppgoc_util.new_id()
-        excv = "exc_%d" % ppgoc_util.new_id()
+        rv = "ret_%d" % new_id()
+        excv = "exc_%d" % new_id()
         cs = [
             "({",
             "%s %s;" % (gen_func_ret_tp_code_from_tps(tps), rv),
@@ -445,8 +461,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
     if expr.op == "call_method":
         oe, m, el = expr.arg
         oec = gen_expr_code(oe, pos_info)
-        rv = "ret_%d" % ppgoc_util.new_id()
-        excv = "exc_%d" % ppgoc_util.new_id()
+        rv = "ret_%d" % new_id()
+        excv = "exc_%d" % new_id()
         cs = [
             "({",
             "%s %s;" % (gen_method_ret_tp_code(m), rv),
@@ -473,7 +489,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
 
     if expr.op == "new":
         cls, el = expr.arg
-        newv = "new_%d" % ppgoc_util.new_id()
+        newv = "new_%d" % new_id()
         cs = [
             "({",
             "%s %s(new ::ppgo::%s::cls_%s);" % (gen_tp_code(expr.tp), newv, mncs[cls.mod.name], cls.name),
@@ -481,8 +497,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         init_method = cls.get_init_method()
         if init_method is not None:
             assert not init_method.ret_defs
-            rv = "ret_%d" % ppgoc_util.new_id()
-            excv = "exc_%d" % ppgoc_util.new_id()
+            rv = "ret_%d" % new_id()
+            excv = "exc_%d" % new_id()
             cs += [
                 "::std::tuple<> %s;" % rv,
                 "auto %s = %s->method_init(%s" % (excv, newv, rv),
@@ -568,8 +584,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         if not e.tp.is_any:
             assert e.tp.is_coi_type
             ec = "std::static_pointer_cast<::ppgo::Any>(%s)" % ec
-        rv = "ret_%d" % ppgoc_util.new_id()
-        excv = "exc_%d" % ppgoc_util.new_id()
+        rv = "ret_%d" % new_id()
+        excv = "exc_%d" % new_id()
         t, fom = pos_info
         cs = [
             "({",
@@ -588,8 +604,8 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         fe, el = expr.arg
         assert fe.tp.is_func
         atps, rtps = fe.tp.func_arg_ret_tps
-        rv = "ret_%d" % ppgoc_util.new_id()
-        excv = "exc_%d" % ppgoc_util.new_id()
+        rv = "ret_%d" % new_id()
+        excv = "exc_%d" % new_id()
         cs = [
             "({",
             "%s %s;" % (gen_func_ret_tp_code_from_tps(rtps), rv),
@@ -616,7 +632,7 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
 
     if expr.op == "closure":
         f = expr.arg
-        rv = "ret_%d" % ppgoc_util.new_id()
+        rv = "ret_%d" % new_id()
         cs = ["([&](%s &%s" % (gen_func_ret_tp_code(f), rv)]
         for name, (_, tp) in f.arg_defs.iteritems():
             cs.append(", ")
@@ -672,9 +688,9 @@ def output_stmts(code, stmts):
 
         if stmt.type == "for_vec":
             with code.new_blk(""):
-                vv = "vec_%d" % ppgoc_util.new_id()
+                vv = "vec_%d" % new_id()
                 code += "auto %s = (%s);" % (vv, gen_expr_code(stmt.expr))
-                viv = "vec_idx_%d" % ppgoc_util.new_id()
+                viv = "vec_idx_%d" % new_id()
                 with code.new_blk("for (::ppgo::tp_int %s = 0; %s < %s.Len(); ++ %s)" %
                                   (viv, viv, vv, viv)):
                     if not stmt.idx_var_name.startswith("_."):
@@ -690,9 +706,9 @@ def output_stmts(code, stmts):
         if stmt.type == "for_map":
             ktp, vtp = stmt.expr.tp.map_kv_tp
             with code.new_blk(""):
-                mv = "map_%d" % ppgoc_util.new_id()
+                mv = "map_%d" % new_id()
                 code += "auto %s = (%s);" % (mv, gen_expr_code(stmt.expr))
-                miv = "map_iter_%d" % ppgoc_util.new_id()
+                miv = "map_iter_%d" % new_id()
                 with code.new_blk("for (auto %s = %s.NewIter(); %s.Valid(); %s.Inc())" %
                                   (miv, mv, miv, miv)):
                     if not stmt.k_var_name.startswith("_."):
@@ -704,9 +720,9 @@ def output_stmts(code, stmts):
 
         if stmt.type == "for_set":
             with code.new_blk(""):
-                sv = "set_%d" % ppgoc_util.new_id()
+                sv = "set_%d" % new_id()
                 code += "auto %s = (%s);" % (sv, gen_expr_code(stmt.expr))
-                siv = "set_iter_%d" % ppgoc_util.new_id()
+                siv = "set_iter_%d" % new_id()
                 with code.new_blk("for (auto %s = %s.NewIter(); %s.Valid(); %s.Inc())" %
                                   (siv, sv, siv, siv)):
                     if not stmt.var_name.startswith("_."):
@@ -740,13 +756,13 @@ def output_stmts(code, stmts):
                             ec))
                 else:
                     rv_tp = gen_func_ret_tp_code_from_tps(tps)
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     ecf = (
                         "[&] (%s &%s) -> ::ppgo::Exc::Ptr { %s = (%s); return nullptr; }" %
                         (rv_tp, rv, rv, ec))
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     code += "%s %s;" % (rv_tp, rv)
-                    excv = "exc_%d" % ppgoc_util.new_id()
+                    excv = "exc_%d" % new_id()
                     code += "auto %s = (%s)(%s);" % (excv, ecf, rv)
                     assert len(stmt.new_vars) > len(tps)
                     code += "if (%s) {" % excv
@@ -773,13 +789,13 @@ def output_stmts(code, stmts):
                         code += "l_%s = (%s);" % (var_name, ec)
                 else:
                     rv_tp = gen_tp_code(stmt.expr.tp)
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     ecf = (
                         "[&] (%s &%s) -> ::ppgo::Exc::Ptr { %s = (%s); return nullptr; }" %
                         (rv_tp, rv, rv, ec))
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     code += "%s %s%s;" % (rv_tp, rv, gen_var_init_code(stmt.expr.tp))
-                    excv = "exc_%d" % ppgoc_util.new_id()
+                    excv = "exc_%d" % new_id()
                     code += "auto %s = (%s)(%s);" % (excv, ecf, rv)
                     assert len(stmt.new_vars) > 1
                     code += "if (%s) {" % excv
@@ -827,7 +843,7 @@ def output_stmts(code, stmts):
                 tps = stmt.expr.tp.multi_tps
                 assert len(tps) == 0 or len(tps) > 1
                 if len(stmt.lvalues) == len(tps):
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     code += "auto %s = (%s);" % (rv, ec)
                     for i, (lvalue, tp) in enumerate(zip(stmt.lvalues, tps)):
                         if lvalue is not None:
@@ -838,13 +854,13 @@ def output_stmts(code, stmts):
                             code += "(%s) = (%s);" % (gen_expr_code(lvalue, mode = "w"), c)
                 else:
                     rv_tp = gen_func_ret_tp_code_from_tps(tps)
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     ecf = (
                         "[&] (%s &%s) -> ::ppgo::Exc::Ptr { %s = (%s); return nullptr; }" %
                         (rv_tp, rv, rv, ec))
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     code += "%s %s;" % (rv_tp, rv)
-                    excv = "exc_%d" % ppgoc_util.new_id()
+                    excv = "exc_%d" % new_id()
                     code += "auto %s = (%s)(%s);" % (excv, ecf, rv)
                     assert len(stmt.lvalues) > len(tps)
                     code += "if (%s) {" % excv
@@ -888,13 +904,13 @@ def output_stmts(code, stmts):
                         code += "(%s) = (%s);" % (gen_expr_code(lvalue, mode = "w"), ec)
                 else:
                     rv_tp = gen_tp_code(stmt.expr.tp)
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     ecf = (
                         "[&] (%s &%s) -> ::ppgo::Exc::Ptr { %s = (%s); return nullptr; }" %
                         (rv_tp, rv, rv, ec))
-                    rv = "ret_%d" % ppgoc_util.new_id()
+                    rv = "ret_%d" % new_id()
                     code += "%s %s%s;" % (rv_tp, rv, gen_var_init_code(stmt.expr.tp))
-                    excv = "exc_%d" % ppgoc_util.new_id()
+                    excv = "exc_%d" % new_id()
                     code += "auto %s = (%s)(%s);" % (excv, ecf, rv)
                     code += "if (%s) {" % excv
                     if stmt.lvalues[1] is not None:
@@ -931,8 +947,8 @@ def output_stmts(code, stmts):
         if stmt.type == "for..":
             ea, eb = stmt.ep
             assert ea.tp == eb.tp and ea.tp.is_integer_type
-            iv = "idx_%d" % ppgoc_util.new_id()
-            endv = "end_%d" % ppgoc_util.new_id()
+            iv = "idx_%d" % new_id()
+            endv = "end_%d" % new_id()
             with code.new_blk(
                 "for (%s %s = (%s), %s = (%s); %s < %s; ++ %s)" %
                 (gen_tp_code(ea.tp), iv, gen_expr_code(ea), endv, gen_expr_code(eb), iv, endv, iv)):
@@ -943,12 +959,12 @@ def output_stmts(code, stmts):
 
         if stmt.type == "with":
             with code.new_blk(""):
-                wv = "with_%d" % ppgoc_util.new_id()
+                wv = "with_%d" % new_id()
                 wtpc = gen_tp_code(ppgoc_type.WITHABLE_TYPE)
                 P, S = "std::shared_ptr<", ">"
                 assert wtpc.startswith(P) and wtpc.endswith(S)
                 code += "::ppgo::WithGuard<%s> %s(%s);" % (wtpc[len(P):-len(S)], wv, gen_expr_code(stmt.expr))
-                excv = "exc_%d" % ppgoc_util.new_id()
+                excv = "exc_%d" % new_id()
                 code += "auto %s = %s.ExcOfEnter();" % (excv, wv)
                 with code.new_blk("if (%s)" % excv):
                     t, fom = stmt.expr.pos_info
@@ -962,17 +978,6 @@ def output_stmts(code, stmts):
         print stmt.type
         ppgoc_util.raise_bug()
 
-def output_str_literals():
-    with Code(ppgoc_env.out_dir + "/_str_literals.h") as code:
-        code += "#pragma once"
-        with code.new_blk("namespace ppgo"):
-            with code.new_blk("namespace str_literals"):
-                for t in all_str_literals:
-                    assert t.is_literal("str")
-                    code += (
-                        "static ::ppgo::tp_string s%d(%s, %d);" %
-                        (t.id, c_str_literal(t.value), len(t.value)))
-
 def output_fom_named_ret_vars(code, fom):
     if len(fom.ret_defs) == 1 and None in fom.ret_defs:
         return
@@ -981,12 +986,10 @@ def output_fom_named_ret_vars(code, fom):
         code += "auto &l_%s = ::std::get<%d>(%s);" % (name, i, get_ret_var_name())
 
 def output_prog_cpp():
-    with Code(ppgoc_env.out_dir + "/prog.cpp") as code:
-        code += '#include "ppgo.h"'
-        code += '#include "_str_literals.h"'
-        with code.new_blk("namespace ppgo"):
-
-            for mod in ppgoc_mod.mods.itervalues():
+    for mod in ppgoc_mod.mods.itervalues():
+        with Code(ppgoc_env.out_dir + "/prog-%s.cpp" % gen_mnc(mod), use_id = True) as code:
+            code += '#include "ppgo.h"'
+            with code.new_blk("namespace ppgo"):
                 with code.new_blk(gen_ns_code(mod)):
 
                     for cls in mod.clses.itervalues():
@@ -1033,6 +1036,9 @@ def output_prog_cpp():
                         else:
                             code += "return nullptr;"
 
+    with Code(ppgoc_env.out_dir + "/prog-main.cpp") as code:
+        code += '#include "ppgo.h"'
+        with code.new_blk("namespace ppgo"):
             with code.new_blk("Exc::Ptr main()"):
                 code += "::std::tuple<> ret;"
                 code += "auto exc = ::ppgo::%s::init(); if (exc) { return exc; }" % main_mnc
@@ -1079,7 +1085,8 @@ def make_prog():
         code += "PPGO_DIR := %s" % ppgoc_env.ppgo_dir
         assert main_mnc == os.path.basename(exe_file)
         code += "PPGO_MK_OUT := %s" % main_mnc
-    rc = os.system("make -C %s >/dev/null" % ppgoc_env.out_dir)
+        code += "PPGO_OUT_OBJ_CACHE_DIR := %s" % ppgoc_env.out_obj_cache_dir
+    rc = os.system("make -C %s fast >/dev/null" % ppgoc_env.out_dir)
     if rc != 0:
         sys.exit(rc)
 
@@ -1122,7 +1129,6 @@ def output(out_bin, need_run, args_for_run):
     native_header_fns = output_native_src()
     output_prog_h(native_header_fns)
     output_prog_cpp()
-    output_str_literals()
     output_conf_header()
 
     cp_runtime()

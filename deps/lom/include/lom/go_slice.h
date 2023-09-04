@@ -6,7 +6,6 @@
 #include "util.h"
 #include "limit.h"
 #include "str.h"
-#include "iter.h"
 
 namespace lom
 {
@@ -139,30 +138,6 @@ class GoSlice
             typename Array::Ptr(new Array(new_cap, b, e, in_begin, in_end)), 0, curr_len + in_len);
     }
 
-    GoSlice<T> NewArrayAndAppend(
-        ssize_t curr_len, ssize_t curr_cap, ssize_t in_len,
-        const typename ::lom::Iterator<T>::Ptr &iter) const
-    {
-        auto new_cap = curr_cap;
-        while (new_cap < curr_len + in_len)
-        {
-            new_cap += new_cap / 2 + 1;
-        }
-        auto a = typename Array::Ptr(
-            a_ ?
-            new Array(new_cap, a_->a_.begin() + start_, a_->a_.begin() + (start_ + curr_len)) :
-            new Array(new_cap)
-        );
-        ssize_t idx = curr_len;
-        for (; iter->Valid(); iter->Inc())
-        {
-            a->a_[idx] = iter->Get();
-            ++ idx;
-        }
-        Assert(idx == curr_len + in_len);
-        return GoSlice<T>(a, 0, curr_len + in_len);
-    }
-
 public:
 
     //构建空slice，`Nil`为从当前变量构建的快捷方法
@@ -183,22 +158,9 @@ public:
     {
     }
 
-    //通过初始化列表或迭代器构建
+    //通过初始化列表构建
     GoSlice(std::initializer_list<T> l) : a_(new Array(l)), start_(0), len_(static_cast<ssize_t>(l.size()))
     {
-    }
-    GoSlice(const typename ::lom::Iterator<T>::Ptr &iter)
-    {
-        a_ = typename Array::Ptr(new Array());
-        for (; iter->Valid(); iter->Inc())
-        {
-            a_->a_.emplace_back(iter->Get());
-        }
-        start_ = 0;
-        len_ = static_cast<ssize_t>(a_->a_.size());
-
-        //不要浪费后面已经保留的空间
-        a_->a_.resize(a_->a_.capacity());
     }
 
     ssize_t Len() const
@@ -281,104 +243,6 @@ public:
         }
         auto sb = s.a_->a_.begin() + s.start_, se = sb + s_len;
         return NewArrayAndAppend(len, cap, s_len, sb, se);
-    }
-
-    class Iterator final : public SizedIterator<T>
-    {
-        GoSlice<T> gs_;
-        ssize_t idx_;
-
-        Iterator(const GoSlice<T> &gs, ssize_t idx) : gs_(gs), idx_(idx)
-        {
-        }
-
-        friend class GoSlice<T>;
-
-    protected:
-
-        virtual void IncImpl(ssize_t step) override
-        {
-            idx_ += step;
-            if (idx_ < -1)
-            {
-                idx_ = -1;
-            }
-            if (idx_ > gs_.Len())
-            {
-                idx_ = gs_.Len();
-            }
-        }
-
-        virtual const T &GetImpl() const override
-        {
-            return gs_.At(idx_);
-        }
-
-        virtual ssize_t SizeImpl() const override
-        {
-            return gs_.Len() - idx_;
-        }
-
-    public:
-
-        typedef std::shared_ptr<Iterator> Ptr;
-
-        virtual typename ::lom::Iterator<T>::Ptr Copy() const override
-        {
-            return typename ::lom::Iterator<T>::Ptr(new Iterator(gs_, idx_));
-        }
-
-        virtual bool Valid() const override
-        {
-            return idx_ >= 0 && idx_ < gs_.Len();
-        }
-
-        /*
-        返回从当前迭代器位置到创建此迭代器的GoSlice对象的右边界的GoSlice对象，且引用的下层数组一致
-        换句话说，就是若从某GoSlice对象`gs`创建此迭代器`iter`，
-        并执行了相当于执行了`iter.Inc(step)`的流程（step >= 0），
-        此时`iter.RawGoSlice()`将返回相当于`gs.Slice(step)`
-        若此时指向左边界rend，则返回新的空GoSlice对象，若指向右边界，
-        则返回右边界起始且长度为0的GoSlice对象，即右侧的Cap部分依然可访问（如果有的话）
-        */
-        GoSlice<T> RawGoSlice() const
-        {
-            return Valid() || idx_ == gs_.Len() ? gs_.Slice(idx_) : gs_.Nil();
-        }
-    };
-
-    GoSlice<T> AppendIter(const typename ::lom::SizedIterator<T>::Ptr &iter) const
-    {
-        if (!iter->Valid())
-        {
-            return *this;
-        }
-
-        auto gs_iter = dynamic_cast<Iterator *>(iter.get());
-        if (gs_iter != nullptr)
-        {
-            //是同类型的GoSlice对象，走特化流程
-            return AppendGoSlice(gs_iter->RawGoSlice());
-        }
-
-        auto len = Len(), cap = Cap(), l_len = iter->Size();
-        if (cap - len >= l_len)
-        {
-            ssize_t idx = start_ + len;
-            for (; iter->Valid(); iter->Inc())
-            {
-                a_->a_[idx] = iter->Get();
-                ++ idx;
-            }
-            Assert(idx == start_ + len + l_len);
-            return GoSlice<T>(a_, start_, len + l_len);
-        }
-        return NewArrayAndAppend(len, cap, l_len, iter);
-    }
-
-    typename ::lom::Iterator<T>::Ptr NewIter() const
-    {
-        return typename ::lom::Iterator<T>::Ptr(new Iterator(*this, 0));
     }
 
     //遍历slice所有元素，对每个元素执行传入的函数，并将结果组成一个新的slice

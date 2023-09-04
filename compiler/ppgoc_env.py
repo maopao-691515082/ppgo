@@ -14,11 +14,12 @@ tmp_out_dir = None
 
 main_mn = None
 out_dir = None
+out_obj_cache_dir = None
 out_confs = {}
 
 def init(main_mod_path):
     global ppgo_dir, compiler_dir, deps_dir, slib_dir, ulib_dir, runtime_dir, tmp_dir, tmp_out_dir
-    global main_mn, out_dir
+    global main_mn, out_dir, out_obj_cache_dir
 
     THIS_SCRIPT_NAME_SUFFIX = "/compiler/ppgoc.py"
     this_script_name = ppgoc_util.abs_path(sys.argv[0])
@@ -46,6 +47,14 @@ def init(main_mod_path):
         except OSError:
             ppgoc_util.exit("创建临时输出目录[%s]失败" % tmp_out_dir)
 
+    #`obj_cache`作为一个优化方式，在编译器这里只是建立一下并给出当前程序的目录，实际使用在`make_fast.py`
+    tmp_out_obj_cache_dir = tmp_out_dir + ".obj_cache"
+    if not os.path.isdir(tmp_out_obj_cache_dir):
+        try:
+            os.makedirs(tmp_out_obj_cache_dir)
+        except OSError:
+            ppgoc_util.exit("创建临时输出的目标文件缓存目录[%s]失败" % tmp_out_obj_cache_dir)
+
     first_level_std_mod_set = set()
     for fn in os.listdir(slib_dir):
         if os.path.isdir(slib_dir + "/" + fn):
@@ -63,3 +72,4 @@ def init(main_mod_path):
         ppgoc_util.exit("主模块路径不存在于标准库或用户库[%s]" % main_mod_path)
 
     out_dir = tmp_out_dir + "/" + main_mn
+    out_obj_cache_dir = tmp_out_obj_cache_dir + "/" + main_mn

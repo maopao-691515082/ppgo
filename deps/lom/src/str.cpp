@@ -382,35 +382,27 @@ bool StrSlice::Unhex(Str &s) const
 }
 
 template <typename T>
-static Str StrSliceJoin(StrSlice s, const typename Iterator<T>::Ptr &iter)
+static Str StrSliceJoin(StrSlice s, const GoSlice<T> &gs)
 {
     //先算长度
     auto s_data = s.Data();
     auto s_len = s.Len();
-    ssize_t total_len = 0;
+    ssize_t total_len = -s_len;
+    for (ssize_t i = 0; i < gs.Len(); ++ i)
     {
-        auto iter_copy = iter->Copy();
-        if (iter_copy)
-        {
-            //迭代器可复制，先计算总长度
-            total_len = -s_len;
-            for (; iter_copy->Valid(); iter_copy->Inc())
-            {
-                total_len += s_len;
-                total_len += iter_copy->Get().Len();
-            }
-            if (total_len <= 0)
-            {
-                //空列表或分隔和串全空
-                return "";
-            }
-        }
+        total_len += s_len;
+        total_len += gs.At(i).Len();
+    }
+    if (total_len <= 0)
+    {
+        //空列表或分隔和串全空
+        return "";
     }
 
     Str::Buf b(0, total_len);
-    for (ssize_t i = 0; iter->Valid(); iter->Inc(), ++ i)
+    for (ssize_t i = 0; i < gs.Len(); ++ i)
     {
-        const T &t = iter->Get();
+        const T &t = gs.At(i);
         if (i > 0)
         {
             b.Append(s_data, s_len);
@@ -420,13 +412,31 @@ static Str StrSliceJoin(StrSlice s, const typename Iterator<T>::Ptr &iter)
     return Str(std::move(b));
 }
 
-Str StrSlice::Join(const Iterator<StrSlice>::Ptr &iter) const
+Str StrSlice::Join(const GoSlice<StrSlice> &gs) const
 {
-    return StrSliceJoin<StrSlice>(*this, iter);
+    return StrSliceJoin<StrSlice>(*this, gs);
 }
-Str StrSlice::Join(const Iterator<Str>::Ptr &iter) const
+Str StrSlice::Join(const GoSlice<Str> &gs) const
 {
-    return StrSliceJoin<Str>(*this, iter);
+    return StrSliceJoin<Str>(*this, gs);
+}
+
+Str StrSlice::Join(std::function<bool (StrSlice &)> next, ssize_t size_hint) const
+{
+    auto this_data = Data();
+    auto this_len = Len();
+
+    Str::Buf b(0, size_hint);
+    StrSlice s;
+    for (ssize_t i = 0; next(s) ; ++ i)
+    {
+        if (i > 0)
+        {
+            b.Append(this_data, this_len);
+        }
+        b.Append(s.Data(), s.Len());
+    }
+    return Str(std::move(b));
 }
 
 Str StrSlice::Replace(StrSlice a, std::function<StrSlice ()> f, ssize_t max_count) const
@@ -463,13 +473,13 @@ GoSlice<Str> Str::Split(StrSlice sep) const
     return Slice().Split(sep).Map<Str>();
 }
 
-Str Str::Join(const Iterator<StrSlice>::Ptr &iter) const
+Str Str::Join(const GoSlice<StrSlice> &gs) const
 {
-    return Slice().Join(iter);
+    return Slice().Join(gs);
 }
-Str Str::Join(const Iterator<Str>::Ptr &iter) const
+Str Str::Join(const GoSlice<Str> &gs) const
 {
-    return Slice().Join(iter);
+    return Slice().Join(gs);
 }
 
 Str Sprintf(const char *fmt, ...)
