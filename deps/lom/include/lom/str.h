@@ -43,6 +43,8 @@ class StrSlice final
         return len;
     }
 
+    StrSlice(std::nullptr_t) = delete;
+
 public:
 
     //通用构造器，调用者自行保证输入合法性
@@ -383,6 +385,9 @@ class Str final
         s.ss_len_ = 0;
         s.ss_start_ = '\0';
     }
+
+    Str(std::nullptr_t) = delete;
+    Str &operator=(std::nullptr_t) = delete;
 
 public:
 

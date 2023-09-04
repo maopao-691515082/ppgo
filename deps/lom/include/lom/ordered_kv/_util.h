@@ -59,17 +59,18 @@ public:
 
     virtual void Del(const Str &k) override
     {
-        raw_ops_[k] = nullptr;
+        raw_ops_[k] = std::nullopt;
     }
 };
 
 /*
 通用的迭代器基类
+    - 迭代器机制是将数据库视为KV对+双端边界位置的线性表，在范围内可以双向移动
     - 迭代器应该是只针对不可修改的快照视图，若快照可临时修改（如`Snapshot`的机制），
       则修改后继续访问对应迭代器的行为未定义
-    - 建议迭代器保留到对应快照的引用以保证生命周期内的可用性，如果没有保证，
+    - 建议迭代器实现中保留到对应快照的引用，以保证生命周期内的可用性，如果没有保证，
       则快照被销毁后继续使用对应迭代器的行为未定义
-迭代器机制是将数据库视为KV对+双端边界位置的线性表，在范围内可以双向移动
+    - 新建立的迭代器应该保证默认指向开始为止，即默认执行`SeekFirst()`
 */
 class Iterator
 {
@@ -85,13 +86,20 @@ protected:
         }
     }
 
-    virtual bool ValidImpl() const = 0;
-    virtual std::function<std::pair<StrSlice /*k*/, StrSlice /*v*/> ()> KVGetterImpl() const = 0;
+    virtual bool IsLeftBorderImpl() const = 0;
+    virtual bool IsRightBorderImpl() const = 0;
+
+    virtual StrSlice KeyImpl() const = 0;
+    virtual StrSlice ValueImpl() const = 0;
 
     virtual void SeekFirstImpl() = 0;
     virtual void SeekLastImpl() = 0;
     virtual void SeekImpl(const Str &k) = 0;
-    virtual void RSeekImpl(const Str &k) = 0;
+    virtual void SeekPrevImpl(const Str &k)
+    {
+        Seek(k);
+        Prev();
+    }
 
     virtual ssize_t MoveImpl(ssize_t step, const std::optional<Str> &stop_at) = 0;
 
@@ -110,18 +118,39 @@ public:
         return err_;
     }
 
+    bool IsLeftBorder() const
+    {
+        return err_ ? false : IsLeftBorderImpl();
+    }
+
+    bool IsRightBorder() const
+    {
+        return err_ ? false : IsRightBorderImpl();
+    }
+
     /*
     在定位、移动等操作后都应该用`Valid`用来判断是否有效，确认有效才可以进行进一步读取
     若`Err`返回空而`Valid`返回false，则说明迭代器到达了边界
     */
     bool Valid() const
     {
-        return err_ ? false : ValidImpl();
+        return !(err_ || IsLeftBorder() || IsRightBorder());
     }
 
-    std::function<std::pair<StrSlice /*k*/, StrSlice /*v*/>()> KVGetter() const
+    /*
+    返回KV，只有在`Valid()`为true的情况下才有意义
+        - 在一次调用后，直到迭代器销毁或状态改变之前，返回的两个串的引用应保证可用
+            - 最简单的办法就是迭代器对象本身以直接或间接的形式保存KV的不可变的字符串
+    */
+    StrSlice Key() const
     {
-        return Valid() ? KVGetterImpl() : nullptr;
+        Assert(Valid());
+        return KeyImpl();
+    }
+    StrSlice Value() const
+    {
+        Assert(Valid());
+        return ValueImpl();
     }
 
     //定位到第一个K/最后一个K，若空库则定位至右边界/左边界
@@ -140,12 +169,7 @@ public:
         }
     }
 
-    /*
-    定位到`k`
-    若`k`不存在：
-        - `Seek`定位到从左到右第一个比它大的K，若没有则定位到右边界
-        - `RSeek`定位到从右到左第一个比它小的K，若没有则定位到左边界
-    */
+    //定位到从左到右第一个大于等于`k`的K，若所有K都比`k`小或为空数据集，则定位到右边界
     void Seek(const Str &k)
     {
         if (!err_)
@@ -153,11 +177,12 @@ public:
             SeekImpl(k);
         }
     }
-    void RSeek(const Str &k)
+    //相当于先`Seek(k)`再进行`Prev()`，`SeekPrevImpl`默认也是这样实现的，但是具体DB可以覆盖为更高效的实现
+    void SeekPrev(const Str &k)
     {
         if (!err_)
         {
-            RSeekImpl(k);
+            SeekPrevImpl(k);
         }
     }
 
@@ -172,7 +197,7 @@ public:
         - 返回的步数和方向无关，是非负的计数值，例如`step`输入`-100`，若能成功向左移动100步，则返回值是`100`
         - 如果当前K就符合`stop_at`的要求，则不做移动（返回0）
     */
-    ssize_t Move(ssize_t step, const std::optional<Str> &stop_at = nullptr)
+    ssize_t Move(ssize_t step, const std::optional<Str> &stop_at = std::nullopt)
     {
         if (step > kSSizeSoftMax)
         {
@@ -251,7 +276,7 @@ public:
     ::lom::Err::Ptr Get(const Str &k, std::function<StrSlice ()> &v) const;
 
     //创建一个当前快照的迭代器
-    Iterator::Ptr NewIterator() const;
+    Iterator::Ptr NewIterator();
 };
 
 //库的接口类
