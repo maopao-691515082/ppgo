@@ -49,25 +49,6 @@ public:
 
     virtual ~DB() = default;
 
-    //数据库的状态信息
-    struct Stat
-    {
-        //数据状态
-        ssize_t key_count           = 0;    //key数量
-        ssize_t data_len            = 0;    //库中数据总长
-        ssize_t used_block_count    = 0;    //已使用的block数量
-
-        void ApplyChange(const Stat &stat_change)
-        {
-            key_count           += stat_change.key_count;
-            data_len            += stat_change.data_len;
-            used_block_count    += stat_change.used_block_count;
-        }
-
-        ssize_t BlockSize() const;  //单个block的大小
-    };
-    virtual Stat GetStat() = 0;
-
     //指定目录`path`创建数据库，可指定选项
     struct Options
     {

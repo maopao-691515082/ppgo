@@ -294,10 +294,8 @@ public:
 
     virtual ~DBBase() = default;
 
-    //执行写操作，`add_count`和`del_count`可用于保存本次操作导致的key的新增和删除数量
-    virtual ::lom::Err::Ptr Write(
-        const WriteBatch &wb,
-        ssize_t *add_count = nullptr, ssize_t *del_count = nullptr) = 0;
+    //执行写操作
+    virtual ::lom::Err::Ptr Write(const WriteBatch &wb) = 0;
 
     //创建一个当前DB数据的快照
     virtual Snapshot::Ptr NewSnapshot() = 0;

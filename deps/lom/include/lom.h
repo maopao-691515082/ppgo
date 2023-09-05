@@ -18,6 +18,7 @@
 #include "lom/immut/avl_ds.h"
 #include "lom/immut/avl_util.h"
 #include "lom/immut/avl.h"
+#include "lom/immut/zlist.h"
 
 #include "lom/io/io.h"
 

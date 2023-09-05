@@ -247,7 +247,7 @@ public:
 
     //遍历slice所有元素，对每个元素执行传入的函数，并将结果组成一个新的slice
     template <typename MT>
-    GoSlice<MT> Map(std::function<MT (const T &)> f)
+    GoSlice<MT> Map(std::function<MT (const T &)> f) const
     {
         auto len = Len();
         GoSlice<MT> gs(len);
@@ -259,7 +259,7 @@ public:
     }
     //通用Map的快捷方式，对每个元素转为新类型
     template <typename MT>
-    GoSlice<MT> Map()
+    GoSlice<MT> Map() const
     {
         return Map<MT>([] (const T &t) -> MT {
             return MT(t);

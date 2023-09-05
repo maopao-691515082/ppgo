@@ -77,7 +77,7 @@ public:
         return Erase(Size() - 1);
     }
 
-    static AVLList Build(GoSlice<E> elems)
+    static AVLList Build(const GoSlice<E> &elems)
     {
         return AVLList<E>(AVL<E, int8_t>::Build(elems.template Map<std::pair<E, int8_t>>(
             [] (const E &e) -> std::pair<E, int8_t> {
@@ -148,7 +148,7 @@ public:
         return v_ptr == nullptr ? *this : EraseByIdx(idx);
     }
 
-    static AVLMap<K, V> Build(GoSlice<std::pair<K, V>> kvs)
+    static AVLMap<K, V> Build(const GoSlice<std::pair<K, V>> &kvs)
     {
         if (kvs.Len() == 0)
         {
@@ -210,7 +210,7 @@ public:
         return AVLSet<E>(map_.Erase(e));
     }
 
-    static AVLSet<E> Build(GoSlice<E> elems)
+    static AVLSet<E> Build(const GoSlice<E> &elems)
     {
         return AVLSet<E>(AVLMap<E, int8_t>::Build(elems.template Map<std::pair<E, int8_t>>(
             [] (const E &e) -> std::pair<E, int8_t> {

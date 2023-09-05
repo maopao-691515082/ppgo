@@ -185,7 +185,7 @@ class AVL
             return AVLUtil<Node>::Rebalance(this_copy);
         }
 
-        static Ptr Build(GoSlice<std::pair<K, V>> kvs)
+        static Ptr Build(const GoSlice<std::pair<K, V>> &kvs)
         {
             return AVLUtil<Node>::Build([&kvs] (ssize_t idx) -> Ptr {
                 auto const &p = kvs.At(idx);
@@ -265,7 +265,7 @@ public:
         return AVL<K, V>(root_->DelByIdx(idx));
     }
 
-    static AVL<K, V> Build(GoSlice<std::pair<K, V>> kvs)
+    static AVL<K, V> Build(const GoSlice<std::pair<K, V>> &kvs)
     {
         return AVL<K, V>(Node::Build(kvs));
     }

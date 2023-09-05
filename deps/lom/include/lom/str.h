@@ -652,6 +652,10 @@ public:
         {
             return len_;
         }
+        ssize_t Cap() const
+        {
+            return cap_;
+        }
 
         //将`Buf`扩展到指定长度，若当前长度已>=`len`则不做变化
         void FitLen(ssize_t len);
