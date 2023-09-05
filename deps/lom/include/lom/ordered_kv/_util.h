@@ -193,12 +193,17 @@ public:
     若`stop_at`含值，则在遇到或越过它处停下，即：
         - 若向右移动，则在第一个大于等于它的K处停下
         - 若向左移动，则在第一个小于等于它的K处停下
-    返回实际移动的步数，说明：
+    若出错，则返回`-1`，否则返回实际移动的步数，说明：
         - 返回的步数和方向无关，是非负的计数值，例如`step`输入`-100`，若能成功向左移动100步，则返回值是`100`
         - 如果当前K就符合`stop_at`的要求，则不做移动（返回0）
     */
     ssize_t Move(ssize_t step, const std::optional<Str> &stop_at = std::nullopt)
     {
+        if (err_)
+        {
+            return -1;
+        }
+
         if (step > kSSizeSoftMax)
         {
             step = kSSizeSoftMax;
@@ -207,7 +212,8 @@ public:
         {
             step = -kSSizeSoftMax;
         }
-        return !err_ && step != 0 ? MoveImpl(step, stop_at) : 0;
+
+        return step == 0 ? 0 : MoveImpl(step, stop_at);
     }
 
     //`Move`的各种特化封装，简化使用
