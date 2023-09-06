@@ -196,12 +196,6 @@ class SnapshotIteratorImpl : public Iterator
             return;
         }
 
-        if (db_iter_->Err())
-        {
-            SetErr(db_iter_->Err());
-            return;
-        }
-
         //反复计算当前的K大小关系，并跳过ops中的删除标记，直到不需要跳过
         bool skipped_del = false;
         if (skipped_del_count)
@@ -210,6 +204,12 @@ class SnapshotIteratorImpl : public Iterator
         }
         do
         {
+            if (db_iter_->Err())
+            {
+                SetErr(db_iter_->Err());
+                return;
+            }
+
             skipped_del = false;
 
             ComputeKeyCmpResult();

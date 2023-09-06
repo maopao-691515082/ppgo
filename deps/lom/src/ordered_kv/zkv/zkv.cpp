@@ -181,7 +181,7 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
                 }
                 if (merged_kvs.Len() > 0)
                 {
-                    Assert(k > merged_kvs.At(-2));
+                    Assert(k > merged_kvs.At(merged_kvs.Len() - 2));
                 }
                 merged_kvs = merged_kvs.Append(k).Append(v);
                 merged_kvs_data_len += add_data_len;

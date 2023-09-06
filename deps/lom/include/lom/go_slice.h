@@ -11,7 +11,7 @@ namespace lom
 {
 
 /*
-类似Go语言的slice的容器，扩展支持了负索引，按索引访问时，调用者自行保证索引的合法性
+类似Go语言的slice的容器，按索引访问时，调用者自行保证索引的合法性
 容器元素的类型T必须支持默认构造、复制构造、赋值等操作
 注意这个结构的接口设计是介于原地修改和immut之间的，可分几类：
     - 原地修改当前引用的数据（大部分写操作），这类操作会返回`*this`便于链式调用
@@ -87,17 +87,9 @@ class GoSlice
     {
     }
 
-    ssize_t FixIdx(ssize_t &idx, bool allow_end = false, bool cap_end = false) const
+    ssize_t CheckIdx(ssize_t idx, bool allow_end = false, bool cap_end = false) const
     {
-        auto len = Len();
-        if (idx < 0)
-        {
-            idx += len;
-        }
-        if (cap_end)
-        {
-            len = Cap();
-        }
+        auto len = cap_end ? Cap() : Len();
         Assert(0 <= idx && idx <= (allow_end ? len : len - 1));
         return len;
     }
@@ -175,21 +167,21 @@ public:
     //返回的是容器中元素的引用，可用于读写，调用者自行保证其不会失效
     T &At(ssize_t idx) const
     {
-        FixIdx(idx);
+        CheckIdx(idx);
         return a_->a_[start_ + idx];
     }
 
     //slice的获取是指定起始索引和长度，而不是Go和Python的惯例[begin, end)
     GoSlice<T> Slice(ssize_t start, ssize_t len) const
     {
-        auto cap = FixIdx(start, true, true);
+        auto cap = CheckIdx(start, true, true);
         Assert(0 <= len && len <= cap - start);
         return GoSlice<T>(a_, start_ + start, len);
     }
     //不指定长度则表示从指定位置到末尾
     GoSlice<T> Slice(ssize_t start) const
     {
-        auto this_len = FixIdx(start, true);
+        auto this_len = CheckIdx(start, true);
         return GoSlice<T>(a_, start_ + start, this_len - start);
     }
 

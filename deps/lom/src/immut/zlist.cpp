@@ -6,18 +6,35 @@ namespace lom
 namespace immut
 {
 
-void ZList::Iterator::ParseV()
+GoSlice<StrSlice> ZList::Parse(ssize_t limit) const
 {
-    auto p = zs_.Data();
-    auto sz = zs_.Len();
-    if (sz == 0)
+    auto count = limit <= 0 || limit > StrCount() ? StrCount() : limit;
+    GoSlice<StrSlice> r(0, count);
+
+    auto p = z_.Data();
+    auto sz = z_.Len();
+    while (count > 0 && sz > 0)
     {
-        return;
+        int64_t n;
+        Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz);
+        r = r.Append(StrSlice(p, n, true));
+        -- count;
+        p += n + 1;
+        sz -= n + 1;
     }
+
+    return r;
+}
+
+StrSlice ZList::FirstStr() const
+{
+    auto p = z_.Data();
+    auto sz = z_.Len();
+    Assert(sz > 0);
 
     int64_t n;
     Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz);
-    v_ = StrSlice(p, n, true);
+    return StrSlice(p, n, true);
 }
 
 ZList ZList::Append(StrSlice s) const

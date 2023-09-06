@@ -22,32 +22,55 @@ public:
     class Iterator
     {
         Str z_;
-        StrSlice zs_;
-        StrSlice v_;
-
-        void ParseV();
+        GoSlice<StrSlice> gs_;
+        ssize_t gs_idx_ = 0;
 
     public:
 
-        Iterator(const ZList &zl) : z_(zl.z_), zs_(zl.z_)
+        Iterator() = default;
+
+        Iterator(const ZList &zl) : z_(zl.z_), gs_(zl.Parse())
         {
-            ParseV();
+        }
+
+        ssize_t StrCount() const
+        {
+            return gs_.Len();
+        }
+        ssize_t Idx() const
+        {
+            return gs_idx_;
         }
 
         bool Valid() const
         {
-            return zs_.Len() != 0;
+            return gs_idx_ >= 0 && gs_idx_ < gs_.Len();
         }
 
-        StrSlice Get() const
+        StrSlice Get(ssize_t offset = 0) const
         {
-            return v_;
+            return gs_.At(gs_idx_ + offset);
         }
 
+        void Seek(ssize_t idx)
+        {
+            Assert(idx >= -1 && idx <= gs_.Len());
+            gs_idx_ = idx;
+        }
+
+        void Prev()
+        {
+            if (gs_idx_ >= 0)
+            {
+                -- gs_idx_;
+            }
+        }
         void Next()
         {
-            zs_ = zs_.Slice(v_.Data() + v_.Len() + 1 - zs_.Data());
-            ParseV();
+            if (gs_idx_ < gs_.Len())
+            {
+                ++ gs_idx_;
+            }
         }
     };
 
@@ -63,6 +86,12 @@ public:
     {
         return z_.Len();
     }
+
+    //将包含的串解析为一个列表，可指定数量限制，`limit`<=0表示全部解析出来
+    GoSlice<StrSlice> Parse(ssize_t limit = 0) const;
+
+    //快速返回第一个字符串，调用者确保当前ZL不为空
+    StrSlice FirstStr() const;
 
     //各种修改操作，会返回修改后的新结果，不会改变原对象内容
     ZList Append(StrSlice s) const;

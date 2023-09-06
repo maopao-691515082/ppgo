@@ -19,7 +19,7 @@ class Str;
 /*
 `StrSlice`用于引用一段连续的char数据
 由于只是简单引用，因此使用者自行保证有效性，即作用域或生存期小于数据源
-支持负索引，索引存取的输入合法性由调用者保证
+索引存取的输入合法性由调用者保证
 */
 class StrSlice final
 {
@@ -32,13 +32,9 @@ class StrSlice final
     uint16_t len_high_;
     uint32_t len_low_;
 
-    ssize_t FixIdx(ssize_t &idx, bool allow_end) const
+    ssize_t CheckIdx(ssize_t idx, bool allow_end) const
     {
         auto len = Len();
-        if (idx < 0)
-        {
-            idx += len;
-        }
         Assert(0 <= idx && idx <= (allow_end ? len : len - 1));
         return len;
     }
@@ -85,7 +81,7 @@ public:
 
     char Get(ssize_t idx) const
     {
-        FixIdx(idx, false);
+        CheckIdx(idx, false);
         return Data()[idx];
     }
 
@@ -114,14 +110,14 @@ public:
     //指定起始索引和长度返回新的串切片，不指定长度则表示后半段，返回的和当前串引用同一个数据源
     StrSlice Slice(ssize_t start, ssize_t len) const
     {
-        auto this_len = FixIdx(start, true);
+        auto this_len = CheckIdx(start, true);
         auto cap = this_len - start;
         Assert(0 <= len && len <= cap);
         return StrSlice(Data() + start, len, cap == len ? is_zero_end_ : (Data()[start + len] == 0));
     }
     StrSlice Slice(ssize_t start) const
     {
-        auto this_len = FixIdx(start, true);
+        auto this_len = CheckIdx(start, true);
         return StrSlice(Data() + start, this_len - start, is_zero_end_);
     }
 

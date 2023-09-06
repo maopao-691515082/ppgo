@@ -200,13 +200,9 @@ class AVL
     {
     }
 
-    void FixIdx(ssize_t idx, bool allow_end = false) const
+    void CheckIdx(ssize_t idx, bool allow_end = false) const
     {
         auto sz = Size();
-        if (idx < 0)
-        {
-            idx += sz;
-        }
         Assert(0 <= idx && idx <= (allow_end ? sz : sz - 1));
     }
 
@@ -237,31 +233,30 @@ public:
     }
 
     /*
-    允许负索引
     `AddByIdx`时，`idx`可以为`Size()`，表示在末尾插入，其他接口下`idx`必须合法地指代存在的元素
     */
 
     std::pair<const K *, const V *> GetByIdx(ssize_t idx) const
     {
-        FixIdx(idx);
+        CheckIdx(idx);
         return root_->GetByIdx(idx);
     }
 
     AVL<K, V> AddByIdx(ssize_t idx, const K &k, const V &v) const
     {
-        FixIdx(idx, true);
+        CheckIdx(idx, true);
         return AVL<K, V>(Node::AddByIdx(root_, idx, k, v));
     }
 
     AVL<K, V> SetByIdx(ssize_t idx, const V &v, const K *k = nullptr) const
     {
-        FixIdx(idx);
+        CheckIdx(idx);
         return AVL<K, V>(root_->SetByIdx(idx, v, k));
     }
 
     AVL<K, V> DelByIdx(ssize_t idx) const
     {
-        FixIdx(idx);
+        CheckIdx(idx);
         return AVL<K, V>(root_->DelByIdx(idx));
     }
 
