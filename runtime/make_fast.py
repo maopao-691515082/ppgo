@@ -1,6 +1,6 @@
 #codeing=utf8
 
-import sys, os, hashlib, shutil
+import sys, os, hashlib
 
 def file_hash(fn):
     return hashlib.md5(open(fn).read()).hexdigest().upper()
