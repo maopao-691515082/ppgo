@@ -47,6 +47,11 @@ public:
         return raw_ops_;
     }
 
+    ssize_t Size() const
+    {
+        return static_cast<ssize_t>(raw_ops_.size());
+    }
+
     virtual void Clear() override
     {
         raw_ops_.clear();
@@ -70,6 +75,7 @@ public:
       则修改后继续访问对应迭代器的行为未定义
     - 建议迭代器实现中保留到对应快照的引用，以保证生命周期内的可用性，如果没有保证，
       则快照被销毁后继续使用对应迭代器的行为未定义
+        - `lom::ordered_kv`下的DB实现保证了这一点
     - 新建立的迭代器应该保证默认指向开始为止，即默认执行`SeekFirst()`
 */
 class Iterator

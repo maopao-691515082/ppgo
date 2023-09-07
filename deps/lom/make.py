@@ -51,8 +51,9 @@ for d in dirs:
     if not os.path.isdir(d):
         os.makedirs(d)
 
-def do_cmd(cmd):
-    sys.stdout.write(cmd + "\n")
+def do_cmd(cmd, show = True):
+    if show:
+        sys.stdout.write(cmd + "\n")
     ret = os.system(cmd)
     if ret != 0:
         sys.exit(1)
@@ -65,7 +66,7 @@ for fn, h in cpp_hashes.items():
     if header_changed or h != last_cpp_hashes.get(fn):
         do_cmd("%s -c -o tmpobjs/%s %s ../%s" % (cxx, obj_fn, cxx_flags, fn))
     else:
-        do_cmd("cp last_tmpobjs/%s tmpobjs/%s" % (obj_fn, obj_fn))
+        do_cmd("cp last_tmpobjs/%s tmpobjs/%s" % (obj_fn, obj_fn), show = False)
     if fn.startswith("src/"):
         lib_objs.append("tmpobjs/" + obj_fn)
     else:
