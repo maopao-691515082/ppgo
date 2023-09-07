@@ -17,7 +17,7 @@ namespace immut
 
 节点规范：
     需要包含以下类型：
-        `Ptr`：表示节点对应的智能指针，且能从`Node *`直接转换
+        `Ptr`：表示节点对应的智能指针
     需要包含以下属性：
         ```
         uint8_t h_; //子树高度
@@ -25,14 +25,14 @@ namespace immut
         ```
     需要包含以下方法：
         ```
-        Ptr Copy() const;                           //返回当前节点的一个拷贝
-        void AssignData(const Node *node);          //将node的数据部分赋值给当前节点，即不改变管理属性
-        void SetSize(ssize_t sz);                   //调整平衡时设置节点高度
-        static ssize_t Size(const Node *node);      //返回输入子树大小（总元素数量）
-        static ssize_t ElemCount(const Node *node); //返回输入节点的元素数量
+        Ptr Copy() const;                                   //返回当前节点的一个拷贝
+        void AssignData(const Node::Ptr &node);             //将node的数据部分赋值给当前节点，即不改变管理属性
+        void SetSize(ssize_t sz);                           //调整平衡时设置节点高度
+        static ssize_t Size(const Node::Ptr &node);         //返回输入子树大小（总元素数量）
+        static ssize_t ElemCount(const Node::Ptr &node);    //返回输入节点的元素数量
         ```
     以上所有元素都应被`AVLUtil`可访问，一般做法是用`friend`赋予权限
-    static方法可能以`node=nullptr`调用，普通方法调用则保证`this`不为nullptr（C++规定`this`为nullptr是UB）
+    static方法可能以`node`为空指针进行调用，普通方法调用则保证`this`不为nullptr（C++规定`this`为nullptr是UB）
     `Size`和`ElemCount`等方法的返回合法性由使用者保证（如必须>=0、nullptr节点需要返回0等）
     建议：
         节点数据最好实现为可直接赋值拷贝的类型，如值类型、智能指针等，这样拷贝构造可用默认实现
@@ -44,12 +44,12 @@ class AVLUtil
 {
     typedef typename Node::Ptr NodePtr;
 
-    static uint8_t Height(const Node *node)
+    static uint8_t Height(const NodePtr &node)
     {
-        return node == nullptr ? 0 : node->h_;
+        return node ? node->h_ : 0;
     }
 
-    static void FixHSZ(Node *node)
+    static void FixHSZ(const NodePtr &node)
     {
         node->h_ = std::max(Height(node->l_), Height(node->r_)) + 1;
         node->SetSize(Node::Size(node->l_) + Node::Size(node->r_) + Node::ElemCount(node));
@@ -63,7 +63,7 @@ public:
         - 需要`curr_node`是copy出来的，且其左右子树已经平衡
         - 左右子树高度差需保证最大为2
     */
-    static NodePtr Rebalance(Node *curr_node)
+    static NodePtr Rebalance(const NodePtr &curr_node)
     {
         uint8_t l_h = Height(curr_node->l_), r_h = Height(curr_node->r_);
         int32_t h_diff = (int32_t)l_h - (int32_t)r_h;
@@ -171,7 +171,7 @@ public:
     }
 
     //删除`node`为根的子树中的最后一个元素，并将删除元素的数据赋值给`instead_node`，返回删除操作后的子树
-    static NodePtr DelLast(const Node *node, Node *instead_node)
+    static NodePtr DelLast(const NodePtr &node, const NodePtr &instead_node)
     {
         if (!node->r_)
         {
@@ -195,7 +195,7 @@ public:
     {
         Assert(0 <= begin_idx && begin_idx <= end_idx);
 
-        NodePtr node = nullptr;
+        NodePtr node;
         if (begin_idx < end_idx)
         {
             ssize_t mid_idx = begin_idx + (end_idx - begin_idx) / 2;
@@ -236,9 +236,9 @@ public:
         sz_low_ = sz & kUInt32Max;                          \
     }
 
-#define LOM_IMMUT_AVL_DEF_DEFAULT_NODE_METHOD_SIZE()                                            \
-    static ssize_t Size(const Node *node) {                                                     \
-        return node == nullptr ? 0 : ((ssize_t)node->sz_high_ << 32) + (ssize_t)node->sz_low_;  \
+#define LOM_IMMUT_AVL_DEF_DEFAULT_NODE_METHOD_SIZE()                                \
+    static ssize_t Size(const Node::Ptr &node) {                                    \
+        return node ? ((ssize_t)node->sz_high_ << 32) + (ssize_t)node->sz_low_ : 0; \
     }
 
 #define LOM_IMMUT_AVL_COPY_DEFAULT_NODE_MNG_ATTR(_nd) do {  \

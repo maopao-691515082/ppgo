@@ -30,8 +30,10 @@ namespace immut
 template <typename K, typename V>
 class AVL
 {
+    //struct Node
     struct Node : public RCObj
     {
+        //typedef std::shared_ptr<Node> Ptr;
         typedef RCPtr<Node> Ptr;
 
     private:
@@ -53,10 +55,10 @@ class AVL
         {
             auto node = new Node(k_, v_);
             LOM_IMMUT_AVL_COPY_DEFAULT_NODE_MNG_ATTR(node);
-            return node;
+            return Ptr(node);
         }
 
-        void AssignData(const Node *node)
+        void AssignData(const Node::Ptr &node)
         {
             k_ = node->k_;
             v_ = node->v_;
@@ -64,18 +66,18 @@ class AVL
 
         LOM_IMMUT_AVL_DEF_DEFAULT_NODE_METHOD_SET_SIZE()
 
-        static ssize_t ElemCount(const Node *node)
+        static ssize_t ElemCount(const Node::Ptr &node)
         {
-            return node == nullptr ? 0 : 1;
+            return node ? 1 : 0;
         }
 
     public:
 
         LOM_IMMUT_AVL_DEF_DEFAULT_NODE_METHOD_SIZE()
 
-        static const V *Get(const Node *node, const K &k, ssize_t &idx)
+        static const V *Get(const Node::Ptr &node, const K &k, ssize_t &idx)
         {
-            if (node == nullptr)
+            if (!node)
             {
                 return nullptr;
             }
@@ -108,12 +110,12 @@ class AVL
             return std::pair(&k_, &v_);
         }
 
-        static Ptr AddByIdx(const Node *node, ssize_t idx, const K &k, const V &v)
+        static Ptr AddByIdx(const Node::Ptr &node, ssize_t idx, const K &k, const V &v)
         {
-            if (node == nullptr)
+            if (!node)
             {
                 Assert(idx == 0);
-                return new Node(k, v);
+                return Ptr(new Node(k, v));
             }
 
             Ptr this_copy = node->Copy();
@@ -189,7 +191,7 @@ class AVL
         {
             return AVLUtil<Node>::Build([&kvs] (ssize_t idx) -> Ptr {
                 auto const &p = kvs.At(idx);
-                return new Node(p.first, p.second);
+                return Ptr(new Node(p.first, p.second));
             }, 0, kvs.Len());
         }
     };
