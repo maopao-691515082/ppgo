@@ -13,7 +13,7 @@ namespace zkv
 
 class DBImpl : public DB
 {
-    typedef ::lom::immut::AVLMap<Str, ::lom::immut::ZList> ZMap;
+    typedef ::lom::immut::AVL<Str, ::lom::immut::ZList> ZMap;
 
     class Snapshot : public ::lom::ordered_kv::Snapshot
     {

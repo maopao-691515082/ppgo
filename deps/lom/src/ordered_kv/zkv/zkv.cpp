@@ -52,7 +52,7 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
             ::lom::immut::ZList zl;
             std::optional<Str> next_zl_first_k;
             ::lom::immut::ZList next_zl;
-            ssize_t merge_idx = 0;
+            ssize_t merge_idx = 0;  //保持指向当前合并的ZL应该插入的位置
             if (zm.Size() > 0)
             {
                 auto v_ptr = zm.Get(wb_ops_iter->first, &merge_idx);
@@ -73,7 +73,7 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
                 }
 
                 //删掉这个ZL
-                zm = zm.EraseByIdx(merge_idx);
+                zm = zm.DelByIdx(merge_idx);
 
                 //删除后，当前`merge_idx`是ZL的后继，获取后继的信息
                 if (merge_idx < zm.Size())
@@ -177,7 +177,8 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
                     merged_kvs = merged_kvs.Nil();
                     merged_kvs_data_len = 0;
                     //插入
-                    zm = zm.Set(new_zl_first_k, new_zl);
+                    zm = zm.AddByIdx(merge_idx, new_zl_first_k, new_zl);
+                    ++ merge_idx;
                 }
                 if (merged_kvs.Len() > 0)
                 {
@@ -199,12 +200,13 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
                 if (next_zl_first_k && new_zl.SpaceCost() + next_zl.SpaceCost() < kZLDataLenMergeThreshold)
                 {
                     //需要合并，删掉后继ZL，链接到新的ZL后面
-                    zm = zm.Erase(*next_zl_first_k);
+                    zm = zm.DelByIdx(merge_idx);
                     new_zl = new_zl.Extend(next_zl);
                 }
 
                 //插入
-                zm = zm.Set(new_zl_first_k, new_zl);
+                zm = zm.AddByIdx(merge_idx, new_zl_first_k, new_zl);
+                ++ merge_idx;
             }
         }
 
