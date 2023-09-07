@@ -173,9 +173,20 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
                 {
                     //即将超限，新生成ZL
                     Str new_zl_first_k = merged_kvs.At(0);
-                    auto new_zl = ::lom::immut::ZList().Extend(merged_kvs);
-                    merged_kvs = merged_kvs.Nil();
+                    ssize_t len_soft_max_kv_count = merged_kvs.Len() / 2;
+                    if (len_soft_max_kv_count >= 3)
+                    {
+                        len_soft_max_kv_count = len_soft_max_kv_count * 2 / 3;
+                    }
+                    auto new_zl = ::lom::immut::ZList().Extend(
+                        merged_kvs.Slice(0, len_soft_max_kv_count * 2));
+                    merged_kvs = merged_kvs.Slice(len_soft_max_kv_count * 2);
                     merged_kvs_data_len = 0;
+                    for (ssize_t i = 0; i < merged_kvs.Len(); ++ i)
+                    {
+                        merged_kvs_data_len += 2 + merged_kvs.At(i).Len();
+                    }
+
                     //插入
                     zm = zm.AddByIdx(merge_idx, new_zl_first_k, new_zl);
                     ++ merge_idx;
