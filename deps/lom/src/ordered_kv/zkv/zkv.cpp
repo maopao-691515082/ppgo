@@ -25,7 +25,7 @@ DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
 ::lom::Err::Ptr DBImpl::Write(const WriteBatch &wb)
 {
     static const ssize_t
-        kZLDataLenMax = 2048,
+        kZLDataLenMax = 1024,
         kZLDataLenMergeThreshold = kZLDataLenMax / 2;
 
     auto const &wb_ops = wb.RawOps();

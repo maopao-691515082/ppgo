@@ -10,7 +10,7 @@ namespace zkv
 {
 
 void DBImpl::Snapshot::DBGet(
-    const Str &k, std::function<void (const ::lom::immut::ZList::Iterator *)> f) const
+    const Str &k, std::function<void (std::function<bool (StrSlice &)>, StrSlice)> f) const
 {
     ssize_t idx;
     auto v_ptr = zm_.Get(k, &idx);
@@ -21,55 +21,49 @@ void DBImpl::Snapshot::DBGet(
     if (v_ptr != nullptr)
     {
         auto ks = k.Slice();
-        ::lom::immut::ZList::Iterator iter(*v_ptr);
-        while (iter.Valid())
+        auto iter = v_ptr->NewForwardIterator();
+        for (;;)
         {
-            auto iter_k = iter.Get();
-            iter.Next();
-            Assert(iter.Valid());
+            StrSlice iter_k, iter_v;
+            if (!iter(iter_k))
+            {
+                break;
+            }
+            Assert(iter(iter_v));
 
             if (ks == iter_k)
             {
-                f(&iter);
+                f(iter, iter_v);
                 return;
             }
-
-            iter.Next();
         }
     }
 
     //not found
-    f(nullptr);
+    f(nullptr, StrSlice());
 }
 
 ::lom::Err::Ptr DBImpl::Snapshot::DBGet(const Str &k, std::function<void (const StrSlice *)> f) const
 {
-    DBGet(k, [f] (const ::lom::immut::ZList::Iterator *iter) {
-        if (iter == nullptr)
-        {
-            f(nullptr);
-        }
-        else
-        {
-            auto v = iter->Get();
-            f(&v);
-        }
+    DBGet(k, [f] (std::function<bool (StrSlice &)> iter, StrSlice v) {
+        return iter ? f(&v) : f(nullptr);
     });
     return nullptr;
 }
 
 ::lom::Err::Ptr DBImpl::Snapshot::DBGet(const Str &k, std::function<StrSlice ()> &v) const
 {
-    DBGet(k, [&v] (const ::lom::immut::ZList::Iterator *iter_ptr) {
-        if (iter_ptr == nullptr)
+    DBGet(k, [&v] (std::function<bool (StrSlice &)> iter, StrSlice iter_v) {
+        if (iter)
         {
-            v = nullptr;
+            v = [iter, iter_v] () -> StrSlice {
+                static_cast<void>(iter);    //just a holder
+                return iter_v;
+            };
         }
         else
         {
-            v = [iter = *iter_ptr] () -> StrSlice {
-                return iter.Get();
-            };
+            v = nullptr;
         }
     });
     return nullptr;

@@ -66,8 +66,7 @@ class DBImpl : public DB
             }
             virtual StrSlice ValueImpl() const override
             {
-                auto v = zl_iter_.Get(1);
-                return v;
+                return zl_iter_.Get(1);
             }
 
             virtual void SeekFirstImpl() override
@@ -98,7 +97,7 @@ class DBImpl : public DB
 
         ZMap zm_;
 
-        void DBGet(const Str &k, std::function<void (const ::lom::immut::ZList::Iterator *)> f) const;
+        void DBGet(const Str &k, std::function<void (std::function<bool (StrSlice &)>, StrSlice)> f) const;
 
     protected:
 

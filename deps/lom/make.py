@@ -60,7 +60,7 @@ def do_cmd(cmd, show = True):
 
 lib_objs = []
 test_objs = []
-for fn, h in cpp_hashes.items():
+for fn, h in sorted(cpp_hashes.items(), key = lambda x: (int(x[0].startswith("src/")), x[0], x[1])):
     assert fn.endswith(".cpp")
     obj_fn = fn[: -4] + ".o"
     if header_changed or h != last_cpp_hashes.get(fn):

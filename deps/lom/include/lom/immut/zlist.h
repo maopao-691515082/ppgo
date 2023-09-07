@@ -15,13 +15,18 @@ namespace immut
 class ZList
 {
     ssize_t str_count_ = 0;
-    Str z_;
+    //注：不能直接用`Str`之类的不可变对象，必须长引用堆对象以确保各迭代器的`StrSlice`有效，这里直接用`Buf`
+    std::shared_ptr<Str::Buf> z_;
+
+    ZList(ssize_t str_count, std::shared_ptr<Str::Buf> &&z) : str_count_(str_count), z_(std::move(z))
+    {
+    }
 
 public:
 
     class Iterator
     {
-        Str z_;
+        std::shared_ptr<Str::Buf> z_;
         GoSlice<StrSlice> gs_;
         ssize_t gs_idx_ = 0;
 
@@ -74,7 +79,9 @@ public:
         }
     };
 
-    ZList() = default;
+    ZList() : z_(std::make_shared<Str::Buf>())
+    {
+    }
 
     //返回字符串数量
     ssize_t StrCount() const
@@ -84,7 +91,7 @@ public:
     //返回消耗的空间
     ssize_t SpaceCost() const
     {
-        return z_.Len();
+        return z_->Cap();
     }
 
     //将包含的串解析为一个列表，可指定数量限制，`limit`<=0表示全部解析出来
@@ -92,6 +99,13 @@ public:
 
     //快速返回第一个字符串，调用者确保当前ZL不为空
     StrSlice FirstStr() const;
+
+    /*
+    函数形式的简单、快速的顺序迭代器
+    可反复调用以迭代元素，调用返回`true`表示成功，`false`表示已结束
+    调用的结果串引用的内容由迭代器维持，在迭代器生命周期内有效
+    */
+    std::function<bool (StrSlice &)> NewForwardIterator() const;
 
     //各种修改操作，会返回修改后的新结果，不会改变原对象内容
     ZList Append(StrSlice s) const;

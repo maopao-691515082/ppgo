@@ -40,6 +40,7 @@ class StrSlice final
     }
 
     StrSlice(std::nullptr_t) = delete;
+    StrSlice &operator=(std::nullptr_t) = delete;
 
 public:
 

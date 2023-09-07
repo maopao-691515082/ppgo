@@ -33,3 +33,5 @@ public:
 void Die(const Str &msg = "", CodePos _cp = CodePos());
 
 }
+
+#define LOM_DIE(_fmt, ...) (lom::Die(lom::Sprintf(_fmt, ##__VA_ARGS__)))

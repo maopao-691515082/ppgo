@@ -15,6 +15,7 @@ class CodePos
 
 public:
 
+    //注意本对象对file_name_和func_name_存放的是裸指针，所以需要保证这两个串是全局常量或字面量
     CodePos(
         const char *file_name = __builtin_FILE(),
         int line_num = __builtin_LINE(),
