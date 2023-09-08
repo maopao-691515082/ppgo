@@ -101,11 +101,13 @@ ssize_t DBImpl::Snapshot::Iterator::MoveImpl(ssize_t step, const std::optional<S
                 -- step;
                 ++ moved_step;
             }
-            if (!zl_iter_.Valid())
+            if (zl_iter_.Valid())
             {
-                //当前ZL遍历结束，转到下一个
-                Reset(zm_idx_ + 1);
+                //当前ZL没有遍历完，说明要么步数到了，要么到达`stop_at`了
+                break;
             }
+            //下一个ZL
+            Reset(zm_idx_ + 1);
         }
     }
     else
@@ -153,13 +155,14 @@ ssize_t DBImpl::Snapshot::Iterator::MoveImpl(ssize_t step, const std::optional<S
                 ++ step;
                 ++ moved_step;
             }
-            if (!zl_iter_.Valid())
+            if (zl_iter_.Valid())
             {
-                Reset(zm_idx_ - 1);
-                if (zm_idx_ >= 0)
-                {
-                    SeekZLIterLast();
-                }
+                break;
+            }
+            Reset(zm_idx_ - 1);
+            if (zm_idx_ >= 0)
+            {
+                SeekZLIterLast();
             }
         }
     }
