@@ -4,6 +4,7 @@
 
 #include "../go_slice.h"
 #include "../str.h"
+#include "../io/io.h"
 
 namespace lom
 {
@@ -111,6 +112,10 @@ public:
     ZList Append(StrSlice s) const;
     ZList Extend(const ZList &zl) const;
     ZList Extend(const GoSlice<StrSlice> &gs) const;
+
+    //指定buf-io对象读写ZL
+    ::lom::Err::Ptr DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush = true) const;
+    static ::lom::Err::Ptr LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl);
 };
 
 }

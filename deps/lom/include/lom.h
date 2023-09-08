@@ -30,3 +30,5 @@
 
 #include "lom/ordered_kv/ckv/ckv.h"
 #include "lom/ordered_kv/zkv/zkv.h"
+
+#include "lom/hash/hash.h"

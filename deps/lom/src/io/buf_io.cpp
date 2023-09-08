@@ -25,8 +25,15 @@ class BufReaderImpl : public BufReader
     ssize_t start_ = 0;
     ssize_t len_ = 0;
 
+    ::lom::Err::Ptr err_;
+
     ::lom::Err::Ptr Fill()
     {
+        if (err_)
+        {
+            return err_;
+        }
+
         if (len_ == 0)
         {
             start_ = 0;
@@ -34,6 +41,7 @@ class BufReaderImpl : public BufReader
             auto err = do_read_(buf_, buf_sz_, rsz);
             if (err)
             {
+                err_ = err;
                 return err;
             }
             if (rsz > 0)
@@ -42,6 +50,7 @@ class BufReaderImpl : public BufReader
                 len_ = rsz;
             }
         }
+
         return nullptr;
     }
 
@@ -60,7 +69,7 @@ class BufReaderImpl : public BufReader
             {
                 //EOF
                 rsz = i;
-                return nullptr;
+                return BufReader::UnexpectedEOF();
             }
 
             auto fill_len = std::min(len_, sz - i);
@@ -104,6 +113,11 @@ public:
         delete[] buf_;
     }
 
+    virtual bool EOFReached() override
+    {
+        return !Fill() && len_ == 0;
+    }
+
     virtual ::lom::Err::Ptr Read(char *buf, ssize_t sz, ssize_t &rsz) override
     {
         LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
@@ -132,11 +146,18 @@ public:
         return ReadFullOrUntil(buf, sz, &end_ch, rsz);
     }
 
-    virtual ::lom::Err::Ptr ReadFull(char *buf, ssize_t sz, ssize_t &rsz) override
+    virtual ::lom::Err::Ptr ReadFull(char *buf, ssize_t sz, ssize_t *rsz_ptr) override
     {
-        return ReadFullOrUntil(buf, sz, nullptr, rsz);
+        ssize_t rsz;
+        return ReadFullOrUntil(buf, sz, nullptr, rsz_ptr ? *rsz_ptr : rsz);
     }
 };
+
+::lom::Err::Ptr BufReader::UnexpectedEOF()
+{
+    static ::lom::Err::Ptr err = ::lom::Err::FromStr("Unexpected EOF");
+    return err;
+}
 
 BufReader::Ptr BufReader::New(BufReader::DoReadFunc do_read, ssize_t buf_sz)
 {

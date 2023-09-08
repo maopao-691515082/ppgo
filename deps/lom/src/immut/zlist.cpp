@@ -106,6 +106,78 @@ ZList ZList::Extend(const GoSlice<StrSlice> &gs) const
     return ZList(str_count_ + count, std::move(b));
 }
 
+static ssize_t ZHash(const std::shared_ptr<Str::Buf> &z)
+{
+    auto p = z->Data();
+    auto len = z->Len();
+    ::lom::hash::BKDRHash h(len, 25222951875809);
+    h.Update(p, len);
+    return h.Hash();
+}
+
+::lom::Err::Ptr ZList::DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush) const
+{
+    auto write_int =
+        [&bw] (int64_t n) -> ::lom::Err::Ptr {
+            auto enc = ::lom::var_int::Encode(n);
+            return bw->WriteAll(enc.Data(), enc.Len());
+        }
+    ;
+
+    auto err = write_int(str_count_);
+    if (!err)
+    {
+        err = write_int(ZHash(z_));
+        if (!err)
+        {
+            err = write_int(z_->Len());
+            if (!err)
+            {
+                err = bw->WriteAll(z_->Data(), z_->Len());
+                if (!err && need_flush)
+                {
+                    err = bw->Flush();
+                }
+            }
+        }
+    }
+    return err;
+}
+
+::lom::Err::Ptr ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
+{
+    int64_t str_count;
+    std::shared_ptr<Str::Buf> z;
+    auto err = ::lom::var_int::LoadFrom(br, str_count);
+    if (!err)
+    {
+        int64_t h;
+        err = ::lom::var_int::LoadFrom(br, h);
+        if (!err)
+        {
+            int64_t len;
+            err = ::lom::var_int::LoadFrom(br, len);
+            if (!err)
+            {
+                z = std::make_shared<Str::Buf>(len);
+                err = br->ReadFull(z->Data(), len);
+                if (!err)
+                {
+                    if (h == ZHash(z))
+                    {
+                        zl = ZList(str_count, std::move(z));
+                    }
+                    else
+                    {
+                        err = ::lom::Err::Sprintf("ZList::LoadFrom: hash mismatch");
+                    }
+                }
+            }
+        }
+    }
+    return err;
+}
+
 }
 
 }

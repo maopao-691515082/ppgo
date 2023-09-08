@@ -302,16 +302,10 @@ bool DecodeUInt(const char *&p, ssize_t &sz, uint64_t &n)
 static ::lom::Err::Ptr LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
 {
     s.resize(1);
-    ssize_t rsz;
-    auto err = br->ReadFull(&s[0], 1, rsz);
+    auto err = br->ReadFull(&s[0], 1);
     if (err)
     {
         return err;
-    }
-    if (rsz != 1)
-    {
-        Assert(rsz == 0);
-        return ::lom::Err::Sprintf("ReadFull first byte failed: EOF");
     }
 
     ssize_t remain_len = 0;
@@ -348,15 +342,10 @@ static ::lom::Err::Ptr LoadEncodedFrom(const io::BufReader::Ptr &br, std::string
     if (remain_len > 0)
     {
         s.resize(1 + static_cast<size_t>(remain_len));
-        err = br->ReadFull(&s[1], remain_len, rsz);
+        err = br->ReadFull(&s[1], remain_len);
         if (err)
         {
             return err;
-        }
-        if (rsz != remain_len)
-        {
-            Assert(rsz >= 0);
-            return ::lom::Err::Sprintf("ReadFull remain_len [%zd] failed, ret [%zd]", remain_len, rsz);
         }
     }
 
