@@ -21,6 +21,7 @@ class BufReaderImpl : public BufReader
 {
     BufReader::DoReadFunc do_read_;
     ssize_t buf_sz_;
+    MakeBufFunc make_buf_;
     char *buf_;
     ssize_t start_ = 0;
     ssize_t len_ = 0;
@@ -103,19 +104,28 @@ class BufReaderImpl : public BufReader
 
 public:
 
-    BufReaderImpl(BufReader::DoReadFunc do_read, ssize_t buf_sz) :
-        do_read_(do_read), buf_sz_(AdjustBufSize(buf_sz)), buf_(new char[buf_sz_])
+    BufReaderImpl(BufReader::DoReadFunc do_read, ssize_t buf_sz, MakeBufFunc make_buf) :
+        do_read_(do_read), buf_sz_(AdjustBufSize(buf_sz)), make_buf_(make_buf)
     {
+        buf_ = make_buf_ ? make_buf_(buf_sz_) : new char[buf_sz_];
     }
 
     virtual ~BufReaderImpl()
     {
-        delete[] buf_;
+        if (!make_buf_)
+        {
+            delete[] buf_;
+        }
     }
 
-    virtual bool EOFReached() override
+    virtual ::lom::Err::Ptr Wait(ssize_t &rsz)
     {
-        return !Fill() && len_ == 0;
+        auto err = Fill();
+        if (!err)
+        {
+            rsz = len_;
+        }
+        return err;
     }
 
     virtual ::lom::Err::Ptr Read(char *buf, ssize_t sz, ssize_t &rsz) override
@@ -159,15 +169,16 @@ public:
     return err;
 }
 
-BufReader::Ptr BufReader::New(BufReader::DoReadFunc do_read, ssize_t buf_sz)
+BufReader::Ptr BufReader::New(BufReader::DoReadFunc do_read, ssize_t buf_sz, MakeBufFunc make_buf)
 {
-    return BufReader::Ptr(new BufReaderImpl(do_read, buf_sz));
+    return BufReader::Ptr(new BufReaderImpl(do_read, buf_sz, make_buf));
 }
 
 class BufWriterImpl : public BufWriter
 {
     BufWriter::DoWriteFunc do_write_;
     ssize_t buf_sz_;
+    MakeBufFunc make_buf_;
     char *buf_;
     ssize_t start_ = 0;
     ssize_t len_ = 0;
@@ -198,14 +209,18 @@ class BufWriterImpl : public BufWriter
 
 public:
 
-    BufWriterImpl(BufWriter::DoWriteFunc do_write, ssize_t buf_sz) :
-        do_write_(do_write), buf_sz_(AdjustBufSize(buf_sz)), buf_(new char[buf_sz_])
+    BufWriterImpl(BufWriter::DoWriteFunc do_write, ssize_t buf_sz, MakeBufFunc make_buf) :
+        do_write_(do_write), buf_sz_(AdjustBufSize(buf_sz)), make_buf_(make_buf)
     {
+        buf_ = make_buf_ ? make_buf_(buf_sz_) : new char[buf_sz_];
     }
 
     virtual ~BufWriterImpl()
     {
-        delete[] buf_;
+        if (!make_buf_)
+        {
+            delete[] buf_;
+        }
     }
 
     virtual ::lom::Err::Ptr WriteAll(const char *buf, ssize_t sz) override
@@ -264,9 +279,9 @@ public:
     }
 };
 
-BufWriter::Ptr BufWriter::New(BufWriter::DoWriteFunc do_write, ssize_t buf_sz)
+BufWriter::Ptr BufWriter::New(BufWriter::DoWriteFunc do_write, ssize_t buf_sz, MakeBufFunc make_buf)
 {
-    return BufWriter::Ptr(new BufWriterImpl(do_write, buf_sz));
+    return BufWriter::Ptr(new BufWriterImpl(do_write, buf_sz, make_buf));
 }
 
 }

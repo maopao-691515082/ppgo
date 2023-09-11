@@ -1,10 +1,21 @@
+//通用的读写接口
+
 public interface Readable
 {
+    /*
+    读取数据到`b`，返回实际读取到的字节数，若读到EOF，则返回0
+    调用者应确保`b`的长度不为0，实现者则应保证检查
+    */
     public read(b [:]byte) int;
 }
 
 public interface Writable
 {
+    /*
+    将`b`中的数据完全写入
+    允许空写入（即`b`长度为0），空写入时立即返回或检查可用性由实现者决定
+    */
     public write(b [:]byte);
+    //`write`的字符串版本，一般可实现为`write(s.<[:]byte>)`，也可选择自行实现为高性能版本
     public write_str(s string);
 }

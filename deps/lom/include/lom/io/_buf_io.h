@@ -11,6 +11,14 @@ namespace io
 {
 
 /*
+调用者可提供这个参数用于指定自定义的缓冲区，buf-io库保证这个`sz`参数在合法区间
+返回的缓冲区指针合法性和生命周期由调用者自行保证
+    - `Buf{Reader|Writer}`会保存`New`的时候传入的函数对象，
+      因此缓冲区的生命周期可以由对应的`Do{Read|Write}Func`函数，或这个函数来绑定
+*/
+typedef std::function<char * (ssize_t sz)> MakeBufFunc;
+
+/*
 带缓冲的读封装，通过传入一个下层读函数来构建
 可指定缓冲大小，但会被调整到一个内部范围，指定<=0表示使用默认值
 */
@@ -34,10 +42,10 @@ public:
     typedef std::function<::lom::Err::Ptr (char *buf, ssize_t sz, ssize_t &rsz)> DoReadFunc;
 
     /*
-    判断是否到达文件结束
-    如果判断过程出错，也会返回`false`，错误在接下来的读操作中返回
+    若缓冲中有数据则立即成功，否则等待到至少有1字节数据进入缓冲，或出错返回
+    成功时通过`rsz`返回当前缓冲中的数据长度，为0则表示文件结束
     */
-    virtual bool EOFReached() = 0;
+    virtual ::lom::Err::Ptr Wait(ssize_t &rsz) = 0;
 
     /*
     读取数据，返回读取到的字节数，不保证读到`sz`大小
@@ -47,7 +55,7 @@ public:
     virtual ::lom::Err::Ptr Read(char *buf, ssize_t sz, ssize_t &rsz) = 0;
 
     /*
-    一个全局唯一错误，用于指示在`Prepare`、`ReadUntil`、`ReadFull`等过程因EOF而未完成
+    一个全局唯一错误，用于指示在`ReadUntil`、`ReadFull`等过程因EOF而未完成
     注意本错误可能有两种返回情况：
         - 调用`DoReadFunc`时文件结束，则直接返回
         - `DoReadFunc`函数本身返回的就是本错误，透传返回
@@ -73,7 +81,7 @@ public:
     */
     virtual ::lom::Err::Ptr ReadFull(char *buf, ssize_t sz, ssize_t *rsz = nullptr) = 0;
 
-    static Ptr New(DoReadFunc do_read, ssize_t buf_sz = 0);
+    static Ptr New(DoReadFunc do_read, ssize_t buf_sz = 0, MakeBufFunc make_buf = nullptr);
 };
 
 /*
@@ -103,7 +111,7 @@ public:
     //将缓冲中的数据通过下层写函数全部写出去
     virtual ::lom::Err::Ptr Flush() = 0;
 
-    static Ptr New(DoWriteFunc do_write, ssize_t buf_sz = 0);
+    static Ptr New(DoWriteFunc do_write, ssize_t buf_sz = 0, MakeBufFunc make_buf = nullptr);
 };
 
 }

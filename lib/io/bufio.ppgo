@@ -1,172 +1,92 @@
-final var (
-    kBufSzMin int = 4 * 1024;
-    kBufSzMax int = 4 * 1024 * 1024;
-
-    kSmallStrLenMax int = 1024;
-)
-
-func standardize_buf_sz(buf_sz int) int
-{
-    if (buf_sz < kBufSzMin) {
-        return kBufSzMin;
-    }
-    if (buf_sz > kBufSzMax) {
-        return kBufSzMax;
-    }
-    return buf_sz;
-}
-
 public class BufReader
 {
     r Readable;
-    buf []byte;
-    start, len int;
+    br uptr;
 
+    //指定的`buf_sz`若不在合法范围，会被自动修正到对应边界，不会报错，不指定则使用默认值
     public func init(r Readable, /, buf_sz int)
     {
         this.r = r;
-        this.buf.resize(standardize_buf_sz(buf_sz.get_or(kBufSzMin)));
+        this.br_init(buf_sz.get_or(0));
     }
+    func br_init(buf_sz int);
 
-    func fill()
-    {
-        if (this.len == 0)
-        {
-            this.start = 0;
-            this.len = this.r.read(this.buf);
-        }
-    }
+    public func deinit();
 
-    public func read(b [:]byte) int
+    /*
+    若缓冲中有数据，则返回其长度
+    若缓冲是空的，则等待至少1字节数据到达，或EOF，或出错异常
+    成功返回`0`表示EOF
+    */
+    public func wait() int;
+
+    func check_empty_out_buf(b [:]byte)
     {
         if (b.len() == 0)
         {
-            throw("empty read buffer");
+            throw("empty buffer");
         }
-
-        this.fill();
-        if (this.len == 0)
-        {
-            return 0;
-        }
-
-        var copy_len = b.copy_from(this.buf[this.start : this.start + this.len]);
-        this.start += copy_len;
-        this.len -= copy_len;
-        return copy_len;
     }
 
-    public func read_until(c byte, b [:]byte) int
+    //实现`Readable`接口
+    public func read(b [:]byte) int
     {
-        var b_len = b.len();
-        if (b_len == 0)
-        {
-            throw("empty read buffer");
-        }
-
-        var read_len = 0;
-        while (read_len < b_len)
-        {
-            this.fill();
-            if (this.len == 0)
-            {
-                return read_len;
-            }
-
-            var copy_len = b_len - read_len;
-            if (copy_len > this.len)
-            {
-                copy_len = this.len;
-            }
-            var c_idx = this.buf[this.start : this.start + this.len].index_byte(c);
-            if (c_idx >= 0)
-            {
-                copy_len = c_idx + 1;
-            }
-            b[read_len :].copy_from(this.buf[this.start : this.start + copy_len]);
-            read_len += copy_len;
-            this.start += copy_len;
-            this.len -= copy_len;
-            if (c_idx >= 0)
-            {
-                return read_len;
-            }
-        }
-        return read_len;
+        this.check_empty_out_buf(b);
+        return this.br_read(b);
     }
+    func br_read(b [:]byte) int;
 
-    public func read_full(b [:]byte) int
+    /*
+    `allow_eof`参数说明：
+        - 若指定为true，则表示允许在读到EOF时成功返回，此时相关方法返回实际读到的长度
+        - 若不指定或指定为false，相关方法会严格按需求读到结果，若中途遇到EOF，则抛出异常，
+          这种情况下若成功返回：
+            - `read_until`返回的长度`len`必然在范围`[1, b.len()]`，若不为`b.len()`，则`b[len-1]`必然是`c`
+            - `read_full`返回的长度`len`必然是`b.len()`，因此调用者可不做检查
+    */
+
+    /*
+    读取数据到`b`，直至读到字符`c`为止，或读到`b.len()`长度的字节为止，返回实际读到的字节数
+    若是因为读到`c`停止，则`c`也会在结果`b`中（作为最后一个字符）
+    */
+    public func read_until(c byte, b [:]byte, /, allow_eof bool) int
     {
-        var b_len = b.len();
-        if (b_len == 0)
-        {
-            throw("empty read buffer");
-        }
-
-        var read_len = 0;
-        while (read_len < b_len)
-        {
-            this.fill();
-            if (this.len == 0)
-            {
-                return read_len;
-            }
-
-            var copy_len = b[read_len :].copy_from(this.buf[this.start : this.start + this.len]);
-            read_len += copy_len;
-            this.start += copy_len;
-            this.len -= copy_len;
-        }
-        return read_len;
+        this.check_empty_out_buf(b);
+        return this.br_read_until(c, b, allow_eof.get_or(false));
     }
+    func br_read_until(c byte, b [:]byte, allow_eof bool) int;
+
+    /*
+    读取数据到`b`，直至读到`b.len()`长度的字节为止，返回实际读到的字节数
+    若未指定`allow_eof`为true，则成功时返回值必然是`b.len()`，见上述`allow_eof`参数说明
+    */
+    public func read_full(b [:]byte, /, allow_eof bool) int
+    {
+        this.check_empty_out_buf(b);
+        return this.br_read_full(b, allow_eof.get_or(false));
+    }
+    func br_read_full(b [:]byte, allow_eof bool) int;
 }
 
 public class BufWriter
 {
     w Writable;
-    buf []byte;
-    len int;
+    bw uptr;
 
+    //指定的`buf_sz`若不在合法范围，会被自动修正到对应边界，不会报错，不指定则使用默认值
     public func init(w Writable, /, buf_sz int)
     {
         this.w = w;
-        this.buf.resize(standardize_buf_sz(buf_sz.get_or(kBufSzMin)));
+        this.bw_init(buf_sz.get_or(0));
     }
+    func bw_init(buf_sz int);
 
-    public func write(b [:]byte)
-    {
-        while (b.len() > 0)
-        {
-            if (this.len == this.buf.len())
-            {
-                this.flush();
-            }
+    public func deinit();
 
-            var copy_len = this.buf[this.len :].copy_from(b);
-            this.len += copy_len;
-            b = b[copy_len :];
-        }
-    }
+    //实现`Writable`接口
+    public func write(b [:]byte);
+    public func write_str(s string);
 
-    public func write_str(s string)
-    {
-        if (s.len() > kSmallStrLenMax)
-        {
-            this.flush();
-            this.w.write_str(s);
-        }
-        else
-        {
-            this.write(s.<[]byte>);
-        }
-    }
-
-    public func flush()
-    {
-        if (this.len > 0)
-        {
-            this.w.write(this.buf[: this.len]);
-            this.len = 0;
-        }
-    }
+    //将缓冲中的数据写出
+    public func flush();
 }

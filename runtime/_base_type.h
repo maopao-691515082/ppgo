@@ -81,7 +81,7 @@ public:
     }
     bool operator==(const tp_string &s) const
     {
-        return s_ < s.s_;
+        return s_ == s.s_;
     }
 
     const char *Data() const
@@ -175,7 +175,6 @@ public:
     typedef std::shared_ptr<Any> Ptr;
 
     virtual ~Any() = default;
-
 
     //R_*: methods for reflect
 

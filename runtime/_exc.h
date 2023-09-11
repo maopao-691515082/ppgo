@@ -5,6 +5,12 @@ namespace ppgo
 
 class Exc
 {
+public:
+
+    typedef ExcPtr Ptr;
+
+private:
+
     std::shared_ptr<Any> throwed_;
     std::vector<tp_string> tb_;
 
@@ -25,9 +31,28 @@ class Exc
         }
     };
 
-public:
+    class LomErrWrapper : public ::lom::Err
+    {
+        ::ppgo::Exc::Ptr exc_;
 
-    typedef ExcPtr Ptr;
+    public:
+
+        LomErrWrapper(const ::ppgo::Exc::Ptr &exc) : exc_(exc)
+        {
+        }
+
+        ::ppgo::Exc::Ptr Get() const
+        {
+            return exc_;
+        }
+
+        virtual ::lom::Str Msg() const override
+        {
+            return "lom error wrapper of ppgo exception";
+        }
+    };
+
+public:
 
     void PushTB(const char *file, int line, const char *func)
     {
@@ -41,37 +66,81 @@ public:
 
     tp_string FormatWithTB() const
     {
-        std::string buf;
-        buf.append("Exception<");
-        buf.append(throwed_->R_TypeName());
-        buf.append(">: ");
+        bool is_rethrow = tb_.size() >= 2 && tb_.at(0) == "";
 
+        std::string buf;
+        if (is_rethrow)
         {
-            std::tuple<tp_string> ret;
-            auto &s = std::get<0>(ret);
-            auto exc = throwed_->method_str(ret);
-            if (exc)
+            //rethrow
+            buf.append(tb_.at(1).Data());
+        }
+        else
+        {
+            buf.append("Exception<");
+            buf.append(throwed_->R_TypeName());
+            buf.append(">: ");
+
             {
-                s = "!!!<UNKNOWN EXC IN METHOD `str`>!!!";
+                std::tuple<tp_string> ret;
+                auto &s = std::get<0>(ret);
+                auto exc = throwed_->method_str(ret);
+                if (exc)
+                {
+                    s = "!!!<UNKNOWN EXC IN METHOD `str`>!!!";
+                }
+                buf.append(s.Data());
+                buf.append("\n");
             }
-            buf.append(s.Data());
-            buf.append("\n");
         }
 
-        for (auto const &s: tb_)
+        for (size_t i = is_rethrow ? 2 : 0; i < tb_.size(); ++ i)
         {
+            if (tb_.at(i) == "")
+            {
+                if (i + 1 < tb_.size())
+                {
+                    buf.append("  rethrowed\n");
+                    ++ i;
+                }
+                else
+                {
+                    break;
+                }
+            }
             buf.append("  from ");
-            buf.append(s.Data());
+            buf.append(tb_.at(i).Data());
             buf.append("\n");
         }
 
         return tp_string(buf.data(), buf.size());
     }
 
+    static ::lom::Err::Ptr WrapToLomErr(const Ptr &exc)
+    {
+        Assert(static_cast<bool>(exc));
+        return ::lom::Err::Ptr(new LomErrWrapper(exc));
+    }
+    static Ptr FromLomErr(::lom::Err::Ptr err)
+    {
+        Assert(static_cast<bool>(err));
+        auto lom_err_wrapper = dynamic_cast<LomErrWrapper *>(err.RawPtr());
+        return lom_err_wrapper ? lom_err_wrapper->Get() : ::ppgo::Exc::Sprintf("%s", err->Msg().CStr());
+    }
+
     static Ptr New(const Any::Ptr &throwed)
     {
         auto e = Ptr(new Exc);
         e->throwed_ = throwed ? throwed : Any::Ptr(new NilExc());
+        return e;
+    }
+
+    static Ptr NewRethrow(const Any::Ptr &throwed, const ::ppgo::tp_string &tb)
+    {
+        auto e = Ptr(new Exc);
+        e->throwed_ = throwed ? throwed : Any::Ptr(new NilExc());
+        e->tb_.emplace_back("");
+        e->tb_.emplace_back(tb);
+        e->tb_.emplace_back("");
         return e;
     }
 
