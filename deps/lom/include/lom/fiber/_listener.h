@@ -13,7 +13,7 @@ class Listener : public Fd
 {
 public:
 
-    ::lom::Err::Ptr Accept(Conn &conn, int64_t timeout_ms = -1) const;
+    ::lom::Err::Ptr Accept(Conn &conn) const;
 
     /*
     调用`Serve`方法进入监听服务

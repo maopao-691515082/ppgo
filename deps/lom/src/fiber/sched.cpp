@@ -40,17 +40,17 @@ static void WakeUpFibers(const Fibers &fibers_to_wake_up)
 
         ready_fibers[fiber_seq] = fiber;
 
-        WaitingEvents &evs = fiber->WaitingEvs();
-
-        if (evs.expire_at_ >= 0)
+        auto expire_at = fiber->CFCtx().expire_at;
+        if (expire_at >= 0)
         {
-            auto iter = expire_waiting_fibers.find(evs.expire_at_);
+            auto iter = expire_waiting_fibers.find(expire_at);
             if (iter != expire_waiting_fibers.end())
             {
                 iter->second.erase(fiber_seq);
             }
-            evs.expire_at_ = -1;
         }
+
+        WaitingEvents &evs = fiber->WaitingEvs();
 
 #define LOM_FIBER_SCHED_CLEAR_FIBER_FROM_IO_WAITING_FIBERS(_r_or_w) do {    \
     for (auto fd : evs.waiting_fds_##_r_or_w##_) {                          \
@@ -76,22 +76,18 @@ static void WakeUpFibers(const Fibers &fibers_to_wake_up)
     }
 }
 
-static bool RegCurrFiberWaitingEvs(const WaitingEvents &evs)
+static void RegCurrFiberWaitingEvs(const WaitingEvents &evs)
 {
-    bool ok = false;
+    auto expire_at = curr_fiber->CFCtx().expire_at;
+    if (expire_at >= 0)
+    {
+        expire_waiting_fibers[expire_at][curr_fiber->Seq()] = curr_fiber;
+    }
 
     WaitingEvents &curr_evs = curr_fiber->WaitingEvs();
 
-    if (evs.expire_at_ >= 0)
-    {
-        ok = true;
-        curr_evs.expire_at_ = evs.expire_at_;
-        expire_waiting_fibers[curr_evs.expire_at_][curr_fiber->Seq()] = curr_fiber;
-    }
-
 #define LOM_FIBER_SCHED_REGISTER_CURR_FIBER_IO_WAITING_FIBERS(_r_or_w) do {             \
     if (evs.waiting_fds_##_r_or_w##_.size() > 0) {                                      \
-        ok = true;                                                                      \
         curr_evs.waiting_fds_##_r_or_w##_ = evs.waiting_fds_##_r_or_w##_;               \
         for (auto fd : curr_evs.waiting_fds_##_r_or_w##_) {                             \
             auto fd_waiting_fibers_iter = io_waiting_fibers.find(fd);                   \
@@ -108,7 +104,6 @@ static bool RegCurrFiberWaitingEvs(const WaitingEvents &evs)
 
     if (evs.waiting_sems_.size() > 0)
     {
-        ok = true;
         curr_evs.waiting_sems_ = evs.waiting_sems_;
         for (Sem sem: curr_evs.waiting_sems_)
         {
@@ -118,7 +113,14 @@ static bool RegCurrFiberWaitingEvs(const WaitingEvents &evs)
         }
     }
 
-    return ok;
+    if (curr_fiber->IsWorker())
+    {
+        auto sem = curr_fiber->CancelationSem();
+        curr_evs.waiting_sems_.emplace_back(sem);
+        auto sem_infos_iter = sem_infos.find(sem);
+        Assert(sem_infos_iter != sem_infos.end());
+        sem_infos_iter->second.fibers_[curr_fiber->Seq()] = curr_fiber;
+    }
 }
 
 static thread_local int ep_fd = -1;
@@ -332,40 +334,80 @@ void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value)
     return nullptr;
 }
 
-void SwitchToSchedFiber(const WaitingEvents &evs)
+static void DoSwitchToSchedFiber()
 {
-    Assert(curr_fiber != nullptr);
-
-    bool ok = RegCurrFiberWaitingEvs(evs);
-    if (!ok)
-    {
-        //empty evs, ready at once
-        ready_fibers[curr_fiber->Seq()] = curr_fiber;
-    }
-
     if (setjmp(*curr_fiber->Ctx()) == 0)
     {
         longjmp(sched_ctx, 1);
     }
 }
 
+void SwitchToSchedFiber(const WaitingEvents &evs)
+{
+    Assert(curr_fiber != nullptr);
+
+    //there must be some waiting-events
+    Assert(curr_fiber->CFCtx().expire_at >= 0 || !evs.Empty());
+    RegCurrFiberWaitingEvs(evs);
+    DoSwitchToSchedFiber();
+}
+
 void Yield()
 {
     AssertInited();
-    WaitingEvents evs;
-    SwitchToSchedFiber(evs);
+
+    //ready at once
+    Assert(curr_fiber != nullptr);
+    ready_fibers[curr_fiber->Seq()] = curr_fiber;
+    DoSwitchToSchedFiber();
 }
 
 ::lom::Err::Ptr SleepMS(int64_t ms)
 {
     AssertInited();
-    if (ms > 0)
+
+    if (ms < 0)
     {
-        WaitingEvents evs;
-        evs.expire_at_ = NowMS() + ms;
-        SwitchToSchedFiber(evs);
+        ms = 0;
     }
+
+    Assert(curr_fiber != nullptr);
+
+    auto err = curr_fiber->CheckCtx();
+    if (err)
+    {
+        return err;
+    }
+
+    int64_t expire_at = NowMS() + ms;
+    int64_t &cf_ctx_expire_at = curr_fiber->CFCtx().expire_at;
+    int64_t old_expire_at = cf_ctx_expire_at;
+
+    if (cf_ctx_expire_at < 0 || expire_at < cf_ctx_expire_at)
+    {
+        cf_ctx_expire_at = expire_at;
+    }
+
+    WaitingEvents evs;
+    SwitchToSchedFiber(evs);
+
+    cf_ctx_expire_at = old_expire_at;
+
+    err = curr_fiber->CheckCtx();
+    if (err)
+    {
+        return err;
+    }
+
     return nullptr;
+}
+
+::lom::Err::Ptr Ctx::Check()
+{
+    AssertInited();
+
+    Assert(curr_fiber != nullptr);
+    return curr_fiber->CheckCtx();
 }
 
 ::lom::Err::Ptr Run()

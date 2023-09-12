@@ -18,7 +18,7 @@ enum : int
     kClosed     = -3,
     kIntr       = -4,
     kInvalid    = -5,
-    kOverflow   = -6,
+    kCanceled   = -6,
     kConnReset  = -7,
 
     kStdCodeMin = -10000,   //标准错误边界，比这个值小的错误码可由用户定义（若需要的话）

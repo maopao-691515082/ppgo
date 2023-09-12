@@ -6,26 +6,29 @@ namespace lom
 namespace fiber
 {
 
-::lom::Err::Ptr Listener::Accept(Conn &conn, int64_t timeout_ms) const
+::lom::Err::Ptr Listener::Accept(Conn &conn) const
 {
+    if (!Valid())
+    {
+        return ::lom::Err::Sprintf("invalid listener");
+    }
 
 #define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg, _err_code) do {                 \
     return ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg));  \
 } while (false)
 
-    if (!Valid())
-    {
-        LOM_FIBER_LISTENER_ERR_RETURN("invalid listener", kInvalid);
-    }
-
-    int64_t expire_at = timeout_ms < 0 ? -1 : NowMS() + timeout_ms;
-
     for (;;)
     {
+        auto err = Ctx::Check();
+        if (err)
+        {
+            return err;
+        }
+
         int fd = accept(RawFd(), nullptr, nullptr);
         if (fd >= 0)
         {
-            auto err = Conn::NewFromRawFd(fd, conn);
+            err = Conn::NewFromRawFd(fd, conn);
             if (err)
             {
                 SilentClose(fd);
@@ -47,14 +50,9 @@ namespace fiber
         {
             LOM_FIBER_LISTENER_ERR_RETURN("syscall error", kSysCallFailed);
         }
-        if (expire_at >= 0 && expire_at <= NowMS())
-        {
-            LOM_FIBER_LISTENER_ERR_RETURN("timeout", kTimeout);
-        }
         if (errno == EAGAIN)
         {
             WaitingEvents evs;
-            evs.expire_at_ = expire_at;
             evs.waiting_fds_r_.emplace_back(RawFd());
             SwitchToSchedFiber(evs);
             if (!Valid())
@@ -167,7 +165,7 @@ public:
     for (;;)
     {
         Conn conn;
-        auto err = Accept(conn, -1);
+        auto err = Accept(conn);
         if (err)
         {
             auto sys_call_err = dynamic_cast<::lom::SysCallErr *>(err.RawPtr());
