@@ -8,19 +8,27 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
+static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f, bool is_worker = false)
 {
-    ::lom::fiber::Create([f] () {
-        ::std::tuple<> ret;
-        auto exc = f->method_run(ret);
-        if (exc)
-        {
-            auto ftb = exc->FormatWithTB();
-            ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
-                "Uncached Exc in fiber main: %s\n", ftb.Data()));
-            _exit(2);
+    ::lom::fiber::Create(
+        [f, is_worker] () {
+            ::std::tuple<> ret;
+            auto exc = f->method_run(ret);
+            if (exc)
+            {
+                auto ftb = exc->FormatWithTB();
+                ::ppgo::util::OutputUnexpectedErrMsg(::lom::Sprintf(
+                    "Uncached Exc in %s main: %s\n", is_worker ? "worker-fiber" : "fiber", ftb.Data()));
+                if (!is_worker)
+                {
+                    _exit(2);
+                }
+            }
+        },
+        ::lom::fiber::CreateOptions{
+            .is_worker = is_worker,
         }
-    });
+    );
 }
 
 ::ppgo::Exc::Ptr func_run(::std::tuple<> &ret, std::shared_ptr<intf_Fiber> f)
@@ -38,6 +46,12 @@ static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
 ::ppgo::Exc::Ptr func_new(::std::tuple<> &ret, std::shared_ptr<intf_Fiber> f)
 {
     new_fiber_impl(f);
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_new_worker(::std::tuple<> &ret, std::shared_ptr<intf_Fiber> f)
+{
+    new_fiber_impl(f, true);
     return nullptr;
 }
 

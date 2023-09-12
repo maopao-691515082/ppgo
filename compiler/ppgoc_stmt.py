@@ -13,6 +13,21 @@ class StmtList(list):
         list.__init__(self)
         self.vars = vars
 
+'''
+独立记录已定义但仍在解析其初始化表达式的变量名栈，用于变量名冲突检测
+基本都是闭包的检测问题
+例：
+    ```
+    var x = func () int {
+        var x = 123; //需要检测出这里的x和上面重名
+        return x;
+    }();
+    ```
+ieup = init-expr unparsed
+元素为名字列表
+'''
+ieup_var_names_stk = []
+
 class Parser:
     def __init__(self, tl, mod, dep_mns, cls, fom):
         self.tl = tl
@@ -58,17 +73,24 @@ class Parser:
                     for vars in vars_stk:
                         if name in vars:
                             name_t.syntax_err("与上层变量名冲突")
+                    for var_names in ieup_var_names_stk:
+                        if name in var_names:
+                            name_t.syntax_err("与上层变量名冲突")
                     new_vars[name] = None
                 assert new_vars
                 self.tl.pop_sym(":")
                 t = self.tl.peek()
+                ieup_var_names_stk.append(list(new_vars))
                 e = self.expr_parser.parse(vars_stk, None)
+                ieup_var_names_stk.pop()
                 is_range = self.tl.peek().is_sym("..")
                 if is_range:
                     self.tl.pop_sym("..")
                     ea = e
                     e = None
+                    ieup_var_names_stk.append(list(new_vars))
                     eb = self.expr_parser.parse(vars_stk, None)
+                    ieup_var_names_stk.pop()
                     if ea.tp != eb.tp:
                         t.syntax_err("'..'两侧的表达式类型必须相同")
                     if not ea.tp.is_integer_type:
@@ -141,12 +163,17 @@ class Parser:
                         for vars in vars_stk:
                             if name in vars:
                                 name_t.syntax_err("与上层变量名冲突")
+                        for var_names in ieup_var_names_stk:
+                            if name in var_names:
+                                name_t.syntax_err("与上层变量名冲突")
                         new_vars[name] = None
                     assert new_vars
 
                     if self.tl.peek().is_sym("="):
                         self.tl.pop_sym("=")
+                        ieup_var_names_stk.append(list(new_vars))
                         e = self.expr_parser.parse(vars_stk, None)
+                        ieup_var_names_stk.pop()
                         if e.tp.is_multi:
                             tps = e.tp.multi_tps
                         else:

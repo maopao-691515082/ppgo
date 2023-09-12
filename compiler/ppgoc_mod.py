@@ -376,6 +376,9 @@ class Closure:
                     for vars in vars_stk:
                         if name in vars:
                             t.syntax_err("与上层变量名冲突")
+                    for var_names in ppgoc_stmt.ieup_var_names_stk:
+                        if name in var_names:
+                            t.syntax_err("与上层变量名冲突")
                 tp.check(self.mod)
 
         tl.pop_sym("{")

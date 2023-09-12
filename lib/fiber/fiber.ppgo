@@ -6,6 +6,7 @@ public interface Fiber
 public func run(main_fiber Fiber);
 
 public func new(f Fiber);
+public func new_worker(f Fiber);
 
 public class Ctx
 {
