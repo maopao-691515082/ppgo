@@ -11,7 +11,35 @@ static thread_local jmp_buf sched_ctx;
 
 typedef std::map<int64_t /*fiber_seq*/, Fiber *> Fibers;
 
-static thread_local Fibers ready_fibers;
+static thread_local class
+{
+    std::vector<Fiber *> sorted_fibers_;
+    Fibers fibers_;
+
+public:
+
+    bool Empty() const
+    {
+        return sorted_fibers_.empty();
+    }
+
+    void Add(Fiber *fiber)
+    {
+        if (fibers_.count(fiber->Seq()) == 0)
+        {
+            sorted_fibers_.emplace_back(fiber);
+            fibers_[fiber->Seq()] = fiber;
+        }
+    }
+
+    std::vector<Fiber *> Move()
+    {
+        std::vector<Fiber *> sfs = std::move(sorted_fibers_);
+        sorted_fibers_.clear();
+        fibers_.clear();
+        return sfs;
+    }
+} ready_fibers;
 
 static thread_local std::map<int64_t /*expire_at*/, Fibers> expire_waiting_fibers;
 
@@ -38,7 +66,7 @@ static void WakeUpFibers(const Fibers &fibers_to_wake_up)
         int64_t fiber_seq = fiber_iter->first;
         Fiber *fiber = fiber_iter->second;
 
-        ready_fibers[fiber_seq] = fiber;
+        ready_fibers.Add(fiber);
 
         auto expire_at = fiber->CFCtx().expire_at;
         if (expire_at >= 0)
@@ -148,7 +176,7 @@ jmp_buf *GetSchedCtx()
 
 void RegFiber(Fiber *fiber)
 {
-    ready_fibers[fiber->Seq()] = fiber;
+    ready_fibers.Add(fiber);
 }
 
 Fiber *GetCurrFiber()
@@ -358,7 +386,7 @@ void Yield()
 
     //ready at once
     Assert(curr_fiber != nullptr);
-    ready_fibers[curr_fiber->Seq()] = curr_fiber;
+    ready_fibers.Add(curr_fiber);
     DoSwitchToSchedFiber();
 }
 
@@ -415,14 +443,11 @@ void Yield()
     AssertInited();
     for (;;)
     {
-        if (!ready_fibers.empty())
+        if (!ready_fibers.Empty())
         {
-            Fibers running_fibers(std::move(ready_fibers));
-            ready_fibers.clear();
-            for (auto iter = running_fibers.begin(); iter != running_fibers.end(); ++ iter)
+            std::vector<Fiber *> running_fibers = ready_fibers.Move();
+            for (auto fiber : running_fibers)
             {
-                Fiber *fiber = iter->second;
-
                 curr_fiber = fiber;
                 if (setjmp(sched_ctx) == 0)
                 {
@@ -457,7 +482,7 @@ void Yield()
 
         //check io ev
         {
-            int ep_wait_timeout = ready_fibers.empty() ? 100 : 0;
+            int ep_wait_timeout = ready_fibers.Empty() ? 100 : 0;
             if (!expire_waiting_fibers.empty())
             {
                 int64_t now = NowMS();
