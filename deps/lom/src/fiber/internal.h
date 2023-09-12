@@ -45,7 +45,7 @@ struct WaitingEvents
     }
 };
 
-void SwitchToSchedFiber(const WaitingEvents &evs);
+void SwitchToSchedFiber(WaitingEvents &&evs);
 
 class Fiber
 {

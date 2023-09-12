@@ -105,7 +105,7 @@ static void WakeUpFibers(const Fibers &fibers_to_wake_up)
     }
 }
 
-static void RegCurrFiberWaitingEvs(const WaitingEvents &evs)
+static void RegCurrFiberWaitingEvs(WaitingEvents &&evs)
 {
     auto expire_at = curr_fiber->CFCtx().expire_at;
     if (expire_at >= 0)
@@ -117,7 +117,7 @@ static void RegCurrFiberWaitingEvs(const WaitingEvents &evs)
 
 #define LOM_FIBER_SCHED_REGISTER_CURR_FIBER_IO_WAITING_FIBERS(_r_or_w) do {             \
     if (evs.waiting_fds_##_r_or_w##_.size() > 0) {                                      \
-        curr_evs.waiting_fds_##_r_or_w##_ = evs.waiting_fds_##_r_or_w##_;               \
+        curr_evs.waiting_fds_##_r_or_w##_ = std::move(evs.waiting_fds_##_r_or_w##_);    \
         for (auto fd : curr_evs.waiting_fds_##_r_or_w##_) {                             \
             auto fd_waiting_fibers_iter = io_waiting_fibers.find(fd);                   \
             Assert(fd_waiting_fibers_iter != io_waiting_fibers.end());                  \
@@ -133,7 +133,7 @@ static void RegCurrFiberWaitingEvs(const WaitingEvents &evs)
 
     if (evs.waiting_sems_.size() > 0)
     {
-        curr_evs.waiting_sems_ = evs.waiting_sems_;
+        curr_evs.waiting_sems_ = std::move(evs.waiting_sems_);
         for (Sem sem: curr_evs.waiting_sems_)
         {
             auto sem_infos_iter = sem_infos.find(sem);
@@ -371,13 +371,13 @@ static void DoSwitchToSchedFiber()
     }
 }
 
-void SwitchToSchedFiber(const WaitingEvents &evs)
+void SwitchToSchedFiber(WaitingEvents &&evs)
 {
     Assert(curr_fiber != nullptr);
 
     //there must be some waiting-events
     Assert(curr_fiber->CFCtx().expire_at >= 0 || !evs.Empty());
-    RegCurrFiberWaitingEvs(evs);
+    RegCurrFiberWaitingEvs(std::move(evs));
     DoSwitchToSchedFiber();
 }
 
@@ -417,8 +417,10 @@ void Yield()
         cf_ctx_expire_at = expire_at;
     }
 
-    WaitingEvents evs;
-    SwitchToSchedFiber(evs);
+    {
+        WaitingEvents evs;
+        SwitchToSchedFiber(std::move(evs));
+    }
 
     cf_ctx_expire_at = old_expire_at;
 

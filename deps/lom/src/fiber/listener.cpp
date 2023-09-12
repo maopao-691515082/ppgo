@@ -54,7 +54,7 @@ namespace fiber
         {
             WaitingEvents evs;
             evs.waiting_fds_r_.emplace_back(RawFd());
-            SwitchToSchedFiber(evs);
+            SwitchToSchedFiber(std::move(evs));
             if (!Valid())
             {
                 LOM_FIBER_LISTENER_ERR_RETURN("listener closed by other fiber", kClosed);

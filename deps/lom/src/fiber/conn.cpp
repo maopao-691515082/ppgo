@@ -28,7 +28,7 @@ namespace fiber
     if (errno == EAGAIN) {                                          \
         WaitingEvents evs;                                          \
         evs.waiting_fds_##_r_or_w##_.emplace_back(conn.RawFd());    \
-        SwitchToSchedFiber(evs);                                    \
+        SwitchToSchedFiber(std::move(evs));                         \
         if (!conn.Valid()) {                                        \
             return ::lom::SysCallErr::Maker().Make(                 \
                 err_code::kClosed, "conn closed by other fiber");   \
@@ -210,9 +210,11 @@ static ::lom::Err::Ptr ConnectStreamSock(
         return nullptr;
     }
 
-    WaitingEvents evs;
-    evs.waiting_fds_w_.emplace_back(conn_sock);
-    SwitchToSchedFiber(evs);
+    {
+        WaitingEvents evs;
+        evs.waiting_fds_w_.emplace_back(conn_sock);
+        SwitchToSchedFiber(std::move(evs));
+    }
 
 #define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do {                         \
     auto _err = ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg)); \

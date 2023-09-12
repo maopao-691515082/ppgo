@@ -53,7 +53,7 @@ bool Sem::Valid() const
 
         WaitingEvents evs;
         evs.waiting_sems_.emplace_back(*this);
-        SwitchToSchedFiber(evs);
+        SwitchToSchedFiber(std::move(evs));
 
         if (!Valid())
         {
