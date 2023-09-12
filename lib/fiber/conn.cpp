@@ -21,11 +21,11 @@ namespace PPGO_THIS_MOD
 }
 
 ::ppgo::Exc::Ptr cls_Conn::method_read_impl(
-    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_int timeout_ms)
+    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
     ssize_t n;
-    auto err = conn->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n, timeout_ms);
+    auto err = conn->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -41,10 +41,10 @@ namespace PPGO_THIS_MOD
 }
 
 ::ppgo::Exc::Ptr cls_Conn::method_write_impl(
-    ::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_int timeout_ms)
+    ::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
-    auto err = conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len(), timeout_ms);
+    auto err = conn->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len());
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -57,11 +57,10 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr cls_Conn::method_write_str_impl(
-    ::std::tuple<> &ret, ::ppgo::tp_string s, ::ppgo::tp_int timeout_ms)
+::ppgo::Exc::Ptr cls_Conn::method_write_str_impl(::std::tuple<> &ret, ::ppgo::tp_string s)
 {
     auto conn = reinterpret_cast<::lom::fiber::Conn *>(attr_c);
-    auto err = conn->WriteAll(s.Data(), s.Len(), timeout_ms);
+    auto err = conn->WriteAll(s.Data(), s.Len());
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -75,14 +74,13 @@ namespace PPGO_THIS_MOD
 }
 
 ::ppgo::Exc::Ptr func_connect_tcp_impl(
-    ::std::tuple<std::shared_ptr<cls_Conn>> &ret,
-    ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port, ::ppgo::tp_int timeout_ms)
+    ::std::tuple<std::shared_ptr<cls_Conn>> &ret, ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port)
 {
     auto conn = std::make_shared<cls_Conn>();
     auto c = new ::lom::fiber::Conn;
     conn->attr_c = reinterpret_cast<::ppgo::tp_uptr>(c);
 
-    auto err = ::lom::fiber::ConnectTCP(ipv4.Data(), port, *c, timeout_ms);
+    auto err = ::lom::fiber::ConnectTCP(ipv4.Data(), port, *c);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);

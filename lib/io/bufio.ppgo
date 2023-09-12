@@ -24,7 +24,7 @@ public class BufReader
     {
         if (b.len() == 0)
         {
-            throw("empty buffer");
+            throw("empty out-buffer");
         }
     }
 

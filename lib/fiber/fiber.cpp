@@ -41,6 +41,37 @@ static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f)
     return nullptr;
 }
 
+::ppgo::Exc::Ptr cls_Ctx::method_call(
+    ::std::tuple<> &, std::function<::ppgo::Exc::Ptr (::std::tuple<> &)> f)
+{
+    auto err = ::lom::fiber::Ctx(attr_timeout_ms).Call(
+        [&] () -> ::lom::Err::Ptr {
+            ::std::tuple<> ret;
+            auto exc = f(ret);
+            if (exc)
+            {
+                return ::ppgo::Exc::WrapToLomErr(exc);
+            }
+            return nullptr;
+        }
+    );
+    if (err)
+    {
+        return ::ppgo::Exc::FromLomErr(err);
+    }
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_check_ctx(::std::tuple<> &ret)
+{
+    auto err = ::lom::fiber::Ctx::Check();
+    if (err)
+    {
+        return ::ppgo::Exc::FromLomErr(err);
+    }
+    return nullptr;
+}
+
 }
 
 }

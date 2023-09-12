@@ -9,13 +9,8 @@ public class Listener
 
     public func deinit();
 
-    func accept_impl(timeout_ms int) Conn;
-    public func accept(/, timeout float) Conn
-    {
-        return this.accept_impl(opt_timeout_to_ms(opt_timeout = timeout));
-    }
+    public func accept() Conn;
 
-    func serve_impl(cw ClientWorker, worker_count uint);
     public func serve(cw ClientWorker, /, worker_count int)
     {
         var wc = worker_count.get_or(0);
@@ -26,10 +21,11 @@ public class Listener
 
         this.serve_impl(cw, wc.<uint>);
     }
+    func serve_impl(cw ClientWorker, worker_count uint);
 }
 
-func listen_tcp_impl(port u16) Listener;
 public func listen_tcp(port int) Listener
 {
     return listen_tcp_impl(check_ipv4_port(port));
 }
+func listen_tcp_impl(port u16) Listener;

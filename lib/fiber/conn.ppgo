@@ -4,33 +4,33 @@ public class Conn
 
     public func deinit();
 
-    func read_impl(b [:]byte, timeout_ms int) int;
-    public func read(b [:]byte, /, timeout float) int
+    public func read(b [:]byte) int
     {
         if (b.len() == 0)
         {
-            throw("empty read buffer");
+            throw("empty out-buffer");
         }
-        return this.read_impl(b, opt_timeout_to_ms(opt_timeout = timeout));
+        return this.read_impl(b);
     }
+    func read_impl(b [:]byte) int;
 
-    func write_impl(b [:]byte, timeout_ms int);
-    public func write(b [:]byte, /, timeout float)
+    public func write(b [:]byte)
     {
         b.check_valid();
-        this.write_impl(b, opt_timeout_to_ms(opt_timeout = timeout));
+        this.write_impl(b);
     }
+    func write_impl(b [:]byte);
 
-    func write_str_impl(s string, timeout_ms int);
-    public func write_str(s string, /, timeout float)
+    public func write_str(s string)
     {
-        this.write_str_impl(s, opt_timeout_to_ms(opt_timeout = timeout));
+        this.write_str_impl(s);
     }
+    func write_str_impl(s string);
 }
 
-func connect_tcp_impl(ipv4 string, port u16, timeout_ms int) Conn;
-public func connect_tcp(ipv4 string, port int, /, timeout float) Conn
+public func connect_tcp(ipv4 string, port int) Conn
 {
     check_ip_str(ipv4);
-    return connect_tcp_impl(ipv4, check_ipv4_port(port), opt_timeout_to_ms(opt_timeout = timeout));
+    return connect_tcp_impl(ipv4, check_ipv4_port(port));
 }
+func connect_tcp_impl(ipv4 string, port u16) Conn;

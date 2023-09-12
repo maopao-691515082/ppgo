@@ -23,6 +23,10 @@ namespace PPGO_THIS_MOD
             {
                 return ::ppgo::Exc::New(std::static_pointer_cast<::ppgo::Any>(gv_kExcClosed));
             }
+            case ::lom::fiber::err_code::kCanceled:
+            {
+                return ::ppgo::Exc::New(std::static_pointer_cast<::ppgo::Any>(gv_kExcCanceled));
+            }
             case ::lom::fiber::err_code::kConnReset:
             {
                 return ::ppgo::Exc::New(std::static_pointer_cast<::ppgo::Any>(gv_kExcConnReset));

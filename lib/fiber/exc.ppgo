@@ -16,5 +16,6 @@ class InternalExc
 public final var (
     kExcTimeout     any = InternalExc("timeout");
     kExcClosed      any = InternalExc("closed");
+    kExcCanceled    any = InternalExc("canceled");
     kExcConnReset   any = InternalExc("connect reset by peer");
 )

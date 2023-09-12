@@ -20,13 +20,12 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr cls_Listener::method_accept_impl(
-    ::std::tuple<std::shared_ptr<cls_Conn>> &ret, ::ppgo::tp_int timeout)
+::ppgo::Exc::Ptr cls_Listener::method_accept(::std::tuple<std::shared_ptr<cls_Conn>> &ret)
 {
     auto listener = reinterpret_cast<::lom::fiber::Listener *>(attr_l);
 
     ::lom::fiber::Conn lom_conn;
-    auto err = listener->Accept(lom_conn, timeout);
+    auto err = listener->Accept(lom_conn);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);

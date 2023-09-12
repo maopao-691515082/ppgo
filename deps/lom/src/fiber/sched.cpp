@@ -11,7 +11,7 @@ static thread_local jmp_buf sched_ctx;
 
 typedef std::map<int64_t /*fiber_seq*/, Fiber *> Fibers;
 
-static thread_local class
+class ReadyFibers
 {
     std::vector<Fiber *> sorted_fibers_;
     Fibers fibers_;
@@ -39,7 +39,8 @@ public:
         fibers_.clear();
         return sfs;
     }
-} ready_fibers;
+};
+static thread_local ReadyFibers ready_fibers;
 
 static thread_local std::map<int64_t /*expire_at*/, Fibers> expire_waiting_fibers;
 

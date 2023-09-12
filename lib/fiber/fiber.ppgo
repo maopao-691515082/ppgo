@@ -6,3 +6,30 @@ public interface Fiber
 public func run(main_fiber Fiber);
 
 public func new(f Fiber);
+
+public class Ctx
+{
+    timeout_ms int;
+
+    public func init(/, timeout float)
+    {
+        if (!timeout.valid())
+        {
+            this.timeout_ms = -1;
+            return;
+        }
+
+        var t = timeout.get();
+        if (t >= 0.0 && t <= 1e15)
+        {
+            this.timeout_ms = (t * 1e3 + 0.01).<int>;
+            return;
+        }
+
+        throw("invalid timeout");
+    }
+
+    public func call(f func ());
+}
+
+public func check_ctx();
