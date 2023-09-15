@@ -24,6 +24,12 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
+::ppgo::Exc::Ptr func_sleep_ms(::std::tuple<> &ret, ::ppgo::tp_int tm_ms)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(tm_ms));
+    return nullptr;
+}
+
 }
 
 }

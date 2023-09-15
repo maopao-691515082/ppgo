@@ -175,8 +175,6 @@ def gen_method_def(method, with_cls_name = False):
 def output_prog_h(native_header_fns):
     with Code(ppgoc_env.out_dir + "/_prog.h") as code:
         code += "#pragma once"
-        for fn in native_header_fns:
-            code += '#include "%s"' % fn
         with code.new_blk("namespace ppgo"):
 
             #mod nss
@@ -191,6 +189,11 @@ def output_prog_h(native_header_fns):
                         code += "struct intf_%s;" % intf.name
                     for cls in mod.clses.itervalues():
                         code += "struct cls_%s;" % cls.name
+
+        for fn in native_header_fns:
+            code += '#include "%s"' % fn
+
+        with code.new_blk("namespace ppgo"):
 
             #intf def
             for mod in ppgoc_mod.mods.itervalues():
@@ -215,8 +218,9 @@ def output_prog_h(native_header_fns):
                             for name in intf.methods:
                                 overrided_method_names.add(name)
                         with code.new_blk(
-                            "struct cls_%s final : public virtual ::ppgo::Any%s" %
-                            (cls.name, "".join(derived_intfs_codes))):
+                            "struct cls_%s final : public ::ppgo::ClsBase<cls_%s>, "
+                            "public virtual ::ppgo::Any%s" %
+                            (cls.name, cls.name, "".join(derived_intfs_codes))):
                             code += "virtual ~cls_%s();" % cls.name
                             with code.new_blk("virtual ::std::string R_TypeName() const override"):
                                 code += "return %s;" % c_str_literal(str(cls))
@@ -963,7 +967,7 @@ def output_stmts(code, stmts):
                 wtpc = gen_tp_code(ppgoc_type.WITHABLE_TYPE)
                 P, S = "std::shared_ptr<", ">"
                 assert wtpc.startswith(P) and wtpc.endswith(S)
-                code += "::ppgo::WithGuard<%s> %s(%s);" % (wtpc[len(P):-len(S)], wv, gen_expr_code(stmt.expr))
+                code += "::ppgo::WithGuard<%s> %s{%s};" % (wtpc[len(P):-len(S)], wv, gen_expr_code(stmt.expr))
                 excv = "exc_%d" % new_id()
                 code += "auto %s = %s.ExcOfEnter();" % (excv, wv)
                 with code.new_blk("if (%s)" % excv):

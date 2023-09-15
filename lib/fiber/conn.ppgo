@@ -1,9 +1,5 @@
 public class Conn
 {
-    c uptr;
-
-    public func deinit();
-
     public func read(b [:]byte) int
     {
         if (b.len() == 0)

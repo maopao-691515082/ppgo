@@ -4,3 +4,19 @@ public interface Thread
 }
 
 public func new(t Thread);
+
+func sleep_ms(tm int);
+public func sleep(tm float)
+{
+    if (tm > 1e15)
+    {
+        tm = 1e15;
+    }
+    if (tm >= 0.0)
+    {
+        sleep_ms((tm * 1e3 + 0.01).<int>);
+        return;
+    }
+
+    throw("invalid time");
+}

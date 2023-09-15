@@ -870,4 +870,9 @@ ExcPtr AssertType(const Any::Ptr &a, T &t)
     return NewTypeAssertionException();
 }
 
+template <typename T>
+struct ClsBase
+{
+};
+
 }

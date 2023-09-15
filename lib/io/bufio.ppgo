@@ -1,7 +1,6 @@
 public class BufReader
 {
     r Readable;
-    br uptr;
 
     //指定的`buf_sz`若不在合法范围，会被自动修正到对应边界，不会报错，不指定则使用默认值
     public func init(r Readable, /, buf_sz int)
@@ -10,8 +9,6 @@ public class BufReader
         this.br_init(buf_sz.get_or(0));
     }
     func br_init(buf_sz int);
-
-    public func deinit();
 
     /*
     若缓冲中有数据，则返回其长度
@@ -71,7 +68,6 @@ public class BufReader
 public class BufWriter
 {
     w Writable;
-    bw uptr;
 
     //指定的`buf_sz`若不在合法范围，会被自动修正到对应边界，不会报错，不指定则使用默认值
     public func init(w Writable, /, buf_sz int)
@@ -80,8 +76,6 @@ public class BufWriter
         this.bw_init(buf_sz.get_or(0));
     }
     func bw_init(buf_sz int);
-
-    public func deinit();
 
     //实现`Writable`接口
     public func write(b [:]byte);

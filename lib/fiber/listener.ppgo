@@ -5,10 +5,6 @@ interface ClientWorker
 
 public class Listener
 {
-    l uptr;
-
-    public func deinit();
-
     public func accept() Conn;
 
     public func serve(cw ClientWorker, /, worker_count int)

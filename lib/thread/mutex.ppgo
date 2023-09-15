@@ -1,9 +1,8 @@
 public class Mutex
 {
-    l uptr;
-
-    public func init();
-    public func deinit();
+    public func init()
+    {
+    }
 
     public func lock();
     public func unlock();
