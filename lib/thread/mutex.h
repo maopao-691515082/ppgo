@@ -9,9 +9,9 @@ namespace PPGO_THIS_MOD
 }
 
 template <>
-struct ClsBase<PPGO_THIS_MOD::cls_Mutex>
+struct NativeAttrs<PPGO_THIS_MOD::cls_Mutex>
 {
-    std::mutex na_l;
+    std::mutex lock;
 };
 
 }

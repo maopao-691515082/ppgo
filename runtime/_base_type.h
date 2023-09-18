@@ -871,7 +871,7 @@ ExcPtr AssertType(const Any::Ptr &a, T &t)
 }
 
 template <typename T>
-struct ClsBase
+struct NativeAttrs
 {
 };
 

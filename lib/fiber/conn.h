@@ -9,13 +9,13 @@ namespace PPGO_THIS_MOD
 }
 
 template <>
-struct ClsBase<PPGO_THIS_MOD::cls_Conn>
+struct NativeAttrs<PPGO_THIS_MOD::cls_Conn>
 {
-    ::lom::fiber::Conn na_conn;
+    ::lom::fiber::Conn conn;
 
-    ~ClsBase()
+    ~NativeAttrs()
     {
-        na_conn.Close();
+        conn.Close();
     }
 };
 

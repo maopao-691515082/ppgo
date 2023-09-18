@@ -9,13 +9,13 @@ namespace PPGO_THIS_MOD
 }
 
 template <>
-struct ClsBase<PPGO_THIS_MOD::cls_Listener>
+struct NativeAttrs<PPGO_THIS_MOD::cls_Listener>
 {
-    ::lom::fiber::Listener na_listener;
+    ::lom::fiber::Listener listener;
 
-    ~ClsBase()
+    ~NativeAttrs()
     {
-        na_listener.Close();
+        listener.Close();
     }
 };
 

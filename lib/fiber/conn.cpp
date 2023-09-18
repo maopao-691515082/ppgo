@@ -12,7 +12,7 @@ namespace PPGO_THIS_MOD
     ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
     ssize_t n;
-    auto err = na_conn.Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n);
+    auto err = nas.conn.Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -30,7 +30,7 @@ namespace PPGO_THIS_MOD
 ::ppgo::Exc::Ptr cls_Conn::method_write_impl(
     ::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
-    auto err = na_conn.WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len());
+    auto err = nas.conn.WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len());
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -45,7 +45,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr cls_Conn::method_write_str_impl(::std::tuple<> &ret, ::ppgo::tp_string s)
 {
-    auto err = na_conn.WriteAll(s.Data(), s.Len());
+    auto err = nas.conn.WriteAll(s.Data(), s.Len());
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -62,7 +62,7 @@ namespace PPGO_THIS_MOD
     ::std::tuple<std::shared_ptr<cls_Conn>> &ret, ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port)
 {
     auto conn = std::make_shared<cls_Conn>();
-    auto err = ::lom::fiber::ConnectTCP(ipv4.Data(), port, conn->na_conn);
+    auto err = ::lom::fiber::ConnectTCP(ipv4.Data(), port, conn->nas.conn);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);

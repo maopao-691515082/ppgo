@@ -218,9 +218,10 @@ def output_prog_h(native_header_fns):
                             for name in intf.methods:
                                 overrided_method_names.add(name)
                         with code.new_blk(
-                            "struct cls_%s final : public ::ppgo::ClsBase<cls_%s>, "
-                            "public virtual ::ppgo::Any%s" %
-                            (cls.name, cls.name, "".join(derived_intfs_codes))):
+                            "struct cls_%s final : public virtual ::ppgo::Any%s" %
+                            (cls.name, "".join(derived_intfs_codes))
+                        ):
+                            code += "::ppgo::NativeAttrs<cls_%s> nas;" % cls.name
                             code += "virtual ~cls_%s();" % cls.name
                             with code.new_blk("virtual ::std::string R_TypeName() const override"):
                                 code += "return %s;" % c_str_literal(str(cls))

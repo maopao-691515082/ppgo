@@ -9,15 +9,15 @@ namespace PPGO_THIS_MOD
 }
 
 template <>
-struct ClsBase<PPGO_THIS_MOD::cls_BufReader>
+struct NativeAttrs<PPGO_THIS_MOD::cls_BufReader>
 {
-    ::lom::io::BufReader::Ptr na_br;
+    ::lom::io::BufReader::Ptr br;
 };
 
 template <>
-struct ClsBase<PPGO_THIS_MOD::cls_BufWriter>
+struct NativeAttrs<PPGO_THIS_MOD::cls_BufWriter>
 {
-    ::lom::io::BufWriter::Ptr na_bw;
+    ::lom::io::BufWriter::Ptr bw;
 };
 
 }
