@@ -289,7 +289,8 @@ class Parser:
             elif t.is_reserved("this"):
                 if self.cls is None:
                     t.syntax_err("'this'只能用于方法中")
-                parse_stk.push_expr(Expr("this", t, ppgoc_type.from_cls(self.cls)))
+                parse_stk.push_expr(Expr(
+                    "this" if self.tl.peek().is_sym(".") else "this_sp", t, ppgoc_type.from_cls(self.cls)))
             elif t.is_sym("["):
                 e = None
                 self.tl.revert()
