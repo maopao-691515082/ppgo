@@ -218,8 +218,9 @@ def output_prog_h(native_header_fns):
                             for name in intf.methods:
                                 overrided_method_names.add(name)
                         with code.new_blk(
-                            "struct cls_%s final : public virtual ::ppgo::Any%s" %
-                            (cls.name, "".join(derived_intfs_codes))
+                            "struct cls_%s final : "
+                            "public ::std::enable_shared_from_this<cls_%s>, public virtual ::ppgo::Any%s" %
+                            (cls.name, cls.name, "".join(derived_intfs_codes))
                         ):
                             code += "::ppgo::NativeAttrs<cls_%s> nas;" % cls.name
                             code += "virtual ~cls_%s();" % cls.name
@@ -531,6 +532,9 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
 
     if expr.op == "this":
         return "this"
+
+    if expr.op == "this_sp":
+        return "shared_from_this()"
 
     if expr.op == "%d":
         e = expr.arg
