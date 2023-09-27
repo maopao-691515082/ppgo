@@ -8,7 +8,7 @@ def file_hash(fn):
 HASHES_FN = "hashes"
 HASHES_FILE_END_LINE = "<HASHES FILE END>"
 
-CXX_PARALLEL_COUNT = 16
+CXX_PARALLEL_COUNT = 8
 
 cxx, cxx_flags, ld_flags, out_fn, oc_dir = sys.argv[1 :]
 
