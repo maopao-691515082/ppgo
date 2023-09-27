@@ -1,12 +1,14 @@
 #codeing=utf8
 
-import sys, os, hashlib
+import sys, os, hashlib, subprocess
 
 def file_hash(fn):
     return hashlib.md5(open(fn, "rb").read()).hexdigest().upper()
 
 HASHES_FN = "hashes"
 HASHES_FILE_END_LINE = "<HASHES FILE END>"
+
+CXX_PARALLEL_COUNT = 16
 
 cxx, cxx_flags, ar, ar_flags, ld, ld_flags, ld_std_lib_flags = sys.argv[1:]
 
@@ -58,13 +60,14 @@ def do_cmd(cmd, show = True):
     if ret != 0:
         sys.exit(1)
 
+cxx_cmds = []
 lib_objs = []
 test_objs = []
 for fn, h in sorted(cpp_hashes.items(), key = lambda x: (int(x[0].startswith("src/")), x[0], x[1])):
     assert fn.endswith(".cpp")
     obj_fn = fn[: -4] + ".o"
     if header_changed or h != last_cpp_hashes.get(fn):
-        do_cmd("%s -c -o tmpobjs/%s %s ../%s" % (cxx, obj_fn, cxx_flags, fn))
+        cxx_cmds.append("%s -c -o tmpobjs/%s %s ../%s" % (cxx, obj_fn, cxx_flags, fn))
     else:
         do_cmd("cp last_tmpobjs/%s tmpobjs/%s" % (obj_fn, obj_fn), show = False)
     if fn.startswith("src/"):
@@ -72,6 +75,23 @@ for fn, h in sorted(cpp_hashes.items(), key = lambda x: (int(x[0].startswith("sr
     else:
         assert fn.startswith("test/")
         test_objs.append("tmpobjs/" + obj_fn)
+
+#parallel compiling
+for i in range(0, len(cxx_cmds), CXX_PARALLEL_COUNT):
+    ccs = cxx_cmds[i : i + CXX_PARALLEL_COUNT]
+    ps = []
+    for cc in ccs:
+        sys.stdout.write(cc + "\n")
+        p = subprocess.Popen(cc, shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        ps.append(p)
+    ok = True
+    for p in ps:
+        rc = p.wait()
+        if rc != 0:
+            sys.stderr.write(p.stderr.read())
+            ok = False
+    if not ok:
+        sys.exit(1)
 
 f = open("tmpobjs/" + HASHES_FN, "w")
 for fn, h in list(header_hashes.items()) + list(cpp_hashes.items()):

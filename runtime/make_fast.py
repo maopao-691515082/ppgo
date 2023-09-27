@@ -1,12 +1,14 @@
 #codeing=utf8
 
-import sys, os, hashlib
+import sys, os, hashlib, subprocess
 
 def file_hash(fn):
     return hashlib.md5(open(fn).read()).hexdigest().upper()
 
 HASHES_FN = "hashes"
 HASHES_FILE_END_LINE = "<HASHES FILE END>"
+
+CXX_PARALLEL_COUNT = 16
 
 cxx, cxx_flags, ld_flags, out_fn, oc_dir = sys.argv[1 :]
 
@@ -35,16 +37,33 @@ if os.path.isfile(oc_file_hash_fn):
 
 h_file_changed = h_file_hashes != oc_h_file_hashes
 
+cxx_cmds = []
 for fn, h in cpp_file_hashes.items():
     assert fn.endswith(".cpp")
     obj_fn = fn[: -4] + ".o"
     if h_file_changed or h != oc_cpp_file_hashes.get(fn):
-        cmd = "%s -c -o %s %s %s" % (cxx, obj_fn, cxx_flags, fn)
+        cxx_cmds.append("%s -c -o %s %s %s" % (cxx, obj_fn, cxx_flags, fn))
     else:
         cmd = "cp %s/%s ./" % (oc_dir, obj_fn)
-    print cmd
-    ret = os.system(cmd)
-    if ret != 0:
+        print cmd
+        ret = os.system(cmd)
+        if ret != 0:
+            sys.exit(1)
+
+for i in range(0, len(cxx_cmds), CXX_PARALLEL_COUNT):
+    ccs = cxx_cmds[i : i + CXX_PARALLEL_COUNT]
+    ps = []
+    for cc in ccs:
+        sys.stdout.write(cc + "\n")
+        p = subprocess.Popen(cc, shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        ps.append(p)
+    ok = True
+    for p in ps:
+        rc = p.wait()
+        if rc != 0:
+            sys.stderr.write(p.stderr.read())
+            ok = False
+    if not ok:
         sys.exit(1)
 
 cmd = "%s -o %s *.o %s" % (cxx, out_fn, ld_flags)
