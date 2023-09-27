@@ -28,6 +28,7 @@
 #include <optional>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #ifndef __GNUC__
 #   error error: lom needs GNUC

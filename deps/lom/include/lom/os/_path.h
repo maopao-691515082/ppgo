@@ -1,0 +1,56 @@
+#pragma once
+
+#include "../_internal.h"
+
+#include "../err.h"
+#include "../go_slice.h"
+
+namespace lom
+{
+
+namespace os
+{
+
+/*
+标准化的路径名，通过一个路径串初始化，内部存储标准化后的目录层次列表
+    * 标准化会处理掉`.`、`..`等特殊路径，连续分隔`//`，末尾`/`等
+        * 例如`/A/./B`、`/A/foo/../B`、`/A/B/`、`////A//B//////`等都会标准化为`/A/B`
+    * 初始化路径串如果以`/`开头，则认为是绝对路径，否则视为相对路径并和当前路径做连接后进行处理
+    * 按惯例，根目录的所在目录是自身（例如：`/..`不是错误，而视为`/`）
+    * 不会扩展`~`和`~<USER>`开头的路径，将其视为普通路径名
+*/
+class Path
+{
+    GoSlice<::lom::Str> paths_;
+
+    Path(const ::lom::GoSlice<::lom::Str> &paths) : paths_(paths)
+    {
+    }
+
+public:
+
+    Path(const char *path);
+
+    //返回标准化的路径串
+    ::lom::Str Str() const;
+
+    /*
+    获取当前路径的目录或最后一级文件名
+    注意根目录路径`/`比较特殊，其目录和最后一级文件名都是自身
+    */
+    Path Dir() const
+    {
+        return paths_.Len() > 0 ? Path(paths_.Slice(0, paths_.Len() - 1)) : *this;
+    }
+    ::lom::Str Base() const
+    {
+        return paths_.Len() > 0 ? paths_.At(paths_.Len() - 1) : "/";
+    }
+
+    //根据当前路径递归建立整个目录结构，若已经是一个目录也成功返回
+    ::lom::Err::Ptr MakeDirs() const;
+};
+
+}
+
+}

@@ -88,7 +88,7 @@ for i in range(0, len(cxx_cmds), CXX_PARALLEL_COUNT):
     for p in ps:
         rc = p.wait()
         if rc != 0:
-            sys.stderr.write(p.stderr.read())
+            sys.stderr.write(p.stderr.read().decode("utf-8"))
             ok = False
     if not ok:
         sys.exit(1)

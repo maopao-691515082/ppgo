@@ -9,17 +9,36 @@ namespace ordered_kv
 namespace zkv
 {
 
-DBImpl::DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err)
+DBImpl::DBImpl(const char *path_str, Options opts, ::lom::Err::Ptr &err)
 {
-    if (path == nullptr)
+    if (path_str == nullptr)
     {
         //memory mode
         return;
     }
 
     //disk mode
-    (void)opts;
-    err = ::lom::Err::Sprintf("todo");
+    ::lom::os::Path path(path_str);
+    ::lom::os::FileStat fst;
+    err = ::lom::os::FileStat::Stat(path.Str().CStr(), fst);
+    if (err)
+    {
+        return;
+    }
+    if (!fst.Exists())
+    {
+        if (!opts.create_if_missing)
+        {
+            err = ::lom::Err::Sprintf("no such dir `%s`", path.Str().CStr());
+            return;
+        }
+        err = path.MakeDirs();
+        if (err)
+        {
+            return;
+        }
+        
+    }
 }
 
 ::lom::Err::Ptr DBImpl::Write(const WriteBatch &wb)
