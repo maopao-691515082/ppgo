@@ -41,9 +41,9 @@ static uint32_t &FdSeq(int fd)
     }
 
     int flags = 1;
-    if (ioctl(fd, FIONBIO, &flags) == -1)
+    if (::ioctl(fd, FIONBIO, &flags) == -1)
     {
-        return ::lom::Err::Sprintf("set fd nonblocking failed");
+        return ::lom::SysCallErr::Maker().Sprintf("set fd nonblocking failed");
     }
 
     auto err = RegRawFdToSched(fd);
@@ -64,7 +64,7 @@ static uint32_t &FdSeq(int fd)
 
     if (!Valid())
     {
-        return ::lom::Err::Sprintf("fd is invalid");
+        return ::lom::Err::Sprintf("invalid fd");
     }
 
     auto err = UnregRawFdFromSched(fd_);
@@ -81,11 +81,11 @@ bool Fd::Valid() const
 {
     if (!Valid())
     {
-        return ::lom::Err::Sprintf("fd is invalid");
+        return ::lom::Err::Sprintf("invalid fd");
     }
 
     auto err = Unreg();
-    if (close(fd_) == -1)
+    if (::close(fd_) == -1)
     {
         auto unreg_err_msg = err ? err->Msg().Concat(" & ") : "";
         err = ::lom::Err::Sprintf("%sclose fd failed", unreg_err_msg.CStr());
@@ -96,7 +96,7 @@ bool Fd::Valid() const
 void SilentClose(int fd)
 {
     int save_errno = errno;
-    close(fd);
+    ::close(fd);
     errno = save_errno;
 }
 

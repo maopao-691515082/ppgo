@@ -117,9 +117,12 @@ class DBImpl : public DB
 
     ZMap zm_;
 
+    ::lom::os::File::Ptr lock_file_;
+
 public:
 
     DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err);
+    virtual ~DBImpl();
 
     virtual ::lom::Err::Ptr Write(const WriteBatch &wb) override;
     virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot() override;

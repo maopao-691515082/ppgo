@@ -156,13 +156,13 @@ static thread_local int ep_fd = -1;
 
 ::lom::Err::Ptr InitSched()
 {
-    ep_fd = epoll_create1(0);
+    ep_fd = ::epoll_create1(0);
     if (ep_fd == -1)
     {
         return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create epoll fd failed");
     }
 
-    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+    if (::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     {
         return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "ignore SIGPIPE failed");
     }
@@ -195,7 +195,7 @@ Fiber *GetCurrFiber()
     struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
     ev.data.fd = fd;
-    if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
+    if (::epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
     {
         return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_ADD failed");
     }
@@ -225,7 +225,7 @@ Fiber *GetCurrFiber()
     io_waiting_fibers.erase(fd_waiting_fibers_iter);
 
     struct epoll_event ev;  //must specify an ev struct in old-version epoll
-    if (epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, &ev) == -1)
+    if (::epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, &ev) == -1)
     {
         return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_DEL failed");
     }
@@ -247,7 +247,7 @@ void RegSemToSched(Sem sem, uint64_t value)
     auto sem_infos_iter = sem_infos.find(sem);
     if (sem_infos_iter == sem_infos.end())
     {
-        return ::lom::Err::Sprintf("sem is invalid");
+        return ::lom::Err::Sprintf("invalid sem");
     }
 
     SemInfo &sem_info = sem_infos_iter->second;
@@ -344,7 +344,7 @@ void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value)
     auto sem_infos_iter = sem_infos.find(sem);
     if (sem_infos_iter == sem_infos.end())
     {
-        return ::lom::Err::Sprintf("sem is invalid");
+        return ::lom::Err::Sprintf("invalid sem");
     }
 
     SemInfo &sem_info = sem_infos_iter->second;
@@ -352,7 +352,7 @@ void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value)
     Assert(kUInt64Max - sem_info.value_ >= sem_info.acquiring_value_);
     if (kUInt64Max - sem_info.value_ - sem_info.acquiring_value_ < release_value)
     {
-        return ::lom::Err::Sprintf("releasing sem cause value-overflow");
+        return ::lom::Err::Sprintf("sem value overflow");
     }
     sem_info.value_ += release_value;
 
@@ -496,7 +496,7 @@ void Yield()
 
             static const int kEpollEvCountMax = 1024;
             struct epoll_event evs[kEpollEvCountMax];
-            int ev_count = epoll_wait(ep_fd, evs, kEpollEvCountMax, ep_wait_timeout);
+            int ev_count = ::epoll_wait(ep_fd, evs, kEpollEvCountMax, ep_wait_timeout);
             if (ev_count == -1)
             {
                 if (errno != EINTR)

@@ -11,10 +11,11 @@ static ssize_t AdjustBufSize(ssize_t sz)
     return std::min<ssize_t>(std::max<ssize_t>(sz, 4 * 1024), 4 * 1024 * 1024);
 }
 
-#define LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(_sz) do {          \
-        if (_sz <= 0) {                                         \
-            return ::lom::Err::Sprintf("non-positive size");    \
-        }                                                       \
+#define LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(_sz) do {                      \
+        ssize_t _szv = (_sz);                                               \
+        if (_szv <= 0) {                                                    \
+            return ::lom::Err::Sprintf("non-positive size `%zd`", _szv);    \
+        }                                                                   \
     } while (false)
 
 class BufReaderImpl : public BufReader
@@ -227,7 +228,7 @@ public:
     {
         if (sz < 0)
         {
-            return ::lom::Err::Sprintf("negative size");
+            return ::lom::Err::Sprintf("negative size `%zd`", sz);
         }
 
         while (sz > 0)

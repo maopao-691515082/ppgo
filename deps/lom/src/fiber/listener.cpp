@@ -25,7 +25,7 @@ namespace fiber
             return err;
         }
 
-        int fd = accept(RawFd(), nullptr, nullptr);
+        int fd = ::accept(RawFd(), nullptr, nullptr);
         if (fd >= 0)
         {
             err = Conn::NewFromRawFd(fd, conn);
@@ -37,7 +37,7 @@ namespace fiber
 
             //set tcp nodelay as possible
             int enable = 1;
-            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
+            ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable));
 
             return nullptr;
         }
@@ -48,7 +48,7 @@ namespace fiber
         }
         if (errno != EAGAIN && errno != EINTR)
         {
-            LOM_FIBER_LISTENER_ERR_RETURN("syscall error", kSysCallFailed);
+            LOM_FIBER_LISTENER_ERR_RETURN("listener accept failed", kSysCallFailed);
         }
         if (errno == EAGAIN)
         {
@@ -113,7 +113,7 @@ class ServeWorker
                                 "lom.fiber.Listener.ServeWorker: register new conn fd failed: %s",
                                 err->Msg().CStr()));
                         }
-                        close(fd);
+                        ::close(fd);
                         continue;
                     }
 
@@ -215,14 +215,15 @@ public:
 }
 
 static ::lom::Err::Ptr ListenStream(
-    int socket_family, struct sockaddr *addr, socklen_t addr_len, Listener &listener, int listen_fd = -1)
+    int socket_family, struct sockaddr *addr, socklen_t addr_len, const Str &addr_desc,
+    Listener &listener, int listen_fd = -1)
 {
     if (listen_fd < 0)
     {
-        listen_fd = socket(socket_family, SOCK_STREAM, 0);
+        listen_fd = ::socket(socket_family, SOCK_STREAM, 0);
         if (listen_fd == -1)
         {
-            return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "listen socket create failed");
+            return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create listen socket failed");
         }
     }
 
@@ -232,12 +233,12 @@ static ::lom::Err::Ptr ListenStream(
     return _err;                                                                        \
 } while (false)
 
-    if (bind(listen_fd, addr, addr_len) == -1)
+    if (::bind(listen_fd, addr, addr_len) == -1)
     {
-        LOM_FIBER_LISTENER_ERR_RETURN("bind failed");
+        LOM_FIBER_LISTENER_ERR_RETURN(Sprintf("bind listener to addr `%s` failed", addr_desc.CStr()));
     }
 
-    if (listen(listen_fd, 1024) == -1)
+    if (::listen(listen_fd, 1024) == -1)
     {
         LOM_FIBER_LISTENER_ERR_RETURN("listen failed");
     }
@@ -256,14 +257,14 @@ static ::lom::Err::Ptr ListenStream(
 
 ::lom::Err::Ptr ListenTCP(uint16_t port, Listener &listener)
 {
-    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd == -1)
     {
-        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "listen socket create failed");
+        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create listen socket failed");
     }
 
     int reuseaddr_on = 1;
-    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on, sizeof(reuseaddr_on)) == -1)
+    if (::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr_on, sizeof(reuseaddr_on)) == -1)
     {
         auto err = ::lom::SysCallErr::Maker().Make(
             err_code::kSysCallFailed, "set listen socket reuse-addr failed");
@@ -278,7 +279,8 @@ static ::lom::Err::Ptr ListenStream(
     listen_addr.sin_port = htons(port);
 
     return ListenStream(
-        AF_INET, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr), listener, listen_fd);
+        AF_INET, reinterpret_cast<struct sockaddr *>(&listen_addr), sizeof(listen_addr),
+        Sprintf("tcp4[:%u]", static_cast<unsigned int>(port)), listener, listen_fd);
 }
 
 ::lom::Err::Ptr ListenUnixSockStream(const char *path, Listener &listener)
@@ -291,7 +293,8 @@ static ::lom::Err::Ptr ListenStream(
         return err;
     }
 
-    return ListenStream(AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, listener);
+    return ListenStream(
+        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, Sprintf("unix[%s]", path), listener);
 }
 
 ::lom::Err::Ptr ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener)
@@ -304,7 +307,9 @@ static ::lom::Err::Ptr ListenStream(
         return err;
     }
 
-    return ListenStream(AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, listener);
+    return ListenStream(
+        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len,
+        Sprintf("unix-abstract[%s]", path.Repr().CStr()), listener);
 }
 
 }

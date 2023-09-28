@@ -23,7 +23,7 @@ namespace fiber
     }                                                               \
     if (errno != EAGAIN && errno != EINTR) {                        \
         return ::lom::SysCallErr::Maker().Make(                     \
-            err_code::kSysCallFailed, "syscall error");             \
+            err_code::kSysCallFailed, "conn read/write error");     \
     }                                                               \
     if (errno == EAGAIN) {                                          \
         WaitingEvents evs;                                          \
@@ -48,7 +48,7 @@ static ::lom::Err::Ptr InternalRead(Conn conn, char *buf, ssize_t sz, ssize_t &r
             return err;
         }
 
-        ssize_t ret = read(conn.RawFd(), buf, static_cast<size_t>(sz));
+        ssize_t ret = ::read(conn.RawFd(), buf, static_cast<size_t>(sz));
         if (ret >= 0)
         {
             rsz = ret;
@@ -72,7 +72,7 @@ static ::lom::Err::Ptr InternalWrite(Conn conn, const char *buf, ssize_t sz, ssi
     {
         for (;;)
         {
-            ssize_t ret = write(conn.RawFd(), buf, static_cast<size_t>(sz));
+            ssize_t ret = ::write(conn.RawFd(), buf, static_cast<size_t>(sz));
             if (ret > 0)
             {
                 wsz = ret;
@@ -105,7 +105,7 @@ static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
 
     while (sz > 0)
     {
-        ssize_t ret = write(conn.RawFd(), buf, static_cast<size_t>(sz));
+        ssize_t ret = ::write(conn.RawFd(), buf, static_cast<size_t>(sz));
         if (ret > 0)
         {
             Assert(ret <= sz);
@@ -131,7 +131,7 @@ static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
 {
     if (sz <= 0)
     {
-        return ::lom::Err::Sprintf("invalid buf size");
+        return ::lom::Err::Sprintf("invalid buf size `%zd`", sz);
     }
 
     return InternalRead(*this, buf, sz, rsz);
@@ -141,7 +141,7 @@ static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
 {
     if (sz < 0)
     {
-        return ::lom::Err::Sprintf("invalid buf size");
+        return ::lom::Err::Sprintf("invalid buf size `%zd`", sz);
     }
 
     return InternalWrite(*this, buf, sz, wsz);
@@ -151,7 +151,7 @@ static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
 {
     if (sz < 0)
     {
-        return ::lom::Err::Sprintf("invalid buf size");
+        return ::lom::Err::Sprintf("invalid buf size `%zd`", sz);
     }
 
     return InternalWriteAll(*this, buf, sz);
@@ -177,19 +177,19 @@ static ::lom::Err::Ptr ConnectStreamSock(
     return _err;                                                                    \
 } while (false)
 
-    int conn_sock = socket(socket_family, SOCK_STREAM, 0);
+    int conn_sock = ::socket(socket_family, SOCK_STREAM, 0);
     if (conn_sock == -1)
     {
         LOM_FIBER_CONN_ERR_RETURN("create connection socket failed", kSysCallFailed);
     }
 
     int flags = 1;
-    if (ioctl(conn_sock, FIONBIO, &flags) == -1)
+    if (::ioctl(conn_sock, FIONBIO, &flags) == -1)
     {
         LOM_FIBER_CONN_ERR_RETURN("set connection socket nonblocking failed", kSysCallFailed);
     }
 
-    int ret = connect(conn_sock, addr, addr_len);
+    int ret = ::connect(conn_sock, addr, addr_len);
     if (ret == -1 && errno != EINPROGRESS)
     {
         LOM_FIBER_CONN_ERR_RETURN("connect failed", kSysCallFailed);
@@ -230,7 +230,7 @@ static ::lom::Err::Ptr ConnectStreamSock(
 
     int sock_opt_err;
     socklen_t len = sizeof(sock_opt_err);
-    if (getsockopt(conn_sock, SOL_SOCKET, SO_ERROR, &sock_opt_err, &len) == -1)
+    if (::getsockopt(conn_sock, SOL_SOCKET, SO_ERROR, &sock_opt_err, &len) == -1)
     {
         LOM_FIBER_CONN_ERR_RETURN("getsockopt failed", kSysCallFailed);
     }

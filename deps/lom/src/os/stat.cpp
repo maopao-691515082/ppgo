@@ -8,7 +8,7 @@ namespace os
 
 static ::lom::Err::Ptr DoStat(bool is_lstat, const char *path, struct stat &st, bool &exists)
 {
-    if ((is_lstat ? lstat : stat)(path, &st) == 0)
+    if ((is_lstat ? ::lstat : ::stat)(path, &st) == 0)
     {
         exists = true;
         return nullptr;

@@ -17,28 +17,67 @@ DBImpl::DBImpl(const char *path_str, Options opts, ::lom::Err::Ptr &err)
         return;
     }
 
-    //disk mode
-    ::lom::os::Path path(path_str);
-    ::lom::os::FileStat fst;
-    err = ::lom::os::FileStat::Stat(path.Str().CStr(), fst);
-    if (err)
+    //disk mode, init
+
+    ::lom::os::Path
+        lock_file_path(::lom::Sprintf("%s/LOCK", path_str).CStr()),
+        db_dir_path = lock_file_path.Dir();
+    auto db_dir_path_str = db_dir_path.Str();
+
+    //open and lock
     {
-        return;
-    }
-    if (!fst.Exists())
-    {
-        if (!opts.create_if_missing)
-        {
-            err = ::lom::Err::Sprintf("no such dir `%s`", path.Str().CStr());
-            return;
-        }
-        err = ::lom::os::MakeDirs(path);
+        auto lock_file_path_str = lock_file_path.Str();
+        ::lom::os::FileStat fst;
+        err = ::lom::os::FileStat::Stat(lock_file_path_str.CStr(), fst);
         if (err)
         {
             return;
         }
-
+        if (fst.Exists())
+        {
+            err = ::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "r+e");
+            if (err)
+            {
+                return;
+            }
+        }
+        else
+        {
+            if (!opts.create_if_missing)
+            {
+                err = ::lom::Err::Sprintf("zkv db not found at `%s`", db_dir_path_str.CStr());
+                return;
+            }
+            err = ::lom::os::MakeDirs(db_dir_path);
+            if (err)
+            {
+                return;
+            }
+            err = ::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "w+ex", 0600);
+            if (err)
+            {
+                return;
+            }
+        }
+        bool ok;
+        err = lock_file_->TryLock(ok);
+        if (err)
+        {
+            return;
+        }
+        if (!ok)
+        {
+            err = ::lom::Err::Sprintf("zkv db `%s` is opened by another", db_dir_path_str.CStr());
+            return;
+        }
     }
+
+    //load data
+    //todo
+}
+
+DBImpl::~DBImpl()
+{
 }
 
 ::lom::Err::Ptr DBImpl::Write(const WriteBatch &wb)

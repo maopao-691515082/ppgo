@@ -32,12 +32,14 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
+#undef CHECK_BASE
 #define CHECK_BASE() do {                               \
     if (!(base == 0 || (base >= 2 && base <= 36))) {    \
         return ::ppgo::Exc::Sprintf("invalid base");    \
     }                                                   \
 } while (false)
 
+#undef PARSE_NUM
 #define PARSE_NUM(_e) do {                          \
     auto p = s.Data();                              \
     auto len = s.Len();                             \

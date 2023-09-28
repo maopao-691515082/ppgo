@@ -15,14 +15,14 @@ static ::lom::Err::Ptr PathMake(const char *path, GoSlice<::lom::Str> &paths)
     }
     else
     {
-        char *cwd = getcwd(nullptr, 0);
+        char *cwd = ::getcwd(nullptr, 0);
         if (cwd == nullptr)
         {
-            return ::lom::SysCallErr::Maker().Sprintf("getcwd failed");
+            return ::lom::SysCallErr::Maker().Sprintf("`getcwd` failed");
         }
         if (*cwd != '/')
         {
-            return ::lom::Err::Sprintf("invalid getcwd result `%s`", cwd);
+            return ::lom::Err::Sprintf("invalid `getcwd` result: `%s`", cwd);
         }
         abs_path = ::lom::Sprintf("%s/%s", cwd, path);
         free(cwd);

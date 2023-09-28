@@ -22,6 +22,7 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <sys/prctl.h>
+#include <sys/file.h>
 
 #include "../include/lom.h"
 

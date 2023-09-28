@@ -21,16 +21,16 @@ namespace os
     }
     if (fst.Exists())
     {
-        return ::lom::Err::Sprintf("path `%s` exists and is not a dir", path_str.CStr());
+        return ::lom::Err::Sprintf("non-dir path `%s`", path_str.CStr());
     }
     err = MakeDirs(path.Dir(), perm_bits);
     if (err)
     {
         return err;
     }
-    if (mkdir(path_str.CStr(), perm_bits) == -1)
+    if (::mkdir(path_str.CStr(), perm_bits) == -1)
     {
-        return ::lom::SysCallErr::Maker().Sprintf("mkdir `%s` failed", path_str.CStr());
+        return ::lom::SysCallErr::Maker().Sprintf("make dir `%s` failed", path_str.CStr());
     }
     return nullptr;
 }

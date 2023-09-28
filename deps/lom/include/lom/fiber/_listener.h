@@ -19,8 +19,8 @@ public:
     调用`Serve`方法进入监听服务
         - 方法执行过程会一直循环接收链接，并根据给定的处理函数将连接指派给worker线程执行
         - `worker_count`参数：
-            * 为0表示不创建worker线程，链接在本线程内部开启协程来处理
-            * 若超出`kWorkerCountMax`，则调整为后者
+            - 为0表示不创建worker线程，链接在本线程内部开启协程来处理
+            - 若超出`kWorkerCountMax`，则调整为后者
         - `work_with_conn`函数用于回调处理新链接，由于可能在其他worker线程环境中执行，调用者自己处理好相关问题
         - 若指定`init_worker`，则它会在每个worker线程做完fiber初始化后调用
     错误和退出处理机制：
