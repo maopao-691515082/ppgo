@@ -147,7 +147,7 @@ public:
     static inline
         __attribute__((always_inline))
         __attribute__((format(gnu_printf, 1, 2)))
-        Ptr Sprintf(const char *fmt, ...)
+    Ptr Sprintf(const char *fmt, ...)
     {
         return New(::ppgo::base_type_boxing::StrObj::New(
             ::ppgo::tp_string::Sprintf(fmt, __builtin_va_arg_pack())));

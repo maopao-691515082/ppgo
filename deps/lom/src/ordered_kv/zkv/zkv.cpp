@@ -32,12 +32,12 @@ DBImpl::DBImpl(const char *path_str, Options opts, ::lom::Err::Ptr &err)
             err = ::lom::Err::Sprintf("no such dir `%s`", path.Str().CStr());
             return;
         }
-        err = path.MakeDirs();
+        err = ::lom::os::MakeDirs(path);
         if (err)
         {
             return;
         }
-        
+
     }
 }
 

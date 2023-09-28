@@ -6,7 +6,7 @@ namespace lom
 namespace os
 {
 
-Path::Path(const char *path)
+static ::lom::Err::Ptr PathMake(const char *path, GoSlice<::lom::Str> &paths)
 {
     ::lom::Str abs_path;
     if (*path == '/')
@@ -16,11 +16,20 @@ Path::Path(const char *path)
     else
     {
         char *cwd = getcwd(nullptr, 0);
+        if (cwd == nullptr)
+        {
+            return ::lom::SysCallErr::Maker().Sprintf("getcwd failed");
+        }
+        if (*cwd != '/')
+        {
+            return ::lom::Err::Sprintf("invalid getcwd result `%s`", cwd);
+        }
         abs_path = ::lom::Sprintf("%s/%s", cwd, path);
         free(cwd);
     }
     Assert(abs_path.HasPrefix("/"));
     auto parts = abs_path.Slice().Split("/");
+    paths = paths.Nil();
     for (ssize_t i = 0; i < parts.Len(); ++ i)
     {
         auto part = parts.At(i);
@@ -28,13 +37,22 @@ Path::Path(const char *path)
         {
             continue;
         }
-        if (part == ".." && paths_.Len() > 0)
+        if (part == ".." && paths.Len() > 0)
         {
-            paths_ = paths_.Slice(0, paths_.Len() - 1);
+            paths = paths.Slice(0, paths.Len() - 1);
             continue;
         }
-        paths_ = paths_.Append(part);
+        paths = paths.Append(part);
     }
+    return nullptr;
+}
+
+Path::Path(const char *path)
+{
+    GoSlice<::lom::Str> paths;
+    ::lom::Err::Ptr err = PathMake(path, paths);
+    Assert(!err);
+    paths_ = paths;
 }
 
 ::lom::Str Path::Str() const
@@ -53,9 +71,16 @@ Path::Path(const char *path)
     return ::lom::Str(std::move(b));
 }
 
-::lom::Err::Ptr Path::MakeDirs() const
+::lom::Err::Ptr Path::Make(const char *path_str, Path &path)
 {
-    return ::lom::Err::Sprintf("todo");
+    GoSlice<::lom::Str> paths;
+    auto err = PathMake(path_str, paths);
+    if (err)
+    {
+        return err;
+    }
+    path = Path(paths);
+    return nullptr;
 }
 
 }

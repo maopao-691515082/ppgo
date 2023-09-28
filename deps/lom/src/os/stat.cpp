@@ -18,9 +18,7 @@ static ::lom::Err::Ptr DoStat(bool is_lstat, const char *path, struct stat &st, 
         exists = false;
         return nullptr;
     }
-    int save_errno = errno;
-    return ::lom::Err::Sprintf(
-        "syscall `%s` failed, errno = %d", is_lstat ? "lstat" : "stat", save_errno);
+    return ::lom::SysCallErr::Maker().Sprintf("%s `%s` failed", is_lstat ? "lstat" : "stat", path);
 }
 
 ::lom::Err::Ptr FileStat::Stat(const char *path, FileStat &fst)

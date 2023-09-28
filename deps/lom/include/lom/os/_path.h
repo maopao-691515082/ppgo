@@ -18,12 +18,15 @@ namespace os
     * 初始化路径串如果以`/`开头，则认为是绝对路径，否则视为相对路径并和当前路径做连接后进行处理
     * 按惯例，根目录的所在目录是自身（例如：`/..`不是错误，而视为`/`）
     * 不会扩展`~`和`~<USER>`开头的路径，将其视为普通路径名
+
+可直接通过构造函数构建，或用`Make`方法构建，区别在于当传入的路径串为相对路径，在`getcwd`取当前路径失败时，
+`Make`返回错误，而构造函数会崩溃
 */
 class Path
 {
     GoSlice<::lom::Str> paths_;
 
-    Path(const ::lom::GoSlice<::lom::Str> &paths) : paths_(paths)
+    Path(const GoSlice<::lom::Str> &paths) : paths_(paths)
     {
     }
 
@@ -47,8 +50,7 @@ public:
         return paths_.Len() > 0 ? paths_.At(paths_.Len() - 1) : "/";
     }
 
-    //根据当前路径递归建立整个目录结构，若已经是一个目录也成功返回
-    ::lom::Err::Ptr MakeDirs() const;
+    static ::lom::Err::Ptr Make(const char *path_str, Path &path);
 };
 
 }

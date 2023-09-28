@@ -10,7 +10,7 @@ namespace thread
 {
     return
         prctl(PR_SET_NAME, name) == -1 ?
-            ::lom::Err::Sprintf("set thread name failed, <errno=%d>", errno) :
+            ::lom::SysCallErr::Maker().Sprintf("set thread name failed") :
             nullptr;
 }
 

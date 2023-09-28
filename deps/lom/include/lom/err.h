@@ -50,7 +50,7 @@ public:
     static inline
         __attribute__((always_inline))
         __attribute__((format(gnu_printf, 1, 2)))
-        Ptr Sprintf(const char *fmt, ...)
+    Ptr Sprintf(const char *fmt, ...)
     {
         return FromStr(::lom::Sprintf(fmt, __builtin_va_arg_pack()), CodePos(nullptr, 0, nullptr));
     }
@@ -87,6 +87,19 @@ public:
             auto err = new SysCallErr(code, errno_, msg);
             err->PushTB(_cp);
             return err;
+        }
+
+        Err::Ptr Make(const Str &msg, CodePos _cp = CodePos()) const
+        {
+            return Make(-1, msg, _cp);
+        }
+
+        inline
+            __attribute__((always_inline))
+            __attribute__((format(gnu_printf, 2, 3)))
+        Err::Ptr Sprintf(const char *fmt, ...)
+        {
+            return Make(::lom::Sprintf(fmt, __builtin_va_arg_pack()), CodePos(nullptr, 0, nullptr));
         }
     };
 
