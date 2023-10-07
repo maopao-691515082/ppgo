@@ -35,9 +35,9 @@ public:
     对文件进行加解锁操作
     下层使用`flock`系统调用而不是`fcntl`，其区别以及`flock`的行为请参考系统调用文档
     */
-    ::lom::Err::Ptr Lock() const;
-    ::lom::Err::Ptr TryLock(bool &ok) const;
-    ::lom::Err::Ptr Unlock() const;
+    LOM_ERR Lock() const;
+    LOM_ERR TryLock(bool &ok) const;
+    LOM_ERR Unlock() const;
 
     /*
     打开文件，可通过`mode`指定打开方式
@@ -64,7 +64,7 @@ public:
     `perm_bits`指定了创建新文件时的权限，只有存在创建文件的行为时才有意义，否则被忽略
         - 当然，实际创建的文件权限会受到umask影响
     */
-    static ::lom::Err::Ptr Open(const char *path, Ptr &fp, const char *mode = "r", int perm_bits = 0644);
+    static LOM_ERR Open(const char *path, Ptr &fp, const char *mode = "r", int perm_bits = 0644);
 };
 
 }

@@ -59,7 +59,7 @@ static void new_fiber_impl(const std::shared_ptr<intf_Fiber> &f, bool is_worker 
     ::std::tuple<> &, std::function<::ppgo::Exc::Ptr (::std::tuple<> &)> f)
 {
     auto err = ::lom::fiber::Ctx(attr_timeout_ms).Call(
-        [&] () -> ::lom::Err::Ptr {
+        [&] () -> LOM_ERR {
             ::std::tuple<> ret;
             auto exc = f(ret);
             if (exc)

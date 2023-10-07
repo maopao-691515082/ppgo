@@ -6,12 +6,13 @@ namespace lom
 namespace thread
 {
 
-::lom::Err::Ptr SetThreadName(const char *name)
+LOM_ERR SetThreadName(const char *name)
 {
-    return
-        ::prctl(PR_SET_NAME, name) == -1 ?
-            ::lom::SysCallErr::Maker().Sprintf("set thread name `%s` failed", name) :
-            nullptr;
+    if (::prctl(PR_SET_NAME, name) == -1)
+    {
+        LOM_RET_SYS_CALL_ERR("set thread name `%s` failed", name);
+    }
+    return nullptr;
 }
 
 }

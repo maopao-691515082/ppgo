@@ -6,7 +6,7 @@ namespace lom
 namespace os
 {
 
-static ::lom::Err::Ptr DoStat(bool is_lstat, const char *path, struct stat &st, bool &exists)
+static LOM_ERR DoStat(bool is_lstat, const char *path, struct stat &st, bool &exists)
 {
     if ((is_lstat ? ::lstat : ::stat)(path, &st) == 0)
     {
@@ -18,15 +18,15 @@ static ::lom::Err::Ptr DoStat(bool is_lstat, const char *path, struct stat &st, 
         exists = false;
         return nullptr;
     }
-    return ::lom::SysCallErr::Maker().Sprintf("%s `%s` failed", is_lstat ? "lstat" : "stat", path);
+    LOM_RET_SYS_CALL_ERR("%s `%s` failed", is_lstat ? "lstat" : "stat", path);
 }
 
-::lom::Err::Ptr FileStat::Stat(const char *path, FileStat &fst)
+LOM_ERR FileStat::Stat(const char *path, FileStat &fst)
 {
     return DoStat(false, path, fst.stat_, fst.exists_);
 }
 
-::lom::Err::Ptr FileStat::LStat(const char *path, FileStat &fst)
+LOM_ERR FileStat::LStat(const char *path, FileStat &fst)
 {
     return DoStat(true, path, fst.stat_, fst.exists_);
 }

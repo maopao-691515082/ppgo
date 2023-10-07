@@ -9,12 +9,12 @@ namespace ordered_kv
 namespace zkv
 {
 
-DBImpl::DBImpl(const char *path_str, Options opts, ::lom::Err::Ptr &err)
+LOM_ERR DBImpl::Init(const char *path_str, Options opts)
 {
     if (path_str == nullptr)
     {
         //memory mode
-        return;
+        return nullptr;
     }
 
     //disk mode, init
@@ -28,59 +28,35 @@ DBImpl::DBImpl(const char *path_str, Options opts, ::lom::Err::Ptr &err)
     {
         auto lock_file_path_str = lock_file_path.Str();
         ::lom::os::FileStat fst;
-        err = ::lom::os::FileStat::Stat(lock_file_path_str.CStr(), fst);
-        if (err)
-        {
-            return;
-        }
+        LOM_RET_ON_ERR(::lom::os::FileStat::Stat(lock_file_path_str.CStr(), fst));
         if (fst.Exists())
         {
-            err = ::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "r+e");
-            if (err)
-            {
-                return;
-            }
+            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "r+e"));
         }
         else
         {
             if (!opts.create_if_missing)
             {
-                err = ::lom::Err::Sprintf("zkv db not found at `%s`", db_dir_path_str.CStr());
-                return;
+                LOM_RET_ERR("zkv db not found at `%s`", db_dir_path_str.CStr());
             }
-            err = ::lom::os::MakeDirs(db_dir_path);
-            if (err)
-            {
-                return;
-            }
-            err = ::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "w+ex", 0600);
-            if (err)
-            {
-                return;
-            }
+            LOM_RET_ON_ERR(::lom::os::MakeDirs(db_dir_path));
+            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "w+ex", 0600));
         }
         bool ok;
-        err = lock_file_->TryLock(ok);
-        if (err)
-        {
-            return;
-        }
+        LOM_RET_ON_ERR(lock_file_->TryLock(ok));
         if (!ok)
         {
-            err = ::lom::Err::Sprintf("zkv db `%s` is opened by another", db_dir_path_str.CStr());
-            return;
+            LOM_RET_ERR("zkv db `%s` is opened by another", db_dir_path_str.CStr());
         }
     }
 
     //load data
     //todo
+
+    LOM_RET_ERR("todo");
 }
 
-DBImpl::~DBImpl()
-{
-}
-
-::lom::Err::Ptr DBImpl::Write(const WriteBatch &wb)
+LOM_ERR DBImpl::Write(const WriteBatch &wb)
 {
     static const ssize_t
         kZLDataLenMax = 1024,
@@ -299,15 +275,12 @@ DBImpl::~DBImpl()
     return ::lom::ordered_kv::Snapshot::Ptr(new Snapshot(zm));
 }
 
-::lom::Err::Ptr DB::Open(const char *path, DB::Ptr &db, DB::Options opts)
+LOM_ERR DB::Open(const char *path, DB::Ptr &db, DB::Options opts)
 {
-    ::lom::Err::Ptr err;
-    DB::Ptr new_db(new DBImpl(path, opts, err));
-    if (!err)
-    {
-        db = new_db;
-    }
-    return err;
+    auto new_db = std::make_shared<DBImpl>();
+    LOM_RET_ON_ERR(new_db->Init(path, opts));
+    db = std::static_pointer_cast<DB>(new_db);
+    return nullptr;
 }
 
 }

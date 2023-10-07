@@ -6,23 +6,23 @@ namespace lom
 namespace fiber
 {
 
-#define LOM_FIBER_CONN_CHECK_VALID() do {           \
-    if (!conn.Valid()) {                            \
-        return ::lom::Err::Sprintf("invalid conn"); \
-    }                                               \
+#define LOM_FIBER_CONN_CHECK_VALID() do {   \
+    if (!conn.Valid()) {                    \
+        LOM_RET_ERR("invalid conn");        \
+    }                                       \
 } while (false)
 
 #define LOM_FIBER_CONN_ON_IO_SYS_CALL_ERR(_r_or_w) do {             \
     Assert(ret == -1 && errno != 0);                                \
     if (errno == ECONNRESET) {                                      \
-        return ::lom::SysCallErr::Maker().Make(                     \
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(                             \
             err_code::kConnReset, "connection reset by peer");      \
     }                                                               \
     if (errno == EWOULDBLOCK) {                                     \
         errno = EAGAIN;                                             \
     }                                                               \
     if (errno != EAGAIN && errno != EINTR) {                        \
-        return ::lom::SysCallErr::Maker().Make(                     \
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(                             \
             err_code::kSysCallFailed, "conn read/write error");     \
     }                                                               \
     if (errno == EAGAIN) {                                          \
@@ -30,23 +30,19 @@ namespace fiber
         evs.waiting_fds_##_r_or_w##_.emplace_back(conn.RawFd());    \
         SwitchToSchedFiber(std::move(evs));                         \
         if (!conn.Valid()) {                                        \
-            return ::lom::SysCallErr::Maker().Make(                 \
+            LOM_RET_SYS_CALL_ERR_WITH_CODE(                         \
                 err_code::kClosed, "conn closed by other fiber");   \
         }                                                           \
     }                                                               \
 } while (false)
 
-static ::lom::Err::Ptr InternalRead(Conn conn, char *buf, ssize_t sz, ssize_t &rsz)
+static LOM_ERR InternalRead(Conn conn, char *buf, ssize_t sz, ssize_t &rsz)
 {
     LOM_FIBER_CONN_CHECK_VALID();
 
     for (;;)
     {
-        auto err = Ctx::Check();
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(Ctx::Check());
 
         ssize_t ret = ::read(conn.RawFd(), buf, static_cast<size_t>(sz));
         if (ret >= 0)
@@ -58,15 +54,11 @@ static ::lom::Err::Ptr InternalRead(Conn conn, char *buf, ssize_t sz, ssize_t &r
     }
 }
 
-static ::lom::Err::Ptr InternalWrite(Conn conn, const char *buf, ssize_t sz, ssize_t &wsz)
+static LOM_ERR InternalWrite(Conn conn, const char *buf, ssize_t sz, ssize_t &wsz)
 {
     LOM_FIBER_CONN_CHECK_VALID();
 
-    auto err = Ctx::Check();
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(Ctx::Check());
 
     if (sz > 0)
     {
@@ -82,26 +74,18 @@ static ::lom::Err::Ptr InternalWrite(Conn conn, const char *buf, ssize_t sz, ssi
             {
                 LOM_FIBER_CONN_ON_IO_SYS_CALL_ERR(w);
             }
-            err = Ctx::Check();
-            if (err)
-            {
-                return err;
-            }
+            LOM_RET_ON_ERR(Ctx::Check());
         }
     }
 
     return nullptr;
 }
 
-static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
+static LOM_ERR InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
 {
     LOM_FIBER_CONN_CHECK_VALID();
 
-    auto err = Ctx::Check();
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(Ctx::Check());
 
     while (sz > 0)
     {
@@ -117,59 +101,51 @@ static ::lom::Err::Ptr InternalWriteAll(Conn conn, const char *buf, ssize_t sz)
         {
             LOM_FIBER_CONN_ON_IO_SYS_CALL_ERR(w);
         }
-        err = Ctx::Check();
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(Ctx::Check());
     }
 
     return nullptr;
 }
 
-::lom::Err::Ptr Conn::Read(char *buf, ssize_t sz, ssize_t &rsz) const
+LOM_ERR Conn::Read(char *buf, ssize_t sz, ssize_t &rsz) const
 {
     if (sz <= 0)
     {
-        return ::lom::Err::Sprintf("invalid buf size `%zd`", sz);
+        LOM_RET_ERR("invalid buf size `%zd`", sz);
     }
 
     return InternalRead(*this, buf, sz, rsz);
 }
 
-::lom::Err::Ptr Conn::Write(const char *buf, ssize_t sz, ssize_t &wsz) const
+LOM_ERR Conn::Write(const char *buf, ssize_t sz, ssize_t &wsz) const
 {
     if (sz < 0)
     {
-        return ::lom::Err::Sprintf("invalid buf size `%zd`", sz);
+        LOM_RET_ERR("invalid buf size `%zd`", sz);
     }
 
     return InternalWrite(*this, buf, sz, wsz);
 }
 
-::lom::Err::Ptr Conn::WriteAll(const char *buf, ssize_t sz) const
+LOM_ERR Conn::WriteAll(const char *buf, ssize_t sz) const
 {
     if (sz < 0)
     {
-        return ::lom::Err::Sprintf("invalid buf size `%zd`", sz);
+        LOM_RET_ERR("invalid buf size `%zd`", sz);
     }
 
     return InternalWriteAll(*this, buf, sz);
 }
 
-::lom::Err::Ptr Conn::NewFromRawFd(int fd, Conn &conn)
+LOM_ERR Conn::NewFromRawFd(int fd, Conn &conn)
 {
     return conn.Reg(fd);
 }
 
-static ::lom::Err::Ptr ConnectStreamSock(
+static LOM_ERR ConnectStreamSock(
     int socket_family, struct sockaddr *addr, socklen_t addr_len, Conn &conn)
 {
-    auto err = Ctx::Check();
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(Ctx::Check());
 
 #define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do {                         \
     auto _err = ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg)); \
@@ -197,7 +173,7 @@ static ::lom::Err::Ptr ConnectStreamSock(
 
 #undef LOM_FIBER_CONN_ERR_RETURN
 
-    err = Conn::NewFromRawFd(conn_sock, conn);
+    auto err = Conn::NewFromRawFd(conn_sock, conn);
     if (err)
     {
         SilentClose(conn_sock);
@@ -222,11 +198,7 @@ static ::lom::Err::Ptr ConnectStreamSock(
     return _err;                                                                    \
 } while (false)
 
-    err = Ctx::Check();
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(Ctx::Check());
 
     int sock_opt_err;
     socklen_t len = sizeof(sock_opt_err);
@@ -249,14 +221,14 @@ static ::lom::Err::Ptr ConnectStreamSock(
     return nullptr;
 }
 
-::lom::Err::Ptr ConnectTCP(const char *ip, uint16_t port, Conn &conn)
+LOM_ERR ConnectTCP(const char *ip, uint16_t port, Conn &conn)
 {
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     if (inet_aton(ip, &addr.sin_addr) == 0)
     {
-        return ::lom::Err::Sprintf("invalid ip [%s]", ip);
+        LOM_RET_ERR("invalid ip [%s]", ip);
     }
     addr.sin_port = htons(port);
 
@@ -264,30 +236,20 @@ static ::lom::Err::Ptr ConnectStreamSock(
         AF_INET, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr), conn);
 }
 
-::lom::Err::Ptr ConnectUnixSockStream(const char *path, Conn &conn)
+LOM_ERR ConnectUnixSockStream(const char *path, Conn &conn)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    auto err = PathToUnixSockAddr(path, addr, addr_len);
-    if (err)
-    {
-        return err;
-    }
-
+    LOM_RET_ON_ERR(PathToUnixSockAddr(path, addr, addr_len));
     return ConnectStreamSock(
         AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, conn);
 }
 
-::lom::Err::Ptr ConnectUnixSockStreamWithAbstractPath(const Str &path, Conn &conn)
+LOM_ERR ConnectUnixSockStreamWithAbstractPath(const Str &path, Conn &conn)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    auto err = AbstractPathToUnixSockAddr(path, addr, addr_len);
-    if (err)
-    {
-        return err;
-    }
-
+    LOM_RET_ON_ERR(AbstractPathToUnixSockAddr(path, addr, addr_len));
     return ConnectStreamSock(
         AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, conn);
 }

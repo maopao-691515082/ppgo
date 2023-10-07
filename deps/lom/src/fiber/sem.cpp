@@ -6,7 +6,7 @@ namespace lom
 namespace fiber
 {
 
-::lom::Err::Ptr Sem::Destroy() const
+LOM_ERR Sem::Destroy() const
 {
     return UnregSemFromSched(*this);
 }
@@ -16,11 +16,11 @@ bool Sem::Valid() const
     return seq_ >= 0 && IsSemInSched(*this);
 }
 
-::lom::Err::Ptr Sem::Acquire(uint64_t acquire_value) const
+LOM_ERR Sem::Acquire(uint64_t acquire_value) const
 {
     if (!Valid())
     {
-        return ::lom::Err::Sprintf("invalid sem");
+        LOM_RET_ERR("invalid sem");
     }
 
     /*
@@ -57,19 +57,19 @@ bool Sem::Valid() const
 
         if (!Valid())
         {
-            return ::lom::SysCallErr::Maker().Make(err_code::kClosed, "sem destroyed by another fiber");
+            LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kClosed, "sem destroyed by another fiber");
         }
     }
 
     return nullptr;
 }
 
-::lom::Err::Ptr Sem::Release(uint64_t release_value) const
+LOM_ERR Sem::Release(uint64_t release_value) const
 {
     return ReleaseSem(*this, release_value);
 }
 
-::lom::Err::Ptr Sem::New(uint64_t value, Sem &sem)
+LOM_ERR Sem::New(uint64_t value, Sem &sem)
 {
     static thread_local int64_t next_sem_seq = 1;
 

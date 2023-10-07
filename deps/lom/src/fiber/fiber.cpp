@@ -117,7 +117,7 @@ void CreateWorker(std::function<void ()> run, CreateOptions opts)
     Create(run, opts);
 }
 
-::lom::Err::Ptr Ctx::Call(std::function<::lom::Err::Ptr ()> f) const
+LOM_ERR Ctx::Call(std::function<LOM_ERR ()> f) const
 {
     AssertInited();
 

@@ -37,7 +37,7 @@ int main(int, char *[])
     {
         lom::Str::Buf b;
         auto err = zl3.DumpTo(lom::io::BufWriter::New(
-            [&b] (const char *buf, ssize_t sz, ssize_t &wsz) -> lom::Err::Ptr {
+            [&b] (const char *buf, ssize_t sz, ssize_t &wsz) -> LOM_ERR {
                 b.Append(buf, sz);
                 wsz = sz;
                 return nullptr;
@@ -52,7 +52,7 @@ int main(int, char *[])
         ssize_t idx = 0;
         err = lom::immut::ZList::LoadFrom(
             lom::io::BufReader::New(
-                [&b, &idx] (char *buf, ssize_t sz, ssize_t &rsz) -> lom::Err::Ptr {
+                [&b, &idx] (char *buf, ssize_t sz, ssize_t &rsz) -> LOM_ERR {
                     auto p = b.Data() + idx;
                     rsz = std::min(sz, b.Len() - idx);
                     lom::Assert(rsz >= 0);
@@ -83,7 +83,7 @@ int main(int, char *[])
         idx = 0;
         err = lom::immut::ZList::LoadFrom(
             lom::io::BufReader::New(
-                [&b, b_len_shorter, &idx] (char *buf, ssize_t sz, ssize_t &rsz) -> lom::Err::Ptr {
+                [&b, b_len_shorter, &idx] (char *buf, ssize_t sz, ssize_t &rsz) -> LOM_ERR {
                     auto p = b.Data() + idx;
                     rsz = std::min(sz, b_len_shorter - idx);
                     lom::Assert(rsz >= 0);
@@ -96,7 +96,7 @@ int main(int, char *[])
         );
         if (err)
         {
-            if (err == lom::io::BufReader::UnexpectedEOF())
+            if (err == lom::io::UnexpectedEOF())
             {
                 std::cout << "UnexpectedEOF detected" << std::endl;
             }

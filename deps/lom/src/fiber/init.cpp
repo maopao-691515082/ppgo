@@ -13,20 +13,12 @@ bool IsInited()
     return inited;
 }
 
-::lom::Err::Ptr Init()
+LOM_ERR Init()
 {
     if (!inited)
     {
-        auto err = InitFdEnv();
-        if (err)
-        {
-            return err;
-        }
-        err = InitSched();
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(InitFdEnv());
+        LOM_RET_ON_ERR(InitSched());
         inited = true;
     }
     return nullptr;

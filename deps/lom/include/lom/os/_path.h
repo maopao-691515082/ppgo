@@ -50,7 +50,7 @@ public:
         return paths_.Len() > 0 ? paths_.At(paths_.Len() - 1) : "/";
     }
 
-    static ::lom::Err::Ptr Make(const char *path_str, Path &path);
+    static LOM_ERR Make(const char *path_str, Path &path);
 };
 
 }

@@ -6,29 +6,25 @@ namespace lom
 namespace fiber
 {
 
-::lom::Err::Ptr Listener::Accept(Conn &conn) const
+LOM_ERR Listener::Accept(Conn &conn) const
 {
     if (!Valid())
     {
-        return ::lom::Err::Sprintf("invalid listener");
+        LOM_RET_ERR("invalid listener");
     }
 
-#define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg, _err_code) do {                 \
-    return ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg));  \
+#define LOM_FIBER_LISTENER_ERR_RETURN(_err_msg, _err_code) do {         \
+    LOM_RET_SYS_CALL_ERR_WITH_CODE((err_code::_err_code), (_err_msg));  \
 } while (false)
 
     for (;;)
     {
-        auto err = Ctx::Check();
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(Ctx::Check());
 
         int fd = ::accept(RawFd(), nullptr, nullptr);
         if (fd >= 0)
         {
-            err = Conn::NewFromRawFd(fd, conn);
+            auto err = Conn::NewFromRawFd(fd, conn);
             if (err)
             {
                 SilentClose(fd);
@@ -71,7 +67,7 @@ class ServeWorker
     size_t idx_;
     std::function<void (size_t)> init_worker_;
     std::function<void (Conn)> work_with_conn_;
-    std::function<void (::lom::Err::Ptr)> err_log_;
+    std::function<void (LOM_ERR)> err_log_;
 
     std::mutex lock_;
     std::vector<int> conn_fds_;
@@ -109,9 +105,8 @@ class ServeWorker
                     {
                         if (err_log_)
                         {
-                            err_log_(::lom::Err::Sprintf(
-                                "lom.fiber.Listener.ServeWorker: register new conn fd failed: %s",
-                                err->Msg().CStr()));
+                            err->PushTB();
+                            err_log_(err);
                         }
                         ::close(fd);
                         continue;
@@ -133,7 +128,7 @@ public:
 
     ServeWorker(
         size_t idx, std::function<void (size_t)> init_worker, std::function<void (Conn)> work_with_conn,
-        std::function<void (::lom::Err::Ptr)> err_log
+        std::function<void (LOM_ERR)> err_log
     ) :
         idx_(idx), init_worker_(init_worker), work_with_conn_(work_with_conn), err_log_(err_log)
     {
@@ -147,9 +142,9 @@ public:
     }
 };
 
-::lom::Err::Ptr Listener::Serve(
+LOM_ERR Listener::Serve(
     size_t worker_count, std::function<void (Conn)> work_with_conn,
-    std::function<void (::lom::Err::Ptr)> err_log, std::function<void (size_t)> init_worker) const
+    std::function<void (LOM_ERR)> err_log, std::function<void (size_t)> init_worker) const
 {
     if (worker_count > kWorkerCountMax)
     {
@@ -168,15 +163,15 @@ public:
         auto err = Accept(conn);
         if (err)
         {
-            auto sys_call_err = dynamic_cast<::lom::SysCallErr *>(err.RawPtr());
+            auto sys_call_err = dynamic_cast<::lom::SysCallErr *>(err.get());
             if (sys_call_err && sys_call_err->Code() == ::lom::fiber::err_code::kClosed)
             {
                 return err;
             }
             if (err_log)
             {
-                err_log(::lom::Err::Sprintf(
-                    "lom.fiber.Listener.Serve: accept new client failed: %s", err->Msg().CStr()));
+                err->PushTB();
+                err_log(err);
             }
             ::lom::fiber::SleepMS(1);
             continue;
@@ -195,10 +190,8 @@ public:
         {
             if (err_log)
             {
-                err_log(::lom::Err::Sprintf(
-                    "lom.fiber.Listener.Serve: "
-                    "unreg new client fd from listener thread fiber sched failed: %s",
-                    err->Msg().CStr()));
+                err->PushTB();
+                err_log(err);
             }
             conn.Close();
             continue;
@@ -209,12 +202,12 @@ public:
     }
 }
 
-::lom::Err::Ptr Listener::NewFromRawFd(int fd, Listener &listener)
+LOM_ERR Listener::NewFromRawFd(int fd, Listener &listener)
 {
     return listener.Reg(fd);
 }
 
-static ::lom::Err::Ptr ListenStream(
+static LOM_ERR ListenStream(
     int socket_family, struct sockaddr *addr, socklen_t addr_len, const Str &addr_desc,
     Listener &listener, int listen_fd = -1)
 {
@@ -223,7 +216,7 @@ static ::lom::Err::Ptr ListenStream(
         listen_fd = ::socket(socket_family, SOCK_STREAM, 0);
         if (listen_fd == -1)
         {
-            return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create listen socket failed");
+            LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "create listen socket failed");
         }
     }
 
@@ -255,12 +248,12 @@ static ::lom::Err::Ptr ListenStream(
     return nullptr;
 }
 
-::lom::Err::Ptr ListenTCP(uint16_t port, Listener &listener)
+LOM_ERR ListenTCP(uint16_t port, Listener &listener)
 {
     int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd == -1)
     {
-        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create listen socket failed");
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "create listen socket failed");
     }
 
     int reuseaddr_on = 1;
@@ -283,30 +276,20 @@ static ::lom::Err::Ptr ListenStream(
         Sprintf("tcp4[:%u]", static_cast<unsigned int>(port)), listener, listen_fd);
 }
 
-::lom::Err::Ptr ListenUnixSockStream(const char *path, Listener &listener)
+LOM_ERR ListenUnixSockStream(const char *path, Listener &listener)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    auto err = PathToUnixSockAddr(path, addr, addr_len);
-    if (err)
-    {
-        return err;
-    }
-
+    LOM_RET_ON_ERR(PathToUnixSockAddr(path, addr, addr_len));
     return ListenStream(
         AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, Sprintf("unix[%s]", path), listener);
 }
 
-::lom::Err::Ptr ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener)
+LOM_ERR ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
-    auto err = AbstractPathToUnixSockAddr(path, addr, addr_len);
-    if (err)
-    {
-        return err;
-    }
-
+    LOM_RET_ON_ERR(AbstractPathToUnixSockAddr(path, addr, addr_len));
     return ListenStream(
         AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len,
         Sprintf("unix-abstract[%s]", path.Repr().CStr()), listener);

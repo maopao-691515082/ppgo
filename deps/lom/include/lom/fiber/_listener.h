@@ -13,7 +13,7 @@ class Listener : public Fd
 {
 public:
 
-    ::lom::Err::Ptr Accept(Conn &conn) const;
+    LOM_ERR Accept(Conn &conn) const;
 
     /*
     调用`Serve`方法进入监听服务
@@ -34,28 +34,28 @@ public:
               一般来说使用`Serve`的场景也都是永久服务，就先简单处理
     */
     static const size_t kWorkerCountMax = 1024;
-    ::lom::Err::Ptr Serve(
+    LOM_ERR Serve(
         size_t worker_count, std::function<void (Conn)> work_with_conn,
-        std::function<void (::lom::Err::Ptr)> err_log = nullptr,
+        std::function<void (LOM_ERR)> err_log = nullptr,
         std::function<void (size_t)> init_worker = nullptr) const;
 
     //从一个原始fd创建新的`Listener`对象
-    static ::lom::Err::Ptr NewFromRawFd(int fd, Listener &listener);
+    static LOM_ERR NewFromRawFd(int fd, Listener &listener);
 };
 
 //监听TCP端口（IPv4）
-::lom::Err::Ptr ListenTCP(uint16_t port, Listener &listener);
+LOM_ERR ListenTCP(uint16_t port, Listener &listener);
 
 /*
 监听Unix域流式socket，`path`必须是一个普通的文件路径，不能是空串或长度超过`sockaddr_un.sun_path`的大小减一
 */
-::lom::Err::Ptr ListenUnixSockStream(const char *path, Listener &listener);
+LOM_ERR ListenUnixSockStream(const char *path, Listener &listener);
 
 /*
 类似`ListenUnixSockStream`，但是使用Linux的抽象路径机制，输入的`path`不需要带首位的`\0`，接口会自动补上，
 因此`path`的长度不能超过`sockaddr_un.sun_path`的大小减一
 */
-::lom::Err::Ptr ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener);
+LOM_ERR ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener);
 
 }
 

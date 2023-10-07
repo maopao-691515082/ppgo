@@ -299,14 +299,10 @@ bool DecodeUInt(const char *&p, ssize_t &sz, uint64_t &n)
     return false;
 }
 
-static ::lom::Err::Ptr LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
+static LOM_ERR LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
 {
     s.resize(1);
-    auto err = br->ReadFull(&s[0], 1);
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(br->ReadFull(&s[0], 1));
 
     ssize_t remain_len = 0;
     auto b = static_cast<uint8_t>(s[0]);
@@ -336,55 +332,41 @@ static ::lom::Err::Ptr LoadEncodedFrom(const io::BufReader::Ptr &br, std::string
     }
     else
     {
-        return ::lom::Err::Sprintf("invalid first byte [0x%02X]", b);
+        LOM_RET_ERR("invalid first byte [0x%02X]", b);
     }
 
     if (remain_len > 0)
     {
         s.resize(1 + static_cast<size_t>(remain_len));
-        err = br->ReadFull(&s[1], remain_len);
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(br->ReadFull(&s[1], remain_len));
     }
 
     return nullptr;
 }
 
-::lom::Err::Ptr LoadFrom(const io::BufReader::Ptr &br, int64_t &n)
+LOM_ERR LoadFrom(const io::BufReader::Ptr &br, int64_t &n)
 {
     std::string s;
-    auto err = LoadEncodedFrom(br, s);
-    if (err)
-    {
-        err->PushTB();
-        return err;
-    }
+    LOM_RET_ON_ERR(LoadEncodedFrom(br, s));
     const char *p = s.data();
     ssize_t sz = static_cast<ssize_t>(s.size());
     if (!Decode(p, sz, n))
     {
-        return ::lom::Err::Sprintf("decode int64 failed");
+        LOM_RET_ERR("decode int64 failed");
     }
     Assert(sz == 0);
     return nullptr;
 }
 
-::lom::Err::Ptr LoadUIntFrom(const io::BufReader::Ptr &br, uint64_t &n)
+LOM_ERR LoadUIntFrom(const io::BufReader::Ptr &br, uint64_t &n)
 {
     std::string s;
-    auto err = LoadEncodedFrom(br, s);
-    if (err)
-    {
-        err->PushTB();
-        return err;
-    }
+    LOM_RET_ON_ERR(LoadEncodedFrom(br, s));
     const char *p = s.data();
     ssize_t sz = static_cast<ssize_t>(s.size());
     if (!DecodeUInt(p, sz, n))
     {
-        return ::lom::Err::Sprintf("decode uint64 failed");
+        LOM_RET_ERR("decode uint64 failed");
     }
     Assert(sz == 0);
     return nullptr;

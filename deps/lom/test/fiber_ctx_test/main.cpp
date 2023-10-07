@@ -23,15 +23,15 @@ int main(int, char *[])
 
     ::lom::fiber::Create([] () {
         auto err = ::lom::fiber::Ctx(1000).Call(
-            [&] () -> ::lom::Err::Ptr {
-                ::lom::fiber::Ctx().Call(
-                    [&] () -> ::lom::Err::Ptr {
+            [&] () -> LOM_ERR {
+                ::lom::Assert(!::lom::fiber::Ctx().Call(
+                    [&] () -> LOM_ERR {
                         ::lom::fiber::CreateWorker(WorkerMain);
                         return nullptr;
                     }
-                );
+                ));
                 return ::lom::fiber::Ctx(100000).Call(
-                    [&] () -> ::lom::Err::Ptr {
+                    [&] () -> LOM_ERR {
                         for (int i = 0; i < 3; ++ i)
                         {
                             ::lom::fiber::CreateWorker(WorkerMain);

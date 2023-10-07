@@ -16,7 +16,7 @@ static uint32_t &FdSeq(int fd)
     return fd >= 0 && fd < kFastFdSeqMapSizeMax ? fast_fd_seq_map[fd] : slow_fd_seq_map[fd];
 }
 
-::lom::Err::Ptr InitFdEnv()
+LOM_ERR InitFdEnv()
 {
     fast_fd_seq_map = new uint32_t[kFastFdSeqMapSizeMax];
     for (auto i = 0; i < kFastFdSeqMapSizeMax; ++ i)
@@ -26,31 +26,27 @@ static uint32_t &FdSeq(int fd)
     return nullptr;
 }
 
-::lom::Err::Ptr Fd::Reg(int fd)
+LOM_ERR Fd::Reg(int fd)
 {
     AssertInited();
 
     if (fd_ != -1)
     {
-        return ::lom::Err::Sprintf("Fd object is already used");
+        LOM_RET_ERR("Fd object is already used");
     }
 
     if (fd < 0)
     {
-        return ::lom::Err::Sprintf("invalid fd [%d]", fd);
+        LOM_RET_ERR("invalid fd [%d]", fd);
     }
 
     int flags = 1;
     if (::ioctl(fd, FIONBIO, &flags) == -1)
     {
-        return ::lom::SysCallErr::Maker().Sprintf("set fd nonblocking failed");
+        LOM_RET_SYS_CALL_ERR("set fd nonblocking failed");
     }
 
-    auto err = RegRawFdToSched(fd);
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(RegRawFdToSched(fd));
 
     fd_ = fd;
     seq_ = FdSeq(fd_);
@@ -58,13 +54,13 @@ static uint32_t &FdSeq(int fd)
     return nullptr;
 }
 
-::lom::Err::Ptr Fd::Unreg() const
+LOM_ERR Fd::Unreg() const
 {
     AssertInited();
 
     if (!Valid())
     {
-        return ::lom::Err::Sprintf("invalid fd");
+        LOM_RET_ERR("invalid fd");
     }
 
     auto err = UnregRawFdFromSched(fd_);
@@ -77,20 +73,19 @@ bool Fd::Valid() const
     return fd_ >= 0 && seq_ == FdSeq(fd_);
 }
 
-::lom::Err::Ptr Fd::Close() const
+LOM_ERR Fd::Close() const
 {
     if (!Valid())
     {
-        return ::lom::Err::Sprintf("invalid fd");
+        LOM_RET_ERR("invalid fd");
     }
 
-    auto err = Unreg();
+    LOM_RET_ON_ERR(Unreg());
     if (::close(fd_) == -1)
     {
-        auto unreg_err_msg = err ? err->Msg().Concat(" & ") : "";
-        err = ::lom::Err::Sprintf("%sclose fd failed", unreg_err_msg.CStr());
+        LOM_RET_SYS_CALL_ERR("close fd failed");
     }
-    return err;
+    return nullptr;
 }
 
 void SilentClose(int fd)

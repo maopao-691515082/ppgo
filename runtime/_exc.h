@@ -115,15 +115,15 @@ public:
         return tp_string(buf.data(), buf.size());
     }
 
-    static ::lom::Err::Ptr WrapToLomErr(const Ptr &exc)
+    static LOM_ERR WrapToLomErr(const Ptr &exc)
     {
         Assert(static_cast<bool>(exc));
-        return ::lom::Err::Ptr(new LomErrWrapper(exc));
+        return LOM_ERR(new LomErrWrapper(exc));
     }
-    static Ptr FromLomErr(::lom::Err::Ptr err)
+    static Ptr FromLomErr(LOM_ERR err)
     {
         Assert(static_cast<bool>(err));
-        auto lom_err_wrapper = dynamic_cast<LomErrWrapper *>(err.RawPtr());
+        auto lom_err_wrapper = dynamic_cast<LomErrWrapper *>(err.get());
         return lom_err_wrapper ? lom_err_wrapper->Get() : ::ppgo::Exc::Sprintf("%s", err->Msg().CStr());
     }
 

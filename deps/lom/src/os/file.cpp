@@ -6,29 +6,35 @@ namespace lom
 namespace os
 {
 
-::lom::Err::Ptr File::Lock() const
+LOM_ERR File::Lock() const
 {
-    return flock(fd_, LOCK_EX) == -1 ?
-        ::lom::SysCallErr::Maker().Sprintf("`flock` failed") :
-        nullptr;
+    if (flock(fd_, LOCK_EX) == -1)
+    {
+        LOM_RET_SYS_CALL_ERR("`flock` failed");
+    }
+    return nullptr;
 }
 
-::lom::Err::Ptr File::TryLock(bool &ok) const
+LOM_ERR File::TryLock(bool &ok) const
 {
     ok = flock(fd_, LOCK_EX | LOCK_NB) == 0;
-    return ok || errno == EWOULDBLOCK ?
-        nullptr :
-        ::lom::SysCallErr::Maker().Sprintf("`flock` failed");
+    if (ok || errno == EWOULDBLOCK)
+    {
+        return nullptr;
+    }
+    LOM_RET_SYS_CALL_ERR("`flock` failed");
 }
 
-::lom::Err::Ptr File::Unlock() const
+LOM_ERR File::Unlock() const
 {
-    return flock(fd_, LOCK_UN) == -1 ?
-        ::lom::SysCallErr::Maker().Sprintf("`flock` failed") :
-        nullptr;
+    if (flock(fd_, LOCK_UN) == -1)
+    {
+        LOM_RET_SYS_CALL_ERR("`flock` failed");
+    }
+    return nullptr;
 }
 
-::lom::Err::Ptr File::Open(const char *path, File::Ptr &fp, const char *mode, int perm_bits)
+LOM_ERR File::Open(const char *path, File::Ptr &fp, const char *mode, int perm_bits)
 {
     int open_flags = 0;
     const char *m = mode;
@@ -58,7 +64,7 @@ namespace os
     }
     else
     {
-        return ::lom::Err::Sprintf("invalid mode: %s", mode);
+        LOM_RET_ERR("invalid mode: %s", mode);
     }
 
     for (; *m && *m != ','; ++ m)
@@ -78,7 +84,7 @@ namespace os
     int fd = ::open(path, open_flags, perm_bits);
     if (fd == -1)
     {
-        return ::lom::SysCallErr::Maker().Sprintf("open file `%s` with mode `%s` failed", path, mode);
+        LOM_RET_SYS_CALL_ERR("open file `%s` with mode `%s` failed", path, mode);
     }
 
     fp = File::Ptr(new File(fd));

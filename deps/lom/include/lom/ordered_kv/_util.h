@@ -80,11 +80,11 @@ public:
 */
 class Iterator
 {
-    ::lom::Err::Ptr err_;
+    LOM_ERR err_;
 
 protected:
 
-    void SetErr(::lom::Err::Ptr err)
+    void SetErr(LOM_ERR err)
     {
         if (!err_)
         {
@@ -119,7 +119,7 @@ public:
     若操作中出现错误，则可通过`Err`获取，且一旦出错，迭代器状态就被锁死，不可进一步操作，
     只能调用`Err`和`Valid`判断状态
     */
-    ::lom::Err::Ptr Err() const
+    LOM_ERR Err() const
     {
         return err_;
     }
@@ -265,9 +265,9 @@ protected:
     `Get`操作的DB版本，派生类只需要实现到DB的`Get`即可
     参数和返回说明参考`Get`的注释
     */
-    virtual ::lom::Err::Ptr DBGet(
+    virtual LOM_ERR DBGet(
         const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> f) const = 0;
-    virtual ::lom::Err::Ptr DBGet(const Str &k, std::function<StrSlice ()> &v) const = 0;
+    virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const = 0;
 
     virtual Iterator::Ptr DBNewIterator() const = 0;
 
@@ -280,12 +280,12 @@ public:
     WriteBatch wb;
 
     //获取值并调用回调函数，`f`的参数为空指针表示没有找到
-    ::lom::Err::Ptr Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> f) const;
+    LOM_ERR Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> f) const;
     /*
     获取值，通过`v`返回一个值的获取器，`v`返回值为空函数表示没有找到
     若`v`有效，则需要保证其总是可用的，即一直引用一份对应的快照数据
     */
-    ::lom::Err::Ptr Get(const Str &k, std::function<StrSlice ()> &v) const;
+    LOM_ERR Get(const Str &k, std::function<StrSlice ()> &v) const;
 
     //创建一个当前快照的迭代器
     Iterator::Ptr NewIterator();
@@ -301,7 +301,7 @@ public:
     virtual ~DBBase() = default;
 
     //执行写操作
-    virtual ::lom::Err::Ptr Write(const WriteBatch &wb) = 0;
+    virtual LOM_ERR Write(const WriteBatch &wb) = 0;
 
     //创建一个当前DB数据的快照
     virtual Snapshot::Ptr NewSnapshot() = 0;

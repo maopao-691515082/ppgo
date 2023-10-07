@@ -43,7 +43,7 @@ void DBImpl::Snapshot::DBGet(
     f(nullptr, StrSlice());
 }
 
-::lom::Err::Ptr DBImpl::Snapshot::DBGet(const Str &k, std::function<void (const StrSlice *)> f) const
+LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<void (const StrSlice *)> f) const
 {
     DBGet(k, [f] (std::function<bool (StrSlice &)> iter, StrSlice v) {
         return iter ? f(&v) : f(nullptr);
@@ -51,7 +51,7 @@ void DBImpl::Snapshot::DBGet(
     return nullptr;
 }
 
-::lom::Err::Ptr DBImpl::Snapshot::DBGet(const Str &k, std::function<StrSlice ()> &v) const
+LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<StrSlice ()> &v) const
 {
     DBGet(k, [&v] (std::function<bool (StrSlice &)> iter, StrSlice iter_v) {
         if (iter)

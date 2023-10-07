@@ -17,7 +17,7 @@ public:
         return seq_ < other.seq_;
     }
 
-    ::lom::Err::Ptr Destroy() const;
+    LOM_ERR Destroy() const;
 
     bool Valid() const;
 
@@ -27,11 +27,11 @@ public:
         释放的错误只有溢出
         一般在使用者可控的情况下不需要判断返回
     */
-    ::lom::Err::Ptr Acquire(uint64_t acquire_value = 1) const;
-    ::lom::Err::Ptr Release(uint64_t release_value = 1) const;
+    LOM_ERR Acquire(uint64_t acquire_value = 1) const;
+    LOM_ERR Release(uint64_t release_value = 1) const;
 
     //指定初值创建信号量
-    static ::lom::Err::Ptr New(uint64_t value, Sem &sem);
+    static LOM_ERR New(uint64_t value, Sem &sem);
 };
 
 }

@@ -19,9 +19,9 @@ public:
     }
 };
 
-Err::Ptr Err::FromStr(const Str &msg, CodePos _cp)
+LOM_ERR Err::FromStr(const Str &msg, CodePos _cp)
 {
-    auto err = Err::Ptr(new SimpleErr(msg));
+    auto err = LOM_ERR(new SimpleErr(msg));
     if (_cp.Valid())
     {
         err->PushTB(_cp);

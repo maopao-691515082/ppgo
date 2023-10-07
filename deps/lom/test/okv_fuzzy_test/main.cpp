@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     }
 
     lom::ordered_kv::DBBase::Ptr db;
-    lom::Err::Ptr err;
+    LOM_ERR err;
     if (argc >= 2)
     {
         if (strcmp(argv[1], "zkv-mem") == 0)

@@ -11,18 +11,18 @@ namespace fiber
 void SilentClose(int fd);
 
 void AssertInited();
-::lom::Err::Ptr InitFdEnv();
-::lom::Err::Ptr InitSched();
+LOM_ERR InitFdEnv();
+LOM_ERR InitSched();
 
-::lom::Err::Ptr RegRawFdToSched(int fd);
-::lom::Err::Ptr UnregRawFdFromSched(int fd);
+LOM_ERR RegRawFdToSched(int fd);
+LOM_ERR UnregRawFdFromSched(int fd);
 
 void RegSemToSched(Sem sem, uint64_t value);
-::lom::Err::Ptr UnregSemFromSched(Sem sem);
+LOM_ERR UnregSemFromSched(Sem sem);
 bool IsSemInSched(Sem sem);
 uint64_t TryAcquireSem(Sem sem, uint64_t acquire_value);
 void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value);
-::lom::Err::Ptr ReleaseSem(Sem sem, uint64_t release_value);
+LOM_ERR ReleaseSem(Sem sem, uint64_t release_value);
 
 struct WaitingEvents
 {
@@ -122,15 +122,15 @@ public:
         return cf_ctx_.expire_at >= 0 && cf_ctx_.expire_at <= NowMS();
     }
 
-    ::lom::Err::Ptr CheckCtx() const
+    LOM_ERR CheckCtx() const
     {
         if (IsCanceled())
         {
-            return ::lom::SysCallErr::Maker().Make(err_code::kCanceled, "canceled");
+            LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kCanceled, "canceled");
         }
         if (IsCFTimeout())
         {
-            return ::lom::SysCallErr::Maker().Make(err_code::kTimeout, "timeout");
+            LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kTimeout, "timeout");
         }
         return nullptr;
     }
@@ -154,8 +154,8 @@ void RegFiber(Fiber *fiber);
 Fiber *GetCurrFiber();
 jmp_buf *GetSchedCtx();
 
-::lom::Err::Ptr PathToUnixSockAddr(const char *path, struct sockaddr_un &addr, socklen_t &addr_len);
-::lom::Err::Ptr AbstractPathToUnixSockAddr(const Str &path, struct sockaddr_un &addr, socklen_t &addr_len);
+LOM_ERR PathToUnixSockAddr(const char *path, struct sockaddr_un &addr, socklen_t &addr_len);
+LOM_ERR AbstractPathToUnixSockAddr(const Str &path, struct sockaddr_un &addr, socklen_t &addr_len);
 
 }
 

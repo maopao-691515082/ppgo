@@ -24,7 +24,7 @@ public:
     virtual ~IndexDB() = default;
 
     virtual WriteBatchBase::Ptr NewWriteBatch() = 0;
-    virtual ::lom::Err::Ptr Write(const WriteBatchBase::Ptr &wb) = 0;
+    virtual LOM_ERR Write(const WriteBatchBase::Ptr &wb) = 0;
 
     virtual Snapshot::Ptr NewSnapshot() = 0;
 
@@ -37,7 +37,7 @@ public:
         */
         bool create_if_missing = false;
     };
-    typedef std::function<::lom::Err::Ptr (const char *path, Ptr &db, Options opts)> OpenFunc;
+    typedef std::function<LOM_ERR (const char *path, Ptr &db, Options opts)> OpenFunc;
 };
 
 //数据库对象
@@ -62,8 +62,8 @@ public:
         //可指定打开索引库的函数，若不指定，则使用内部默认的实现
         IndexDB::OpenFunc open_idx_db;
     };
-    static ::lom::Err::Ptr Open(const char *path, Ptr &db, Options opts);
-    static ::lom::Err::Ptr Open(const char *path, Ptr &db)
+    static LOM_ERR Open(const char *path, Ptr &db, Options opts);
+    static LOM_ERR Open(const char *path, Ptr &db)
     {
         return Open(path, db, Options());
     }

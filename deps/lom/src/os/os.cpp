@@ -6,31 +6,23 @@ namespace lom
 namespace os
 {
 
-::lom::Err::Ptr MakeDirs(const Path &path, int perm_bits)
+LOM_ERR MakeDirs(const Path &path, int perm_bits)
 {
     auto path_str = path.Str();
     FileStat fst;
-    auto err = FileStat::Stat(path_str.CStr(), fst);
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(FileStat::Stat(path_str.CStr(), fst));
     if (fst.IsDir())
     {
         return nullptr;
     }
     if (fst.Exists())
     {
-        return ::lom::Err::Sprintf("non-dir path `%s`", path_str.CStr());
+        LOM_RET_ERR("non-dir path `%s`", path_str.CStr());
     }
-    err = MakeDirs(path.Dir(), perm_bits);
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(MakeDirs(path.Dir(), perm_bits));
     if (::mkdir(path_str.CStr(), perm_bits) == -1)
     {
-        return ::lom::SysCallErr::Maker().Sprintf("make dir `%s` failed", path_str.CStr());
+        LOM_RET_SYS_CALL_ERR("make dir `%s` failed", path_str.CStr());
     }
     return nullptr;
 }

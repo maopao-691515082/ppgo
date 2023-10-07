@@ -6,7 +6,7 @@ namespace ppgo
 namespace PPGO_THIS_MOD
 {
 
-::ppgo::Exc::Ptr ExcFromLomErr(::lom::Err::Ptr err);
+::ppgo::Exc::Ptr ExcFromLomErr(LOM_ERR err);
 
 }
 

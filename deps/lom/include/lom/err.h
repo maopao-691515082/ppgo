@@ -6,6 +6,8 @@
 #include "str.h"
 #include "code_pos.h"
 
+#define LOM_ERR ::std::shared_ptr<::lom::Err>
+
 namespace lom
 {
 
@@ -13,13 +15,11 @@ namespace lom
 错误对象的基类，主体是一个虚方法`Msg`和traceback记录机制
 使用者可派生自己的错误对象
 */
-class Err : public RCObjDyn
+class Err
 {
     std::vector<Str> tb_;
 
 public:
-
-    typedef RCPtr<Err> Ptr;
 
     void PushTB(CodePos _cp = CodePos())
     {
@@ -44,16 +44,7 @@ public:
     }
 
     //构造最简单的错误对象（只包含一个错误信息），可指定`_cp`为无效位置来禁止记录第一条traceback
-    static Ptr FromStr(const Str &msg, CodePos _cp = CodePos());
-
-    //最简错误对象的`Sprintf`版本，因为是可变参数，所以只能禁用traceback，需要的话可手动`FromStr`
-    static inline
-        __attribute__((always_inline))
-        __attribute__((format(gnu_printf, 1, 2)))
-    Ptr Sprintf(const char *fmt, ...)
-    {
-        return FromStr(::lom::Sprintf(fmt, __builtin_va_arg_pack()), CodePos(nullptr, 0, nullptr));
-    }
+    static LOM_ERR FromStr(const Str &msg, CodePos _cp = CodePos());
 };
 
 /*
@@ -82,24 +73,11 @@ public:
         {
         }
 
-        Err::Ptr Make(int code, const Str &msg, CodePos _cp = CodePos()) const
+        LOM_ERR Make(int code, const Str &msg, CodePos _cp = CodePos()) const
         {
-            auto err = new SysCallErr(code, errno_, msg);
+            auto err = LOM_ERR(new SysCallErr(code, errno_, msg));
             err->PushTB(_cp);
             return err;
-        }
-
-        Err::Ptr Make(const Str &msg, CodePos _cp = CodePos()) const
-        {
-            return Make(-1, msg, _cp);
-        }
-
-        inline
-            __attribute__((always_inline))
-            __attribute__((format(gnu_printf, 2, 3)))
-        Err::Ptr Sprintf(const char *fmt, ...)
-        {
-            return Make(::lom::Sprintf(fmt, __builtin_va_arg_pack()), CodePos(nullptr, 0, nullptr));
         }
     };
 
@@ -120,3 +98,24 @@ public:
 };
 
 }
+
+//这些宏可以简化使用
+
+#define LOM_RET_ERR(_fmt, ...) do {                                             \
+    return ::lom::Err::FromStr(::lom::Sprintf(_fmt, ##__VA_ARGS__), CodePos()); \
+} while (false)
+
+#define LOM_RET_SYS_CALL_ERR_WITH_CODE(_code, _fmt, ...) do {                                           \
+    return ::lom::SysCallErr::Maker().Make((_code), ::lom::Sprintf(_fmt, ##__VA_ARGS__), CodePos());    \
+} while (false)
+
+#define LOM_RET_SYS_CALL_ERR(_fmt, ...) \
+    LOM_RET_SYS_CALL_ERR_WITH_CODE(-1, _fmt, ##__VA_ARGS__)
+
+#define LOM_RET_ON_ERR(_expr) do {  \
+    LOM_ERR _lom_err = (_expr);     \
+    if (_lom_err) {                 \
+        _lom_err->PushTB();         \
+        return _lom_err;            \
+    }                               \
+} while (false)

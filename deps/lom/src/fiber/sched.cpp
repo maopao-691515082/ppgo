@@ -154,17 +154,17 @@ static void RegCurrFiberWaitingEvs(WaitingEvents &&evs)
 
 static thread_local int ep_fd = -1;
 
-::lom::Err::Ptr InitSched()
+LOM_ERR InitSched()
 {
     ep_fd = ::epoll_create1(0);
     if (ep_fd == -1)
     {
-        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "create epoll fd failed");
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "create epoll fd failed");
     }
 
     if (::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     {
-        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "ignore SIGPIPE failed");
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "ignore SIGPIPE failed");
     }
 
     return nullptr;
@@ -185,11 +185,11 @@ Fiber *GetCurrFiber()
     return curr_fiber;
 }
 
-::lom::Err::Ptr RegRawFdToSched(int fd)
+LOM_ERR RegRawFdToSched(int fd)
 {
     if (io_waiting_fibers.find(fd) != io_waiting_fibers.end())
     {
-        return ::lom::Err::Sprintf("fd [%d] is already registered", fd);
+        LOM_RET_ERR("fd [%d] is already registered", fd);
     }
 
     struct epoll_event ev;
@@ -197,14 +197,14 @@ Fiber *GetCurrFiber()
     ev.data.fd = fd;
     if (::epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
     {
-        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_ADD failed");
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_ADD failed");
     }
 
     io_waiting_fibers.insert(std::make_pair(fd, FdWaitingFibers()));
     return nullptr;
 }
 
-::lom::Err::Ptr UnregRawFdFromSched(int fd)
+LOM_ERR UnregRawFdFromSched(int fd)
 {
     auto fd_waiting_fibers_iter = io_waiting_fibers.find(fd);
     Assert(fd_waiting_fibers_iter != io_waiting_fibers.end());
@@ -227,7 +227,7 @@ Fiber *GetCurrFiber()
     struct epoll_event ev;  //must specify an ev struct in old-version epoll
     if (::epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, &ev) == -1)
     {
-        return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_DEL failed");
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "epoll_ctl EPOLL_CTL_DEL failed");
     }
 
     return nullptr;
@@ -240,14 +240,14 @@ void RegSemToSched(Sem sem, uint64_t value)
     sem_infos[sem].value_ = value;
 }
 
-::lom::Err::Ptr UnregSemFromSched(Sem sem)
+LOM_ERR UnregSemFromSched(Sem sem)
 {
     AssertInited();
 
     auto sem_infos_iter = sem_infos.find(sem);
     if (sem_infos_iter == sem_infos.end())
     {
-        return ::lom::Err::Sprintf("invalid sem");
+        LOM_RET_ERR("invalid sem");
     }
 
     SemInfo &sem_info = sem_infos_iter->second;
@@ -339,12 +339,12 @@ void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value)
     WakeUpFibers(fibers_to_wake_up);
 }
 
-::lom::Err::Ptr ReleaseSem(Sem sem, uint64_t release_value)
+LOM_ERR ReleaseSem(Sem sem, uint64_t release_value)
 {
     auto sem_infos_iter = sem_infos.find(sem);
     if (sem_infos_iter == sem_infos.end())
     {
-        return ::lom::Err::Sprintf("invalid sem");
+        LOM_RET_ERR("invalid sem");
     }
 
     SemInfo &sem_info = sem_infos_iter->second;
@@ -352,7 +352,7 @@ void RestoreAcquiringSem(Sem sem, uint64_t acquiring_value)
     Assert(kUInt64Max - sem_info.value_ >= sem_info.acquiring_value_);
     if (kUInt64Max - sem_info.value_ - sem_info.acquiring_value_ < release_value)
     {
-        return ::lom::Err::Sprintf("sem value overflow");
+        LOM_RET_ERR("sem value overflow");
     }
     sem_info.value_ += release_value;
 
@@ -391,7 +391,7 @@ void Yield()
     DoSwitchToSchedFiber();
 }
 
-::lom::Err::Ptr SleepMS(int64_t ms)
+LOM_ERR SleepMS(int64_t ms)
 {
     AssertInited();
 
@@ -402,11 +402,7 @@ void Yield()
 
     Assert(curr_fiber != nullptr);
 
-    auto err = curr_fiber->CheckCtx();
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(curr_fiber->CheckCtx());
 
     int64_t expire_at = NowMS() + ms;
     int64_t &cf_ctx_expire_at = curr_fiber->CFCtx().expire_at;
@@ -424,16 +420,12 @@ void Yield()
 
     cf_ctx_expire_at = old_expire_at;
 
-    err = curr_fiber->CheckCtx();
-    if (err)
-    {
-        return err;
-    }
+    LOM_RET_ON_ERR(curr_fiber->CheckCtx());
 
     return nullptr;
 }
 
-::lom::Err::Ptr Ctx::Check()
+LOM_ERR Ctx::Check()
 {
     AssertInited();
 
@@ -441,7 +433,7 @@ void Yield()
     return curr_fiber->CheckCtx();
 }
 
-::lom::Err::Ptr Run()
+LOM_ERR Run()
 {
     AssertInited();
     for (;;)
@@ -501,7 +493,7 @@ void Yield()
             {
                 if (errno != EINTR)
                 {
-                    return ::lom::SysCallErr::Maker().Make(err_code::kSysCallFailed, "epoll_wait failed");
+                    LOM_RET_SYS_CALL_ERR_WITH_CODE(err_code::kSysCallFailed, "epoll_wait failed");
                 }
                 ev_count = 0;
             }

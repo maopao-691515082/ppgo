@@ -11,11 +11,11 @@ static ssize_t AdjustBufSize(ssize_t sz)
     return std::min<ssize_t>(std::max<ssize_t>(sz, 4 * 1024), 4 * 1024 * 1024);
 }
 
-#define LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(_sz) do {                      \
-        ssize_t _szv = (_sz);                                               \
-        if (_szv <= 0) {                                                    \
-            return ::lom::Err::Sprintf("non-positive size `%zd`", _szv);    \
-        }                                                                   \
+#define LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(_sz) do {      \
+        ssize_t _szv = (_sz);                               \
+        if (_szv <= 0) {                                    \
+            LOM_RET_ERR("non-positive size `%zd`", _szv);   \
+        }                                                   \
     } while (false)
 
 class BufReaderImpl : public BufReader
@@ -27,9 +27,9 @@ class BufReaderImpl : public BufReader
     ssize_t start_ = 0;
     ssize_t len_ = 0;
 
-    ::lom::Err::Ptr err_;
+    LOM_ERR err_;
 
-    ::lom::Err::Ptr Fill()
+    LOM_ERR Fill()
     {
         if (err_)
         {
@@ -56,22 +56,18 @@ class BufReaderImpl : public BufReader
         return nullptr;
     }
 
-    ::lom::Err::Ptr ReadFullOrUntil(char *buf, ssize_t sz, const char *end_ch, ssize_t &rsz)
+    LOM_ERR ReadFullOrUntil(char *buf, ssize_t sz, const char *end_ch, ssize_t &rsz)
     {
         LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
 
         for (ssize_t i = 0; i < sz;)
         {
-            auto err = Fill();
-            if (err)
-            {
-                return err;
-            }
+            LOM_RET_ON_ERR(Fill());
             if (len_ == 0)
             {
                 //EOF
                 rsz = i;
-                return BufReader::UnexpectedEOF();
+                return UnexpectedEOF();
             }
 
             auto fill_len = std::min(len_, sz - i);
@@ -119,25 +115,18 @@ public:
         }
     }
 
-    virtual ::lom::Err::Ptr Wait(ssize_t &rsz)
+    virtual LOM_ERR Wait(ssize_t &rsz)
     {
-        auto err = Fill();
-        if (!err)
-        {
-            rsz = len_;
-        }
-        return err;
+        LOM_RET_ON_ERR(Fill());
+        rsz = len_;
+        return nullptr;
     }
 
-    virtual ::lom::Err::Ptr Read(char *buf, ssize_t sz, ssize_t &rsz) override
+    virtual LOM_ERR Read(char *buf, ssize_t sz, ssize_t &rsz) override
     {
         LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
 
-        auto err = Fill();
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(Fill());
         if (len_ == 0)
         {
             rsz = 0;
@@ -152,23 +141,17 @@ public:
         return nullptr;
     }
 
-    virtual ::lom::Err::Ptr ReadUntil(char end_ch, char *buf, ssize_t sz, ssize_t &rsz) override
+    virtual LOM_ERR ReadUntil(char end_ch, char *buf, ssize_t sz, ssize_t &rsz) override
     {
         return ReadFullOrUntil(buf, sz, &end_ch, rsz);
     }
 
-    virtual ::lom::Err::Ptr ReadFull(char *buf, ssize_t sz, ssize_t *rsz_ptr) override
+    virtual LOM_ERR ReadFull(char *buf, ssize_t sz, ssize_t *rsz_ptr) override
     {
         ssize_t rsz;
         return ReadFullOrUntil(buf, sz, nullptr, rsz_ptr ? *rsz_ptr : rsz);
     }
 };
-
-::lom::Err::Ptr BufReader::UnexpectedEOF()
-{
-    static ::lom::Err::Ptr err = ::lom::Err::FromStr("Unexpected EOF");
-    return err;
-}
 
 BufReader::Ptr BufReader::New(BufReader::DoReadFunc do_read, ssize_t buf_sz, MakeBufFunc make_buf)
 {
@@ -184,17 +167,13 @@ class BufWriterImpl : public BufWriter
     ssize_t start_ = 0;
     ssize_t len_ = 0;
 
-    ::lom::Err::Ptr DoWrite()
+    LOM_ERR DoWrite()
     {
         Assert(start_ < buf_sz_ && len_ <= buf_sz_);
         auto send_len = std::min(len_, buf_sz_ - start_);
         Assert(send_len > 0);
         ssize_t wsz;
-        auto err = do_write_(buf_ + start_, send_len, wsz);
-        if (err)
-        {
-            return err;
-        }
+        LOM_RET_ON_ERR(do_write_(buf_ + start_, send_len, wsz));
 
         Assert(wsz > 0 && wsz <= send_len);
         start_ += wsz;
@@ -224,11 +203,11 @@ public:
         }
     }
 
-    virtual ::lom::Err::Ptr WriteAll(const char *buf, ssize_t sz) override
+    virtual LOM_ERR WriteAll(const char *buf, ssize_t sz) override
     {
         if (sz < 0)
         {
-            return ::lom::Err::Sprintf("negative size `%zd`", sz);
+            LOM_RET_ERR("negative size `%zd`", sz);
         }
 
         while (sz > 0)
@@ -236,11 +215,7 @@ public:
             Assert(len_ <= buf_sz_);
             if (len_ == buf_sz_)
             {
-                auto err = DoWrite();
-                if (err)
-                {
-                    return err;
-                }
+                LOM_RET_ON_ERR(DoWrite());
                 Assert(len_ < buf_sz_);
             }
             auto tail = start_ + len_;
@@ -266,15 +241,11 @@ public:
         return nullptr;
     }
 
-    virtual ::lom::Err::Ptr Flush() override
+    virtual LOM_ERR Flush() override
     {
         while (len_ > 0)
         {
-            auto err = DoWrite();
-            if (err)
-            {
-                return err;
-            }
+            LOM_RET_ON_ERR(DoWrite());
         }
         return nullptr;
     }

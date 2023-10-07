@@ -15,7 +15,9 @@ class ClientWorker
             {
                 return;
             }
-            conn.write(buf[: n], timeout = 1.0);
+            fiber.Ctx(timeout = 1.0).call(func () {
+                conn.write(buf[: n]);
+            });
         }
     }
 }

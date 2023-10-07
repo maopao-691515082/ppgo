@@ -30,16 +30,16 @@ public:
         */
         bool create_if_missing = false;
     };
-    static ::lom::Err::Ptr Open(const char *path, Ptr &db, Options opts);
-    static ::lom::Err::Ptr Open(const char *path, Ptr &db)
+    static LOM_ERR Open(const char *path, Ptr &db, Options opts);
+    static LOM_ERR Open(const char *path, Ptr &db)
     {
         return Open(path, db, Options());
     }
-    static ::lom::Err::Ptr Open(Ptr &db, Options opts)
+    static LOM_ERR Open(Ptr &db, Options opts)
     {
         return Open(nullptr, db, opts);
     }
-    static ::lom::Err::Ptr Open(Ptr &db)
+    static LOM_ERR Open(Ptr &db)
     {
         return Open(db, Options());
     }

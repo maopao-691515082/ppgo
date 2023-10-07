@@ -20,7 +20,7 @@ static const ssize_t
     kStkSizeMax = 8 * 1024 * 1024;
 
 bool IsInited();
-::lom::Err::Ptr Init();
+LOM_ERR Init();
 void MustInit();    //init or die
 
 /*
@@ -40,7 +40,7 @@ void Create(std::function<void ()> run, CreateOptions opts = CreateOptions());
 void CreateWorker(std::function<void ()> run, CreateOptions opts = CreateOptions());
 
 //开始运行，除非出现内部错误（一般就是系统异常导致epoll_wait失败），否则永远不退出
-::lom::Err::Ptr Run();
+LOM_ERR Run();
 
 /*
 在新的控制流上下文执行函数，当前控制流会被压栈
@@ -58,17 +58,17 @@ public:
     }
 
     //`Call`的返回值是透传f的返回
-    ::lom::Err::Ptr Call(std::function<::lom::Err::Ptr ()> f) const;
+    LOM_ERR Call(std::function<LOM_ERR ()> f) const;
 
     //检查当前控制流上下文，如有取消或超时则以错误形式返回
-    static ::lom::Err::Ptr Check();
+    static LOM_ERR Check();
 };
 
 /*
 当前fiber睡眠一段时间，受控制流上下文影响，可能提前结束睡眠
 参数`ms`若<=0则只做错误检测，即相当于`Ctx::Check()`
 */
-::lom::Err::Ptr SleepMS(int64_t ms);
+LOM_ERR SleepMS(int64_t ms);
 
 //切回调度器，注意`Yield`不受控制流上下文的影响
 void Yield();

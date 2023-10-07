@@ -12,7 +12,7 @@ namespace PPGO_THIS_MOD
 {
     ::ppgo::Vec<::ppgo::tp_byte> b;
     nas.br = ::lom::io::BufReader::New(
-        [b, r = attr_r] (char *buf, ssize_t sz, ssize_t &rsz) -> ::lom::Err::Ptr {
+        [b, r = attr_r] (char *buf, ssize_t sz, ssize_t &rsz) -> LOM_ERR {
             ssize_t begin = buf - reinterpret_cast<char *>(&b.GetRef(0));
             ssize_t end = begin + sz;
             ::std::tuple<::ppgo::tp_int> read_ret;
@@ -67,7 +67,7 @@ namespace PPGO_THIS_MOD
     auto err = nas.br->ReadUntil(static_cast<char>(c), reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), rsz);
     if (err)
     {
-        if (err == ::lom::io::BufReader::UnexpectedEOF() && rsz >= 0 && allow_eof)
+        if (err == ::lom::io::UnexpectedEOF() && rsz >= 0 && allow_eof)
         {
             std::get<0>(ret) = rsz;
             return nullptr;
@@ -85,7 +85,7 @@ namespace PPGO_THIS_MOD
     auto err = nas.br->ReadFull(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), &rsz);
     if (err)
     {
-        if (err == ::lom::io::BufReader::UnexpectedEOF() && rsz >= 0 && allow_eof)
+        if (err == ::lom::io::UnexpectedEOF() && rsz >= 0 && allow_eof)
         {
             std::get<0>(ret) = rsz;
             return nullptr;
@@ -100,7 +100,7 @@ namespace PPGO_THIS_MOD
 {
     ::ppgo::Vec<::ppgo::tp_byte> b;
     nas.bw = ::lom::io::BufWriter::New(
-        [b, w = attr_w] (const char *buf, ssize_t sz, ssize_t &wsz) -> ::lom::Err::Ptr {
+        [b, w = attr_w] (const char *buf, ssize_t sz, ssize_t &wsz) -> LOM_ERR {
             ssize_t begin = buf - reinterpret_cast<const char *>(&b.GetRef(0));
             ssize_t end = begin + sz;
             ::std::tuple<> write_ret;

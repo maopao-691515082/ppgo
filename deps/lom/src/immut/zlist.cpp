@@ -115,67 +115,42 @@ static ssize_t ZHash(const std::shared_ptr<Str::Buf> &z)
     return h.Hash();
 }
 
-::lom::Err::Ptr ZList::DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush) const
+LOM_ERR ZList::DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush) const
 {
     auto write_int =
-        [&bw] (int64_t n) -> ::lom::Err::Ptr {
+        [&bw] (int64_t n) -> LOM_ERR {
             auto enc = ::lom::var_int::Encode(n);
             return bw->WriteAll(enc.Data(), enc.Len());
         }
     ;
 
-    auto err = write_int(str_count_);
-    if (!err)
+    LOM_RET_ON_ERR(write_int(str_count_));
+    LOM_RET_ON_ERR(write_int(ZHash(z_)));
+    LOM_RET_ON_ERR(write_int(z_->Len()));
+    LOM_RET_ON_ERR(bw->WriteAll(z_->Data(), z_->Len()));
+    if (need_flush)
     {
-        err = write_int(ZHash(z_));
-        if (!err)
-        {
-            err = write_int(z_->Len());
-            if (!err)
-            {
-                err = bw->WriteAll(z_->Data(), z_->Len());
-                if (!err && need_flush)
-                {
-                    err = bw->Flush();
-                }
-            }
-        }
+        LOM_RET_ON_ERR(bw->Flush());
     }
-    return err;
+    return nullptr;
 }
 
-::lom::Err::Ptr ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
+LOM_ERR ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
 {
     int64_t str_count;
-    std::shared_ptr<Str::Buf> z;
-    auto err = ::lom::var_int::LoadFrom(br, str_count);
-    if (!err)
+    LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, str_count));
+    int64_t h;
+    LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, h));
+    int64_t len;
+    LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, len));
+    auto z = std::make_shared<Str::Buf>(len);
+    LOM_RET_ON_ERR(br->ReadFull(z->Data(), len));
+    if (h != ZHash(z))
     {
-        int64_t h;
-        err = ::lom::var_int::LoadFrom(br, h);
-        if (!err)
-        {
-            int64_t len;
-            err = ::lom::var_int::LoadFrom(br, len);
-            if (!err)
-            {
-                z = std::make_shared<Str::Buf>(len);
-                err = br->ReadFull(z->Data(), len);
-                if (!err)
-                {
-                    if (h == ZHash(z))
-                    {
-                        zl = ZList(str_count, std::move(z));
-                    }
-                    else
-                    {
-                        err = ::lom::Err::Sprintf("ZList::LoadFrom: hash mismatch");
-                    }
-                }
-            }
-        }
+        LOM_RET_ERR("hash mismatch");
     }
-    return err;
+    zl = ZList(str_count, std::move(z));
+    return nullptr;
 }
 
 }

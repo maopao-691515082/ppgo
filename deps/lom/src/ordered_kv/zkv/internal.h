@@ -101,8 +101,8 @@ class DBImpl : public DB
 
     protected:
 
-        virtual ::lom::Err::Ptr DBGet(const Str &k, std::function<void (const StrSlice *)> f) const override;
-        virtual ::lom::Err::Ptr DBGet(const Str &k, std::function<StrSlice ()> &v) const override;
+        virtual LOM_ERR DBGet(const Str &k, std::function<void (const StrSlice *)> f) const override;
+        virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const override;
 
         virtual ::lom::ordered_kv::Iterator::Ptr DBNewIterator() const override;
 
@@ -121,10 +121,9 @@ class DBImpl : public DB
 
 public:
 
-    DBImpl(const char *path, Options opts, ::lom::Err::Ptr &err);
-    virtual ~DBImpl();
+    LOM_ERR Init(const char *path, Options opts);
 
-    virtual ::lom::Err::Ptr Write(const WriteBatch &wb) override;
+    virtual LOM_ERR Write(const WriteBatch &wb) override;
     virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot() override;
 };
 
