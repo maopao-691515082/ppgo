@@ -11,8 +11,8 @@ namespace zkv
 
 static const Str
     kMetaFileName = "META",
-    kSnapshotFileNameExt = ".snapshot",
-    kOpLogFileNameExt = ".op_log";
+    kSnapshotFileNamePrefix = "SNAPSHOT-",
+    kOpLogFileNamePrefix = "OP_LOG-";
 
 LOM_ERR DBImpl::Init(const char *path_str, Options opts)
 {
@@ -74,9 +74,9 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
         ssize_t snapshot_idx = 0, max_op_log_idx = 0;
         for (auto const &file_name : file_names)
         {
-            if (file_name.HasSuffix(kSnapshotFileNameExt))
+            if (file_name.HasPrefix(kSnapshotFileNamePrefix))
             {
-                auto snapshot_idx_str = file_name.SubStr(0, file_name.Len() - kSnapshotFileNameExt.Len());
+                auto snapshot_idx_str = file_name.SubStr(kSnapshotFileNamePrefix.Len());
                 int64_t si;
                 if (!(
                     snapshot_idx_str.ParseInt64(si, 10) &&
@@ -90,9 +90,9 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
                     snapshot_idx = si;
                 }
             }
-            if (file_name.HasSuffix(kOpLogFileNameExt))
+            if (file_name.HasPrefix(kOpLogFileNamePrefix))
             {
-                auto op_log_idx_str = file_name.SubStr(0, file_name.Len() - kOpLogFileNameExt.Len());
+                auto op_log_idx_str = file_name.SubStr(kOpLogFileNamePrefix.Len());
                 int64_t oi;
                 if (!(
                     op_log_idx_str.ParseInt64(oi, 10) &&

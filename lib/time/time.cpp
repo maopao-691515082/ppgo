@@ -14,20 +14,6 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
-::ppgo::Exc::Ptr func_sleep(::std::tuple<> &ret, ::ppgo::tp_float sec)
-{
-    if (sec > 0)
-    {
-        if (sec > 1e12)
-        {
-            sec = 1e12;
-        }
-        std::chrono::microseconds us{static_cast<uint64_t>(sec * 1e6)};
-        std::this_thread::sleep_for(us);
-    }
-    return nullptr;
-}
-
 }
 
 }

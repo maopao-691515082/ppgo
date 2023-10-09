@@ -14,5 +14,3 @@ public func time() float
 {
     return time_us().<float> / 1e6;
 }
-
-public func sleep(n float);
