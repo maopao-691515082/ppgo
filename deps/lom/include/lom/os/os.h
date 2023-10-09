@@ -2,6 +2,7 @@
 
 #include "../_internal.h"
 
+#include "_dir.h"
 #include "_file.h"
 #include "_path.h"
 #include "_stat.h"

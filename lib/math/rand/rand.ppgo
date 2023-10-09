@@ -1,21 +1,26 @@
+//返回范围在`[0, 1)`内的随机浮点数
 public func rand() float;
 
-func rand_n_impl(n int) int;
+//返回一个随机正整数
+public func rand_int() int;
+
+//返回范围在`[0, n)`范围的随机整数，输入n必须大于0
 public func rand_n(n int) int
 {
     if (n <= 0)
     {
         throw("non-positive n");
     }
-    return rand_n_impl(n);
+    return rand_int() % n;
 }
 
-func fast_rand_n_impl(n int) int;
-public func fast_rand_n(n int) int
+//`rand_int`和`rand_n`的快速版本，牺牲随机分布的效果以换取性能
+public func rand_int_fast() int;
+public func rand_n_fast(n int) int
 {
     if (n <= 0)
     {
         throw("non-positive n");
     }
-    return fast_rand_n_impl(n);
+    return rand_int_fast() % n;
 }

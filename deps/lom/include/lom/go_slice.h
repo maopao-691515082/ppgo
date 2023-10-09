@@ -171,6 +171,19 @@ public:
         return a_->a_[start_ + idx];
     }
 
+    /*
+    这两个方法是实现了标准的`begin`和`end`，以便支持`for (elem : go_slice)`的语法
+    显然这两个函数返回的迭代器是内部vector的，除了支持for语句外，不要直接使用
+    */
+    typename Array::VecIter begin() const
+    {
+        return a_->a_.begin() + start_;
+    }
+    typename Array::VecIter end() const
+    {
+        return a_->a_.begin() + start_ + Len();
+    }
+
     //slice的获取是指定起始索引和长度，而不是Go和Python的惯例[begin, end)
     GoSlice<T> Slice(ssize_t start, ssize_t len) const
     {
@@ -277,6 +290,18 @@ public:
             a_->a_[start_ + l] = a_->a_[start_ + r];
             a_->a_[start_ + r] = t;
         }
+        return *this;
+    }
+
+    //排序
+    GoSlice<T> Sort() const
+    {
+        std::sort(a_->a_.begin() + start_, a_->a_.begin() + start_ + Len());
+        return *this;
+    }
+    GoSlice<T> StableSort() const
+    {
+        std::stable_sort(a_->a_.begin() + start_, a_->a_.begin() + start_ + Len());
         return *this;
     }
 };

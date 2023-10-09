@@ -124,10 +124,8 @@ public:
         return SliceSubString(begin, Len());
     }
 
-    static inline
-        __attribute__((always_inline))
-        __attribute__((format(gnu_printf, 1, 2)))
-    tp_string Sprintf(const char *fmt, ...)
+    [[gnu::always_inline]] [[gnu::format(gnu_printf, 1, 2)]]
+    static inline tp_string Sprintf(const char *fmt, ...)
     {
         return tp_string(::lom::Sprintf(fmt, __builtin_va_arg_pack()));
     }

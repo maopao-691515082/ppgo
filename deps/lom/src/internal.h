@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include <sys/prctl.h>
 #include <sys/file.h>
+#include <dirent.h>
 
 #include "../include/lom.h"
 

@@ -23,6 +23,11 @@ uint64_t RandN(uint64_t n)
     return TLSRandGenerator()->RandN(n);
 }
 
+uint64_t RandU64()
+{
+    return TLSRandGenerator()->RandU64();
+}
+
 void SRand(uint64_t seed)
 {
     return TLSRandGenerator()->SRand(seed);

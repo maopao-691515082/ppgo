@@ -9,6 +9,11 @@ namespace ordered_kv
 namespace zkv
 {
 
+static const Str
+    kMetaFileName = "META",
+    kSnapshotFileNameExt = ".snapshot",
+    kOpLogFileNameExt = ".op_log";
+
 LOM_ERR DBImpl::Init(const char *path_str, Options opts)
 {
     if (path_str == nullptr)
@@ -19,41 +24,146 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
 
     //disk mode, init
 
-    ::lom::os::Path
-        lock_file_path(::lom::Sprintf("%s/LOCK", path_str).CStr()),
-        db_dir_path = lock_file_path.Dir();
-    auto db_dir_path_str = db_dir_path.Str();
+    path_ = ::lom::os::Path(path_str).Str();
 
     //open and lock
+    bool new_db_created = false;
     {
-        auto lock_file_path_str = lock_file_path.Str();
+        auto lock_file_path = path_.Concat("/LOCK");
         ::lom::os::FileStat fst;
-        LOM_RET_ON_ERR(::lom::os::FileStat::Stat(lock_file_path_str.CStr(), fst));
+        LOM_RET_ON_ERR(::lom::os::FileStat::Stat(lock_file_path.CStr(), fst));
         if (fst.Exists())
         {
-            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "r+e"));
+            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "r+e"));
         }
         else
         {
             if (!opts.create_if_missing)
             {
-                LOM_RET_ERR("zkv db not found at `%s`", db_dir_path_str.CStr());
+                LOM_RET_ERR("zkv db not found at `%s`", path_.CStr());
             }
-            LOM_RET_ON_ERR(::lom::os::MakeDirs(db_dir_path));
-            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path_str.CStr(), lock_file_, "w+ex", 0600));
+            LOM_RET_ON_ERR(::lom::os::MakeDirs(path_.CStr()));
+            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "w+ex", 0600));
+            new_db_created = true;
         }
         bool ok;
         LOM_RET_ON_ERR(lock_file_->TryLock(ok));
         if (!ok)
         {
-            LOM_RET_ERR("zkv db `%s` is opened by another", db_dir_path_str.CStr());
+            LOM_RET_ERR("zkv db `%s` is opened by another", path_.CStr());
         }
     }
 
-    //load data
-    //todo
+    if (new_db_created)
+    {
+        //init
+        serial_ = ::lom::Sprintf(
+            "ZKV-%zu-%zu",
+            static_cast<size_t>(::lom::NowUS()),
+            static_cast<size_t>(::lom::RandU64()));
+        LOM_RET_ON_ERR(NewOpLogFile());
+        LOM_RET_ON_ERR(DumpSnapshotFile(path_, curr_op_log_idx_, serial_, zm_));
+        LOM_RET_ON_ERR(CreateMetaFile());
+    }
+    else
+    {
+        //load data
+        LOM_RET_ON_ERR(LoadMetaFile());
+        GoSlice<Str> file_names;
+        LOM_RET_ON_ERR(::lom::os::ListDir(path_.CStr(), file_names));
+        ssize_t snapshot_idx = 0, max_op_log_idx = 0;
+        for (auto const &file_name : file_names)
+        {
+            if (file_name.HasSuffix(kSnapshotFileNameExt))
+            {
+                auto snapshot_idx_str = file_name.SubStr(0, file_name.Len() - kSnapshotFileNameExt.Len());
+                int64_t si;
+                if (!(
+                    snapshot_idx_str.ParseInt64(si, 10) &&
+                    si > 0 && si < kSSizeSoftMax &&
+                    snapshot_idx_str == ::lom::Str::FromInt64(si)))
+                {
+                    LOM_RET_ERR("invalid snapshot file name detected: `%s`", file_name.CStr());
+                }
+                if (snapshot_idx < si)
+                {
+                    snapshot_idx = si;
+                }
+            }
+            if (file_name.HasSuffix(kOpLogFileNameExt))
+            {
+                auto op_log_idx_str = file_name.SubStr(0, file_name.Len() - kOpLogFileNameExt.Len());
+                int64_t oi;
+                if (!(
+                    op_log_idx_str.ParseInt64(oi, 10) &&
+                    oi > 0 && oi < kSSizeSoftMax &&
+                    op_log_idx_str == ::lom::Str::FromInt64(oi)))
+                {
+                    LOM_RET_ERR("invalid op_log file name detected: `%s`", file_name.CStr());
+                }
+                if (max_op_log_idx < oi)
+                {
+                    max_op_log_idx = oi;
+                }
+            }
+        }
+        if (snapshot_idx <= 0)
+        {
+            LOM_RET_ERR("no snapshot file found");
+        }
+        if (snapshot_idx > max_op_log_idx)
+        {
+            LOM_RET_ERR("no op-log file found since snapshot #%zd", snapshot_idx);
+        }
+        LOM_RET_ON_ERR(LoadDataFromFiles(snapshot_idx, max_op_log_idx));
+    }
 
-    LOM_RET_ERR("todo");
+    //start dump thread
+    {
+        dump_task_ = std::make_shared<SnapshotDumpTask>();
+        std::thread([handle_bg_err = opts.handle_bg_err, task = dump_task_] () {
+            for (;;)
+            {
+                bool ok = false;
+                Str path;
+                ssize_t idx;
+                Str serial;
+                ZMap zm;
+                {
+                    std::lock_guard<std::mutex> lg(task->lock_);
+                    if (task->cmd_ == SnapshotDumpTask::kCmd_Exit)
+                    {
+                        return;
+                    }
+                    if (task->cmd_ == SnapshotDumpTask::kCmd_Dump)
+                    {
+                        //pop task
+                        path = task->path_;
+                        idx = task->idx_;
+                        serial = task->serial_;
+                        zm = task->zm_;
+                        task->zm_ = ZMap();
+
+                        ok = true;
+                        task->cmd_ = SnapshotDumpTask::kCmd_None;
+                    }
+                }
+                if (!ok)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    continue;
+                }
+
+                auto err = DumpSnapshotFile(path, idx, serial, zm);
+                if (err && handle_bg_err)
+                {
+                    handle_bg_err(err);
+                }
+            }
+        }).detach();
+    }
+
+    return nullptr;
 }
 
 LOM_ERR DBImpl::Write(const WriteBatch &wb)

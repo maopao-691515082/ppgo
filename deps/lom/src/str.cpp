@@ -388,10 +388,10 @@ static Str StrSliceJoin(StrSlice s, const GoSlice<T> &gs)
     auto s_data = s.Data();
     auto s_len = s.Len();
     ssize_t total_len = -s_len;
-    for (ssize_t i = 0; i < gs.Len(); ++ i)
+    for (auto const &t : gs)
     {
         total_len += s_len;
-        total_len += gs.At(i).Len();
+        total_len += t.Len();
     }
     if (total_len <= 0)
     {

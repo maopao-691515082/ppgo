@@ -30,9 +30,8 @@ static LOM_ERR PathMake(const char *path, GoSlice<::lom::Str> &paths)
     Assert(abs_path.HasPrefix("/"));
     auto parts = abs_path.Slice().Split("/");
     paths = paths.Nil();
-    for (ssize_t i = 0; i < parts.Len(); ++ i)
+    for (auto const &part : parts)
     {
-        auto part = parts.At(i);
         if (part == "" || part == ".")
         {
             continue;
@@ -63,10 +62,10 @@ Path::Path(const char *path)
     }
 
     ::lom::Str::Buf b;
-    for (ssize_t i = 0; i < paths_.Len(); ++ i)
+    for (auto const &p : paths_)
     {
         b.Append("/");
-        b.Append(paths_.At(i));
+        b.Append(p);
     }
     return ::lom::Str(std::move(b));
 }

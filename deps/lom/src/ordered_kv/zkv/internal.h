@@ -113,11 +113,43 @@ class DBImpl : public DB
         }
     };
 
+    struct SnapshotDumpTask
+    {
+        typedef std::shared_ptr<SnapshotDumpTask> Ptr;
+
+        enum Cmd
+        {
+            kCmd_None   = 0,
+            kCmd_Dump   = 1,
+            kCmd_Exit   = 100,
+        };
+
+        std::mutex lock_;
+
+        Cmd cmd_ = kCmd_None;
+
+        Str path_;
+        ssize_t idx_;
+        Str serial_;
+        ZMap zm_;
+    };
+
     std::mutex write_lock_, update_lock_;
 
     ZMap zm_;
 
+    Str path_;
     ::lom::os::File::Ptr lock_file_;
+    Str serial_;
+    ::lom::os::File::Ptr curr_op_log_file_;
+    ssize_t curr_op_log_idx_ = 0;
+    SnapshotDumpTask::Ptr dump_task_;
+
+    LOM_ERR CreateMetaFile() const;
+    LOM_ERR LoadMetaFile();
+    static LOM_ERR DumpSnapshotFile(const Str &path, ssize_t idx, const Str &serial, ZMap zm);
+    LOM_ERR NewOpLogFile();
+    LOM_ERR LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx);
 
 public:
 

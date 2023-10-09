@@ -587,6 +587,15 @@ public:
     //算法同`StrSlice`的`Split`，但返回的`GoSlice`的元素是`Str`对象类型
     GoSlice<Str> Split(StrSlice sep) const;
 
+    Str SubStr(ssize_t start, ssize_t len) const
+    {
+        return Slice().Slice(start, len);
+    }
+    Str SubStr(ssize_t start) const
+    {
+        return Slice().Slice(start);
+    }
+
     /*
     `Buf`对象可看做是一段可写、可追加的字节区，一般用于构建字符串，不可拷贝构建或赋值
     会保证逻辑数据后有一个额外的`\0`字节，但是调用者不应该去修改它，否则行为未定义
@@ -746,6 +755,7 @@ public:
 类似标准库的`sprintf`，但不是打印到给定buf，而是打印成一个`Str`对象
 输入参数语法和`printf`族的规定一致
 */
-Str Sprintf(const char *fmt, ...) __attribute__((format(gnu_printf, 1, 2)));
+[[gnu::format(gnu_printf, 1, 2)]]
+Str Sprintf(const char *fmt, ...);
 
 }

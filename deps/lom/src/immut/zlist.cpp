@@ -124,7 +124,6 @@ LOM_ERR ZList::DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush) cons
         }
     ;
 
-    LOM_RET_ON_ERR(write_int(str_count_));
     LOM_RET_ON_ERR(write_int(ZHash(z_)));
     LOM_RET_ON_ERR(write_int(z_->Len()));
     LOM_RET_ON_ERR(bw->WriteAll(z_->Data(), z_->Len()));
@@ -137,8 +136,6 @@ LOM_ERR ZList::DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush) cons
 
 LOM_ERR ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
 {
-    int64_t str_count;
-    LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, str_count));
     int64_t h;
     LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, h));
     int64_t len;
@@ -149,6 +146,22 @@ LOM_ERR ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
     {
         LOM_RET_ERR("hash mismatch");
     }
+
+    ssize_t str_count = 0;
+    const char *p = z->Data();
+    auto sz = z->Len();
+    while (sz > 0)
+    {
+        int64_t n;
+        if (!(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz))
+        {
+            LOM_RET_ERR("invalid zlist data");
+        }
+        ++ str_count;
+        p += n + 1;
+        sz -= n + 1;
+    }
+
     zl = ZList(str_count, std::move(z));
     return nullptr;
 }

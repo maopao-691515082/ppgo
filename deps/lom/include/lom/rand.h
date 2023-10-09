@@ -34,6 +34,11 @@ public:
         return n == 0 ? 0 : r_() % n;
     }
 
+    uint64_t RandU64()
+    {
+        return r_();
+    }
+
     //设置随机种子
     void SRand(uint64_t seed)
     {
@@ -47,6 +52,7 @@ RandGenerator *TLSRandGenerator();
 //使用默认的thread_local的`RandGenerator`的常用算法的快捷方式
 double Rand();  //`Rand01<double>`
 uint64_t RandN(uint64_t n);
+uint64_t RandU64();
 void SRand(uint64_t seed);
 
 }
