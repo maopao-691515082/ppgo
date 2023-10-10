@@ -445,7 +445,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
         return nullptr;
     }
 
-    //disk mode, init
+    //persistent mode, init
 
     path_ = ::lom::os::Path(path_str).Str();
 
