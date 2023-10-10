@@ -4,7 +4,7 @@
 
 int main(int, char *[])
 {
-    lom::immut::ZList zl0;
+    lom::immut::ZList zl0(lom::GoSlice<lom::StrSlice>{"123", "456"});
     auto zl1 = zl0.Append("abc");
     auto zl2 = zl1.Extend(lom::GoSlice<lom::StrSlice>{"def", "ghi"});
     auto zl3 = zl2.Extend(zl2);

@@ -86,6 +86,13 @@ public:
     {
     }
 
+    ZList(const GoSlice<StrSlice> &gs)
+    {
+        auto zl = ZList().Extend(gs);
+        str_count_ = zl.str_count_;
+        z_ = zl.z_;
+    }
+
     //返回字符串数量
     ssize_t StrCount() const
     {

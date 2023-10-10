@@ -138,11 +138,18 @@ class DBImpl : public DB
 
     ZMap zm_;
 
+    bool mem_mode_ = false;
+
     Str path_;
     ::lom::os::File::Ptr lock_file_;
     Str serial_;
-    ::lom::os::File::Ptr curr_op_log_file_;
+
     ssize_t curr_op_log_idx_ = 0;
+    ::lom::io::BufWriter::Ptr curr_op_log_writer_;
+    ssize_t op_log_acc_len_ = 0;
+
+    static const ssize_t kOpLogAccLenMax = 128LL * 1024 * 1024;
+
     SnapshotDumpTask::Ptr dump_task_;
 
     static LOM_ERR GetFileIdxes(const Str &path, GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes);
@@ -153,11 +160,16 @@ class DBImpl : public DB
 
     static LOM_ERR DumpSnapshotFile(const Str &path, ssize_t idx, const Str &serial, ZMap zm);
     LOM_ERR NewOpLogFile();
+    LOM_ERR RecordOpLog(const WriteBatch::RawOpsMap &wb_ops);
     LOM_ERR LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx);
 
     static void DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, SnapshotDumpTask::Ptr task);
 
+    void WriteZM(const WriteBatch::RawOpsMap &wb_ops, ZMap *old_zm = nullptr);
+
 public:
+
+    virtual ~DBImpl();
 
     LOM_ERR Init(const char *path, Options opts);
 

@@ -22,6 +22,12 @@ class AVLList
 
 public:
 
+    typedef E ElemType;
+
+    AVLList()
+    {
+    }
+
     ssize_t Size() const
     {
         return avl_.Size();
@@ -99,6 +105,9 @@ class AVLMap
 
 public:
 
+    typedef K KeyType;
+    typedef V ValueType;
+
     AVLMap()
     {
     }
@@ -175,6 +184,8 @@ class AVLSet
     }
 
 public:
+
+    typedef E ElemType;
 
     AVLSet()
     {

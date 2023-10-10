@@ -210,6 +210,9 @@ class AVL
 
 public:
 
+    typedef K KeyType;
+    typedef V ValueType;
+
     AVL()
     {
     }
