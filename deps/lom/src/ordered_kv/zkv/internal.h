@@ -145,11 +145,17 @@ class DBImpl : public DB
     ssize_t curr_op_log_idx_ = 0;
     SnapshotDumpTask::Ptr dump_task_;
 
+    static LOM_ERR GetFileIdxes(const Str &path, GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes);
+    LOM_ERR GetFileIdxes(GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes) const;
+
     LOM_ERR CreateMetaFile() const;
     LOM_ERR LoadMetaFile();
+
     static LOM_ERR DumpSnapshotFile(const Str &path, ssize_t idx, const Str &serial, ZMap zm);
     LOM_ERR NewOpLogFile();
     LOM_ERR LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx);
+
+    static void DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, SnapshotDumpTask::Ptr task);
 
 public:
 

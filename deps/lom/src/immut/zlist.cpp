@@ -6,6 +6,12 @@ namespace lom
 namespace immut
 {
 
+std::shared_ptr<Str::Buf> ZList::EmptyBuf()
+{
+    static std::shared_ptr<Str::Buf> empty_buf = std::make_shared<Str::Buf>();
+    return empty_buf;
+}
+
 GoSlice<StrSlice> ZList::Parse(ssize_t limit) const
 {
     auto count = limit <= 0 || limit > StrCount() ? StrCount() : limit;

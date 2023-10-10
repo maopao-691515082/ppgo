@@ -4,7 +4,6 @@
 
 #include "_err.h"
 #include "_buf_io.h"
-#include "_fds.h"
 
 namespace lom
 {

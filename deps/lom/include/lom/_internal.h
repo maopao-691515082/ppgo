@@ -45,6 +45,9 @@ static_assert(
 static_assert(
     sizeof(float) == 4 && sizeof(double) == 8,
     "error: lom needs 32-bit `float` and 64-bit `double`");
+static_assert(
+    sizeof(off_t) == 8 && std::is_signed_v<off_t>,
+    "error: lom needs 64-bit signed `off_t`");
 
 namespace lom
 {

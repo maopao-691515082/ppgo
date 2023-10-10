@@ -23,6 +23,8 @@ class ZList
     {
     }
 
+    static std::shared_ptr<Str::Buf> EmptyBuf();
+
 public:
 
     class Iterator
@@ -80,7 +82,7 @@ public:
         }
     };
 
-    ZList() : z_(std::make_shared<Str::Buf>())
+    ZList() : z_(EmptyBuf())
     {
     }
 

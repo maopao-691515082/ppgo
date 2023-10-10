@@ -14,6 +14,166 @@ static const Str
     kSnapshotFileNamePrefix = "SNAPSHOT-",
     kOpLogFileNamePrefix = "OP_LOG-";
 
+LOM_ERR DBImpl::GetFileIdxes(
+    const Str &path, GoSlice<ssize_t> &ret_snapshot_idxes, GoSlice<ssize_t> &ret_op_log_idxes)
+{
+    GoSlice<ssize_t> snapshot_idxes, op_log_idxes;
+    GoSlice<Str> file_names;
+    LOM_RET_ON_ERR(::lom::os::ListDir(path.CStr(), file_names));
+    for (auto const &file_name : file_names)
+    {
+        if (file_name.HasPrefix(kSnapshotFileNamePrefix))
+        {
+            auto snapshot_idx_str = file_name.SubStr(kSnapshotFileNamePrefix.Len());
+            int64_t si;
+            if (snapshot_idx_str.ParseInt64(si, 10) &&
+                si > 0 && si < kSSizeSoftMax &&
+                snapshot_idx_str == ::lom::Str::FromInt64(si))
+            {
+                snapshot_idxes = snapshot_idxes.Append(si);
+            }
+        }
+        if (file_name.HasPrefix(kOpLogFileNamePrefix))
+        {
+            auto op_log_idx_str = file_name.SubStr(kOpLogFileNamePrefix.Len());
+            int64_t oi;
+            if (op_log_idx_str.ParseInt64(oi, 10) &&
+                oi > 0 && oi < kSSizeSoftMax &&
+                op_log_idx_str == ::lom::Str::FromInt64(oi))
+            {
+                op_log_idxes = op_log_idxes.Append(oi);
+            }
+        }
+    }
+    snapshot_idxes.Sort().Reverse();
+    op_log_idxes.Sort().Reverse();
+
+    ret_snapshot_idxes = snapshot_idxes;
+    ret_op_log_idxes = op_log_idxes;
+    return nullptr;
+}
+
+LOM_ERR DBImpl::GetFileIdxes(GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes) const
+{
+    return GetFileIdxes(path_, snapshot_idxes, op_log_idxes);
+}
+
+LOM_ERR DBImpl::CreateMetaFile() const
+{
+    auto meta_file_path = path_.Concat("/").Concat(kMetaFileName);
+    auto tmp_meta_file_path = meta_file_path.Concat(".tmp");
+    ::lom::os::File::Ptr meta_file;
+    LOM_RET_ON_ERR(::lom::os::File::Open(tmp_meta_file_path.CStr(), meta_file, "w", 0600));
+    auto bw = ::lom::io::BufWriter::New(
+        [meta_file] (const char *buf, ssize_t sz, ssize_t &wsz) -> LOM_ERR {
+            return meta_file->Write(buf, sz, wsz);
+        }
+    );
+    LOM_RET_ON_ERR(::lom::immut::ZList().Append(serial_).DumpTo(bw));
+    LOM_RET_ON_ERR(::lom::os::Rename(tmp_meta_file_path.CStr(), meta_file_path.CStr()));
+    return nullptr;
+}
+
+LOM_ERR DBImpl::LoadMetaFile()
+{
+    auto meta_file_path = path_.Concat("/").Concat(kMetaFileName);
+    ::lom::os::File::Ptr meta_file;
+    LOM_RET_ON_ERR(::lom::os::File::Open(meta_file_path.CStr(), meta_file));
+    auto br = ::lom::io::BufReader::New(
+        [meta_file] (char *buf, ssize_t sz, ssize_t &rsz) -> LOM_ERR {
+            return meta_file->Read(buf, sz, rsz);
+        }
+    );
+    ::lom::immut::ZList zl;
+    LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+    if (zl.StrCount() < 1)
+    {
+        LOM_RET_ERR("invalid meta file");
+    }
+    serial_ = zl.FirstStr();
+    return nullptr;
+}
+
+void DBImpl::DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, SnapshotDumpTask::Ptr task)
+{
+    for (;;)
+    {
+        bool ok = false;
+        Str path;
+        ssize_t idx;
+        Str serial;
+        ZMap zm;
+        {
+            std::lock_guard<std::mutex> lg(task->lock_);
+            if (task->cmd_ == SnapshotDumpTask::kCmd_Exit)
+            {
+                return;
+            }
+            if (task->cmd_ == SnapshotDumpTask::kCmd_Dump)
+            {
+                //pop task
+                path = task->path_;
+                idx = task->idx_;
+                serial = task->serial_;
+                zm = task->zm_;
+                task->zm_ = ZMap();
+
+                ok = true;
+                task->cmd_ = SnapshotDumpTask::kCmd_None;
+            }
+        }
+        if (!ok)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
+        auto dump_and_purge = [&] () -> LOM_ERR {
+            LOM_RET_ON_ERR(DumpSnapshotFile(path, idx, serial, zm));
+
+            GoSlice<ssize_t> snapshot_idxes, op_log_idxes;
+            LOM_RET_ON_ERR(GetFileIdxes(path, snapshot_idxes, op_log_idxes));
+            if (snapshot_idxes.Len() == 0)
+            {
+                LOM_RET_ERR("snapshot lost");
+            }
+
+            auto purge_file = [&] (const Str &name) {
+                auto path_name = path.Concat("/").Concat(name);
+                auto err = ::lom::os::RemoveTree(path_name.CStr());
+                if (err && handle_bg_err)
+                {
+                    handle_bg_err(err);
+                }
+            };
+
+            auto snapshot_idx = snapshot_idxes.At(0);
+            for (auto si : snapshot_idxes)
+            {
+                if (si < snapshot_idx)
+                {
+                    purge_file(kSnapshotFileNamePrefix.Concat(Str::FromInt64(si)));
+                }
+            }
+            for (auto oi : op_log_idxes)
+            {
+                if (oi < snapshot_idx)
+                {
+                    purge_file(kOpLogFileNamePrefix.Concat(Str::FromInt64(oi)));
+                }
+            }
+
+            return nullptr;
+        };
+
+        auto err = dump_and_purge();
+        if (err && handle_bg_err)
+        {
+            handle_bg_err(err);
+        }
+    }
+}
+
 LOM_ERR DBImpl::Init(const char *path_str, Options opts)
 {
     if (path_str == nullptr)
@@ -34,7 +194,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
         LOM_RET_ON_ERR(::lom::os::FileStat::Stat(lock_file_path.CStr(), fst));
         if (fst.Exists())
         {
-            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "r+e"));
+            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "r+"));
         }
         else
         {
@@ -43,7 +203,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
                 LOM_RET_ERR("zkv db not found at `%s`", path_.CStr());
             }
             LOM_RET_ON_ERR(::lom::os::MakeDirs(path_.CStr()));
-            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "w+ex", 0600));
+            LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "w+x", 0600));
             new_db_created = true;
         }
         bool ok;
@@ -69,48 +229,17 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
     {
         //load data
         LOM_RET_ON_ERR(LoadMetaFile());
-        GoSlice<Str> file_names;
-        LOM_RET_ON_ERR(::lom::os::ListDir(path_.CStr(), file_names));
-        ssize_t snapshot_idx = 0, max_op_log_idx = 0;
-        for (auto const &file_name : file_names)
-        {
-            if (file_name.HasPrefix(kSnapshotFileNamePrefix))
-            {
-                auto snapshot_idx_str = file_name.SubStr(kSnapshotFileNamePrefix.Len());
-                int64_t si;
-                if (!(
-                    snapshot_idx_str.ParseInt64(si, 10) &&
-                    si > 0 && si < kSSizeSoftMax &&
-                    snapshot_idx_str == ::lom::Str::FromInt64(si)))
-                {
-                    LOM_RET_ERR("invalid snapshot file name detected: `%s`", file_name.CStr());
-                }
-                if (snapshot_idx < si)
-                {
-                    snapshot_idx = si;
-                }
-            }
-            if (file_name.HasPrefix(kOpLogFileNamePrefix))
-            {
-                auto op_log_idx_str = file_name.SubStr(kOpLogFileNamePrefix.Len());
-                int64_t oi;
-                if (!(
-                    op_log_idx_str.ParseInt64(oi, 10) &&
-                    oi > 0 && oi < kSSizeSoftMax &&
-                    op_log_idx_str == ::lom::Str::FromInt64(oi)))
-                {
-                    LOM_RET_ERR("invalid op_log file name detected: `%s`", file_name.CStr());
-                }
-                if (max_op_log_idx < oi)
-                {
-                    max_op_log_idx = oi;
-                }
-            }
-        }
-        if (snapshot_idx <= 0)
+        GoSlice<ssize_t> snapshot_idxes, op_log_idxes;
+        LOM_RET_ON_ERR(GetFileIdxes(snapshot_idxes, op_log_idxes));
+        if (snapshot_idxes.Len() == 0)
         {
             LOM_RET_ERR("no snapshot file found");
         }
+        if (op_log_idxes.Len() == 0)
+        {
+            LOM_RET_ERR("no op-log file found");
+        }
+        ssize_t snapshot_idx = snapshot_idxes.At(0), max_op_log_idx = op_log_idxes.At(0);
         if (snapshot_idx > max_op_log_idx)
         {
             LOM_RET_ERR("no op-log file found since snapshot #%zd", snapshot_idx);
@@ -122,44 +251,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
     {
         dump_task_ = std::make_shared<SnapshotDumpTask>();
         std::thread([handle_bg_err = opts.handle_bg_err, task = dump_task_] () {
-            for (;;)
-            {
-                bool ok = false;
-                Str path;
-                ssize_t idx;
-                Str serial;
-                ZMap zm;
-                {
-                    std::lock_guard<std::mutex> lg(task->lock_);
-                    if (task->cmd_ == SnapshotDumpTask::kCmd_Exit)
-                    {
-                        return;
-                    }
-                    if (task->cmd_ == SnapshotDumpTask::kCmd_Dump)
-                    {
-                        //pop task
-                        path = task->path_;
-                        idx = task->idx_;
-                        serial = task->serial_;
-                        zm = task->zm_;
-                        task->zm_ = ZMap();
-
-                        ok = true;
-                        task->cmd_ = SnapshotDumpTask::kCmd_None;
-                    }
-                }
-                if (!ok)
-                {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    continue;
-                }
-
-                auto err = DumpSnapshotFile(path, idx, serial, zm);
-                if (err && handle_bg_err)
-                {
-                    handle_bg_err(err);
-                }
-            }
+            DumpThreadMain(handle_bg_err, task);
         }).detach();
     }
 

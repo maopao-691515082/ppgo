@@ -28,7 +28,7 @@ public:
 
     /*
     判断文件类型的快捷方法
-        `IsLink`只有`LStat`符号链接时才为true
+        `IsLink()`为true当且仅当`LStat`操作符号链接，且此时其他`IsXXX()`均为false
     */
     bool IsDir() const
     {
