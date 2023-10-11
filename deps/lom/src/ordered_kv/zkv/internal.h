@@ -13,7 +13,11 @@ namespace zkv
 
 class DBImpl : public DB
 {
+public:
+
     typedef ::lom::immut::AVL<Str, ::lom::immut::ZList> ZMap;
+
+private:
 
     class Snapshot : public ::lom::ordered_kv::Snapshot
     {
@@ -148,7 +152,7 @@ class DBImpl : public DB
     ::lom::io::BufWriter::Ptr curr_op_log_writer_;
     ssize_t op_log_acc_len_ = 0;
 
-    static const ssize_t kOpLogAccLenMax = 128LL * 1024 * 1024;
+    static const ssize_t kOpLogAccLenMax = 16LL * 1024 * 1024;
 
     SnapshotDumpTask::Ptr dump_task_;
 
@@ -164,8 +168,6 @@ class DBImpl : public DB
     LOM_ERR LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx);
 
     static void DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, SnapshotDumpTask::Ptr task);
-
-    void WriteZM(const WriteBatch::RawOpsMap &wb_ops, ZMap *old_zm = nullptr);
 
 public:
 
