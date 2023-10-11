@@ -299,7 +299,6 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
             LOM_RET_ERR("`%s`: invalid op-log file head", file_path.CStr());
         }
 
-        //提高性能：每个op-log文件的所有record合并Write一次
         WriteBatch wb;
         for (;;)
         {
@@ -321,18 +320,24 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
                 return err;
             }
 
-            auto record = zl.Parse();
-            while (record.Len() > 0)
+            //重放的op-log长度也计算在累计值里面，若超出阈值则会在开始工作后的第一次Write时进行dump和purge
+            op_log_acc_len_ += zl.SpaceCost();
+
+            auto iter = zl.NewForwardIterator();
+            for (;;)
             {
-                if (record.At(0) == "s" && record.Len() >= 3)
+                StrSlice cmd, k, v;
+                if (!iter(cmd))
                 {
-                    wb.Set(record.At(1), record.At(2));
-                    record = record.Slice(3);
+                    break;
                 }
-                else if (record.At(0) == "d" && record.Len() >= 2)
+                if (cmd == "s" && iter(k) && iter(v))
                 {
-                    wb.Del(record.At(1));
-                    record = record.Slice(2);
+                    wb.Set(k, v);
+                }
+                else if (cmd == "d" && iter(k))
+                {
+                    wb.Del(k);
                 }
                 else
                 {
@@ -514,7 +519,8 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
     //start dump thread
     {
         dump_task_ = std::make_shared<SnapshotDumpTask>();
-        std::thread([handle_bg_err = opts.handle_bg_err, task = dump_task_] () {
+        std::thread([lock_file = lock_file_, handle_bg_err = opts.handle_bg_err, task = dump_task_] () {
+            static_cast<void>(lock_file);   //holder
             DumpThreadMain(handle_bg_err, task);
         }).detach();
     }

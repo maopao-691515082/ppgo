@@ -155,6 +155,9 @@ int main(int argc, char *argv[])
     std::cout << "check ok" << std::endl;
 
     db = nullptr;
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     ts = lom::NowFloat();
     err = lom::ordered_kv::zkv::DB::Open(
         argv[1], db,
