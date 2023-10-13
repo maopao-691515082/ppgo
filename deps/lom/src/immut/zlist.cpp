@@ -45,10 +45,10 @@ StrSlice ZList::FirstStr() const
 
 std::function<bool (StrSlice &)> ZList::NewForwardIterator() const
 {
-    return [z = z_, zs = std::make_shared<StrSlice>(z_->Data(), z_->Len(), true)] (StrSlice &s) -> bool {
+    return [z = z_, zs = StrSlice(z_->Data(), z_->Len(), true)] (StrSlice &s) mutable -> bool {
         static_cast<void>(z); //holder
-        const char *p = zs->Data();
-        auto sz = zs->Len();
+        const char *p = zs.Data();
+        auto sz = zs.Len();
         if (sz == 0)
         {
             return false;
@@ -58,7 +58,7 @@ std::function<bool (StrSlice &)> ZList::NewForwardIterator() const
         s = StrSlice(p, n, true);
         p += n + 1;
         sz -= n + 1;
-        *zs = StrSlice(p, sz, true);
+        zs = StrSlice(p, sz, true);
         return true;
     };
 }
