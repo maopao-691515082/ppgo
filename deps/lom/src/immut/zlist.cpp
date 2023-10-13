@@ -22,11 +22,11 @@ GoSlice<StrSlice> ZList::Parse(ssize_t limit) const
     while (count > 0 && sz > 0)
     {
         int64_t n;
-        Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz);
-        r = r.Append(StrSlice(p, n, true));
+        Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n <= sz);
+        r = r.Append(StrSlice(p, n));
         -- count;
-        p += n + 1;
-        sz -= n + 1;
+        p += n;
+        sz -= n;
     }
 
     return r;
@@ -39,26 +39,23 @@ StrSlice ZList::FirstStr() const
     Assert(sz > 0);
 
     int64_t n;
-    Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz);
-    return StrSlice(p, n, true);
+    Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n <= sz);
+    return StrSlice(p, n);
 }
 
 std::function<bool (StrSlice &)> ZList::NewForwardIterator() const
 {
-    return [z = z_, zs = StrSlice(z_->Data(), z_->Len(), true)] (StrSlice &s) mutable -> bool {
+    return [z = z_, p = static_cast<const char *>(z_->Data()), sz = z_->Len()] (StrSlice &s) mutable -> bool {
         static_cast<void>(z); //holder
-        const char *p = zs.Data();
-        auto sz = zs.Len();
         if (sz == 0)
         {
             return false;
         }
         int64_t n;
-        Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz);
-        s = StrSlice(p, n, true);
-        p += n + 1;
-        sz -= n + 1;
-        zs = StrSlice(p, sz, true);
+        Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n <= sz);
+        s = StrSlice(p, n);
+        p += n;
+        sz -= n;
         return true;
     };
 }
@@ -67,11 +64,10 @@ ZList ZList::Append(StrSlice s) const
 {
     auto len_enc = ::lom::var_int::Encode(s.Len());
 
-    auto b = std::make_shared<Str::Buf>(0, z_->Len() + len_enc.Len() + s.Len() + 1);
+    auto b = std::make_shared<Str::Buf>(0, z_->Len() + len_enc.Len() + s.Len());
     b->Append(z_->Data(), z_->Len());
     b->Append(len_enc);
     b->Append(s);
-    b->Append("\0", 1);
     Assert(b->Len() == b->Cap());
 
     return ZList(str_count_ + 1, std::move(b));
@@ -95,7 +91,7 @@ ZList ZList::Extend(const GoSlice<StrSlice> &gs) const
     auto len_enc_gs = gs.Map<Str>([&total_len] (const StrSlice &s) -> Str {
         auto s_len = s.Len();
         auto len_enc = ::lom::var_int::Encode(s_len);
-        total_len += len_enc.Len() + s_len + 1;
+        total_len += len_enc.Len() + s_len;
         return len_enc;
     });
 
@@ -105,7 +101,6 @@ ZList ZList::Extend(const GoSlice<StrSlice> &gs) const
     {
         b->Append(len_enc_gs.At(i));
         b->Append(gs.At(i));
-        b->Append("\0", 1);
     }
     Assert(b->Len() == b->Cap());
 

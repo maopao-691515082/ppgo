@@ -3,7 +3,7 @@
 namespace lom
 {
 
-StrSlice::StrSlice(const Str &s) : StrSlice(s.Data(), s.Len(), true)
+StrSlice::StrSlice(const Str &s) : StrSlice(s.Data(), s.Len())
 {
 }
 
@@ -24,62 +24,80 @@ bool StrSlice::CaseEq(StrSlice s) const
     return true;
 }
 
-#define LOM_STR_SLICE_PARSE_NUM(_str_to_raw_v)  \
-    do {                                        \
-        const char *p;                          \
-        std::string buf;                        \
-        auto len = Len();                       \
-        if (len == 0) {                         \
-            return false;                       \
-        }                                       \
-        if (is_zero_end_) {                     \
-            p = Data();                         \
-        } else {                                \
-            buf.assign(Data(), len);            \
-            p = buf.c_str();                    \
-        }                                       \
-        if (isspace(*p)) {                      \
-            return false;                       \
-        }                                       \
-        const char *end_ptr;                    \
-        errno = 0;                              \
-        auto raw_v = _str_to_raw_v;             \
-        if (*end_ptr != '\0') {                 \
-            return false;                       \
-        }                                       \
-        if (end_ptr != p + len) {               \
-            return false;                       \
-        }                                       \
-        if (errno != 0) {                       \
-            return false;                       \
-        }                                       \
-        v = raw_v;                              \
-        return true;                            \
+#define LOM_STR_PARSE_NUM(_str_to_raw_v)    \
+    do {                                    \
+        auto p = Data();                    \
+        auto len = Len();                   \
+        if (len == 0) {                     \
+            return false;                   \
+        }                                   \
+        if (isspace(*p)) {                  \
+            return false;                   \
+        }                                   \
+        const char *end_ptr;                \
+        errno = 0;                          \
+        auto raw_v = _str_to_raw_v;         \
+        if (*end_ptr != '\0') {             \
+            return false;                   \
+        }                                   \
+        if (end_ptr != p + len) {           \
+            return false;                   \
+        }                                   \
+        if (errno != 0) {                   \
+            return false;                   \
+        }                                   \
+        v = raw_v;                          \
+        return true;                        \
     } while (false)
+
+bool Str::ParseInt64(int64_t &v, int base) const
+{
+    LOM_STR_PARSE_NUM(strtoll(p, const_cast<char **>(&end_ptr), base));
+}
+
+bool Str::ParseUInt64(uint64_t &v, int base) const
+{
+    LOM_STR_PARSE_NUM(strtoull(p, const_cast<char **>(&end_ptr), base));
+}
+
+bool Str::ParseFloat(float &v) const
+{
+    LOM_STR_PARSE_NUM(strtof(p, const_cast<char **>(&end_ptr)));
+}
+
+bool Str::ParseDouble(double &v) const
+{
+    LOM_STR_PARSE_NUM(strtod(p, const_cast<char **>(&end_ptr)));
+}
+
+bool Str::ParseLongDouble(long double &v) const
+{
+    LOM_STR_PARSE_NUM(strtold(p, const_cast<char **>(&end_ptr)));
+}
 
 bool StrSlice::ParseInt64(int64_t &v, int base) const
 {
-    LOM_STR_SLICE_PARSE_NUM(strtoll(p, const_cast<char **>(&end_ptr), base));
+    return Str(*this).ParseInt64(v, base);
 }
 
 bool StrSlice::ParseUInt64(uint64_t &v, int base) const
 {
-    LOM_STR_SLICE_PARSE_NUM(strtoull(p, const_cast<char **>(&end_ptr), base));
+    return Str(*this).ParseUInt64(v, base);
 }
 
 bool StrSlice::ParseFloat(float &v) const
 {
-    LOM_STR_SLICE_PARSE_NUM(strtof(p, const_cast<char **>(&end_ptr)));
+    return Str(*this).ParseFloat(v);
 }
 
 bool StrSlice::ParseDouble(double &v) const
 {
-    LOM_STR_SLICE_PARSE_NUM(strtod(p, const_cast<char **>(&end_ptr)));
+    return Str(*this).ParseDouble(v);
 }
 
 bool StrSlice::ParseLongDouble(long double &v) const
 {
-    LOM_STR_SLICE_PARSE_NUM(strtold(p, const_cast<char **>(&end_ptr)));
+    return Str(*this).ParseLongDouble(v);
 }
 
 static const char *const kHexDigests = "0123456789ABCDEF";

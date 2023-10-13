@@ -23,14 +23,8 @@ class Str;
 */
 class StrSlice final
 {
-    /*
-    一般的字符串slice是指针+长度的组合，这里稍微复杂一点，长度用48bit存储，
-    将空出来的两个字节中的一个用于标记此StrSlice后面是否有一个合法的字节`\0`，这在某些操作时会比较方便
-    */
     const char *p_;
-    int16_t is_zero_end_;
-    uint16_t len_high_;
-    uint32_t len_low_;
+    ssize_t len_;
 
     ssize_t CheckIdx(ssize_t idx, bool allow_end) const
     {
@@ -45,28 +39,21 @@ class StrSlice final
 public:
 
     //通用构造器，调用者自行保证输入合法性
-    StrSlice(const char *p, ssize_t len, bool is_zero_end) : p_(p), is_zero_end_(is_zero_end)
+    StrSlice(const char *p, ssize_t len) : p_(p), len_(len)
     {
-        Assert(0 <= len && len <= kStrLenMax && (!is_zero_end || p[len] == '\0'));
-        len_high_ = len >> 32;
-        len_low_ = len & kUInt32Max;
-    }
-
-    //根据指定数据段构造，在未知信息的情况下`is_zero_end_`为false
-    StrSlice(const char *p, ssize_t len) : StrSlice(p, len, false)
-    {
+        Assert(0 <= len && len <= kStrLenMax);
     }
 
     //空切片
-    StrSlice() : StrSlice("", 0, true)
+    StrSlice() : StrSlice("", 0)
     {
     }
 
     //从各种字符串构建
-    StrSlice(const char *s) : StrSlice(s, static_cast<ssize_t>(strlen(s)), true)
+    StrSlice(const char *s) : StrSlice(s, static_cast<ssize_t>(strlen(s)))
     {
     }
-    StrSlice(const std::string &s) : StrSlice(s.c_str(), static_cast<ssize_t>(s.size()), true)
+    StrSlice(const std::string &s) : StrSlice(s.c_str(), static_cast<ssize_t>(s.size()))
     {
     }
     StrSlice(const Str &s);
@@ -77,7 +64,7 @@ public:
     }
     ssize_t Len() const
     {
-        return (static_cast<ssize_t>(len_high_) << 32) + len_low_;
+        return len_;
     }
 
     char Get(ssize_t idx) const
@@ -114,12 +101,12 @@ public:
         auto this_len = CheckIdx(start, true);
         auto cap = this_len - start;
         Assert(0 <= len && len <= cap);
-        return StrSlice(Data() + start, len, cap == len ? is_zero_end_ : (Data()[start + len] == 0));
+        return StrSlice(Data() + start, len);
     }
     StrSlice Slice(ssize_t start) const
     {
         auto this_len = CheckIdx(start, true);
-        return StrSlice(Data() + start, this_len - start, is_zero_end_);
+        return StrSlice(Data() + start, this_len - start);
     }
 
     //正向或反向查找字节，返回索引，不存在返回-1
@@ -558,26 +545,11 @@ public:
         return Slice().Trim(chs);
     }
 
-    bool ParseInt64(int64_t &v, int base = 0) const
-    {
-        return Slice().ParseInt64(v, base);
-    }
-    bool ParseUInt64(uint64_t &v, int base = 0) const
-    {
-        return Slice().ParseUInt64(v, base);
-    }
-    bool ParseFloat(float &v) const
-    {
-        return Slice().ParseFloat(v);
-    }
-    bool ParseDouble(double &v) const
-    {
-        return Slice().ParseDouble(v);
-    }
-    bool ParseLongDouble(long double &v) const
-    {
-        return Slice().ParseLongDouble(v);
-    }
+    bool ParseInt64(int64_t &v, int base = 0) const;
+    bool ParseUInt64(uint64_t &v, int base = 0) const;
+    bool ParseFloat(float &v) const;
+    bool ParseDouble(double &v) const;
+    bool ParseLongDouble(long double &v) const;
 
     Str Repr() const
     {
