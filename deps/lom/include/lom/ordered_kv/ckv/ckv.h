@@ -12,23 +12,25 @@ namespace ckv
 {
 
 /*
-索引库接口，如果需要指定索引库的实现，则继承实现这个接口（当然也包括关联的`WriteBatch`等接口）
-自实现的索引库必须保证全量K有序存储
+元数据库接口
+元数据库存放数据索引信息、文件管理信息等
+如果需要指定实现，则继承实现这个接口（当然也包括关联的`WriteBatch`等接口）
+自实现的元数据库必须保证全量K有序存储
 */
-class IndexDB
+class MetaDB
 {
 public:
 
-    typedef std::shared_ptr<IndexDB> Ptr;
+    typedef std::shared_ptr<MetaDB> Ptr;
 
-    virtual ~IndexDB() = default;
+    virtual ~MetaDB() = default;
 
     virtual WriteBatchBase::Ptr NewWriteBatch() = 0;
     virtual LOM_ERR Write(const WriteBatchBase::Ptr &wb) = 0;
 
     virtual Snapshot::Ptr NewSnapshot() = 0;
 
-    //打开索引库的函数接口
+    //打开元数据库的函数接口
     struct Options
     {
         /*
@@ -36,6 +38,9 @@ public:
         为true时尝试打开，若库不存在则创建一个新的
         */
         bool create_if_missing = false;
+
+        //提供给后台任务的错误处理回调
+        std::function<void (LOM_ERR)> handle_bg_err;
     };
     typedef std::function<LOM_ERR (const char *path, Ptr &db, Options opts)> OpenFunc;
 };
@@ -59,8 +64,11 @@ public:
         */
         bool create_if_missing = false;
 
-        //可指定打开索引库的函数，若不指定，则使用内部默认的实现
-        IndexDB::OpenFunc open_idx_db;
+        //提供给后台任务的错误处理回调
+        std::function<void (LOM_ERR)> handle_bg_err;
+
+        //可指定打开元数据库的函数，若不指定，则使用内部默认的实现（ZKV）
+        MetaDB::OpenFunc open_meta_db;
     };
     static LOM_ERR Open(const char *path, Ptr &db, Options opts);
     static LOM_ERR Open(const char *path, Ptr &db)
