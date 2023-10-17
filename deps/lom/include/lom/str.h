@@ -76,7 +76,8 @@ public:
     //字典序比较
     int Cmp(StrSlice s) const
     {
-        int ret = memcmp(Data(), s.Data(), std::min(Len(), s.Len()));
+        int ret = memcmp(
+            Data(), s.Data(), std::min(static_cast<size_t>(Len()), static_cast<size_t>(s.Len())));
         return ret != 0 ? ret : (
             Len() == s.Len() ? 0 : (
                 Len() > s.Len() ? 1 : -1

@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     );
     if (err)
     {
-        LOM_DIE("open db failed: %s", err->Msg().CStr());
+        LOM_DIE("open db failed: %s", err->FmtWithTB().CStr());
     }
     std::cout << "open db ok, cost: " << (lom::NowFloat() - ts) << " sec" << std::endl;
 

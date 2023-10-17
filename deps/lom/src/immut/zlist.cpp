@@ -154,13 +154,13 @@ LOM_ERR ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
     while (sz > 0)
     {
         int64_t n;
-        if (!(::lom::var_int::Decode(p, sz, n) && n >= 0 && n < sz))
+        if (!(::lom::var_int::Decode(p, sz, n) && n >= 0 && n <= sz))
         {
             LOM_RET_ERR("invalid zlist data");
         }
         ++ str_count;
-        p += n + 1;
-        sz -= n + 1;
+        p += n;
+        sz -= n;
     }
 
     zl = ZList(str_count, std::move(z));
