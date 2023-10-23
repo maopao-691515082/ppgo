@@ -6,12 +6,12 @@ namespace lom
 namespace os
 {
 
-static LOM_ERR PathMake(const char *path, GoSlice<::lom::Str> &paths)
+static LOM_ERR PathMake(const char *p, GoSlice<::lom::Str> &paths, bool keep_relative = false)
 {
-    ::lom::Str abs_path;
-    if (*path == '/')
+    ::lom::Str path;
+    if (*p == '/' || keep_relative)
     {
-        abs_path = path;
+        path = p;
     }
     else
     {
@@ -24,26 +24,69 @@ static LOM_ERR PathMake(const char *path, GoSlice<::lom::Str> &paths)
         {
             LOM_RET_ERR("invalid `getcwd` result: `%s`", cwd);
         }
-        abs_path = ::lom::Sprintf("%s/%s", cwd, path);
+        path = ::lom::Sprintf("%s/%s", cwd, p);
         free(cwd);
     }
-    Assert(abs_path.HasPrefix("/"));
-    auto parts = abs_path.Slice().Split("/");
+    if (!keep_relative)
+    {
+        Assert(path.HasPrefix("/"));
+    }
+    auto parts = path.Slice().Split("/");
     paths = paths.Nil();
+    ssize_t prefix_dd = 0;
     for (auto const &part : parts)
     {
         if (part == "" || part == ".")
         {
             continue;
         }
-        if (part == ".." && paths.Len() > 0)
+        if (part == "..")
         {
-            paths = paths.Slice(0, paths.Len() - 1);
+            if (paths.Len() == 0)
+            {
+                ++ prefix_dd;
+            }
+            else
+            {
+                paths = paths.Slice(0, paths.Len() - 1);
+            }
             continue;
         }
         paths = paths.Append(part);
     }
+    if (keep_relative && prefix_dd > 0)
+    {
+        paths.Reverse();
+        for (ssize_t i = 0; i < prefix_dd; ++ i)
+        {
+            paths = paths.Append("..");
+        }
+        paths.Reverse();
+    }
     return nullptr;
+}
+
+::lom::Str NormPath(const char *path)
+{
+    GoSlice<::lom::Str> paths;
+    LOM_ERR err = PathMake(path, paths, true);
+    Assert(!err);
+
+    if (paths.Len() == 0)
+    {
+        return *path == '/' ? "/" : ".";
+    }
+
+    ::lom::Str::Buf b;
+    for (ssize_t i = 0; i < paths.Len(); ++ i)
+    {
+        if (i != 0 || *path == '/')
+        {
+            b.Append("/");
+        }
+        b.Append(paths.At(i));
+    }
+    return ::lom::Str(std::move(b));
 }
 
 Path::Path(const char *path)

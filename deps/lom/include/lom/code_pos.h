@@ -29,12 +29,7 @@ public:
         return file_name_ != nullptr && line_num_ > 0 && func_name_ != nullptr;
     }
 
-    ::lom::Str Str() const
-    {
-        return Valid() ?
-            Sprintf("File [%s] Line [%d] Func [%s]", file_name_, line_num_, func_name_) :
-            "INVALID CODE-POS";
-    }
+    ::lom::Str Str() const;
 
     //获取原始信息，对nullptr转为空串
     const char *FileName() const

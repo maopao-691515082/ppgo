@@ -67,7 +67,7 @@ for fn, h in sorted(cpp_hashes.items(), key = lambda x: (int(x[0].startswith("sr
     assert fn.endswith(".cpp")
     obj_fn = fn[: -4] + ".o"
     if header_changed or h != last_cpp_hashes.get(fn):
-        cxx_cmds.append("%s -c -o tmpobjs/%s %s ../%s" % (cxx, obj_fn, cxx_flags, fn))
+        cxx_cmds.append("%s -c -o tmpobjs/%s %s LOM/%s" % (cxx, obj_fn, cxx_flags, fn))
     else:
         do_cmd("cp last_tmpobjs/%s tmpobjs/%s" % (obj_fn, obj_fn), show = False)
     if fn.startswith("src/"):

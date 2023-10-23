@@ -6,6 +6,7 @@ all:
 	@rm -rf build/tmpobjs build/lom build/test
 	@mkdir -p build/tmpobjs build/lom/lib build/test
 	@cp -r include defs.mk build/lom/
+	@cd build && rm -rf LOM && ln -s .. LOM
 	@python make.py \
 		'$(LOM_CXX)' \
 		'$(LOM_CXX_FLAGS)' \
