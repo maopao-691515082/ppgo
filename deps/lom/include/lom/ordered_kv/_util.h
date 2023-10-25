@@ -286,6 +286,10 @@ public:
     若`v`有效，则需要保证其总是可用的，即一直引用一份对应的快照数据
     */
     LOM_ERR Get(const Str &k, std::function<StrSlice ()> &v) const;
+    /*
+    获取值，通过`ok`返回是否找到
+    */
+    LOM_ERR Get(const Str &k, Str &v, bool &ok) const;
 
     //创建一个当前快照的迭代器
     Iterator::Ptr NewIterator();

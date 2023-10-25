@@ -49,6 +49,37 @@ LOM_ERR Snapshot::Get(const Str &k, std::function<StrSlice ()> &v) const
     return nullptr;
 }
 
+LOM_ERR Snapshot::Get(const Str &k, Str &v, bool &ok) const
+{
+    auto iter = wb.RawOps().find(k);
+    if (iter == wb.RawOps().end())
+    {
+        return DBGet(k, [&v, &ok] (const StrSlice *v_ptr) {
+            if (v_ptr)
+            {
+                v = *v_ptr;
+                ok = true;
+            }
+            else
+            {
+                ok = false;
+            }
+        });
+    }
+
+    if (iter->second)
+    {
+        v = *iter->second;
+        ok = true;
+    }
+    else
+    {
+        ok = false;
+    }
+
+    return nullptr;
+}
+
 class SnapshotIteratorImpl : public Iterator
 {
     class OpsIter

@@ -152,7 +152,7 @@ private:
     ::lom::io::BufWriter::Ptr curr_op_log_writer_;
     ssize_t op_log_acc_len_ = 0;
 
-    static const ssize_t kOpLogAccLenMax = 16LL * 1024 * 1024;
+    static const ssize_t kOpLogAccLenThreshold = 16LL * 1024 * 1024;
 
     SnapshotDumpTask::Ptr dump_task_;
 

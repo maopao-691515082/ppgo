@@ -26,11 +26,14 @@ public:
     virtual ~MetaDB() = default;
 
     virtual WriteBatchBase::Ptr NewWriteBatch() = 0;
-    virtual LOM_ERR Write(const WriteBatchBase::Ptr &wb) = 0;
+    virtual LOM_ERR Write(const WriteBatchBase &wb) = 0;
 
     virtual Snapshot::Ptr NewSnapshot() = 0;
 
-    //打开元数据库的函数接口
+    /*
+    打开元数据库的函数接口
+    注：CKV会保证在`create_if_missing`为true时，`path`的父目录先被创建，且`path`为`<CKV_PATH>/META`
+    */
     struct Options
     {
         /*

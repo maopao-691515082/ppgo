@@ -74,7 +74,31 @@ class DBImpl : public DB
         }
     };
 
+    class DataFile
+    {
+        ssize_t id_;
+        ::lom::os::File::Ptr file_;
+        ssize_t sz_;
+
+        ssize_t seg_count_ = 0, freed_seg_count_ = 0;
+
+    public:
+
+        typedef ::std::shared_ptr<DataFile> Ptr;
+
+        static const ssize_t kSizeThreshold = 16LL * 1024 * 1024;
+
+    };
+    typedef ::lom::immut::AVLMap<ssize_t /*id*/, DataFile::Ptr> DataFiles;
+
+    ::lom::io::BufWriter::Ptr dw_;
+
+    Str path_;
+    Str serial_;
+
     MetaDB::Ptr meta_db_;
+
+    DataFiles data_files_;
 
 public:
 

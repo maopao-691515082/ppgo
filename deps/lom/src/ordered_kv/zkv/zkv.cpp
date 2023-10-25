@@ -353,7 +353,7 @@ LOM_ERR DBImpl::NewOpLogFile()
         }
     );
     curr_op_log_idx_ = new_op_log_idx;
-    if (op_log_acc_len_ > kOpLogAccLenMax)
+    if (op_log_acc_len_ > kOpLogAccLenThreshold)
     {
         //deliver snapshot dump task
         {
@@ -374,7 +374,7 @@ LOM_ERR DBImpl::NewOpLogFile()
 LOM_ERR DBImpl::RecordOpLog(const WriteBatch::RawOpsMap &wb_ops)
 {
     //make sure op-log writer is ready
-    if (!curr_op_log_writer_ || op_log_acc_len_ > kOpLogAccLenMax)
+    if (!curr_op_log_writer_ || op_log_acc_len_ > kOpLogAccLenThreshold)
     {
         LOM_RET_ON_ERR(NewOpLogFile());
     }
