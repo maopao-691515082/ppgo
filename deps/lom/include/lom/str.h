@@ -218,8 +218,18 @@ public:
     注意和标准库的解析方式不同的是，这些接口不允许前导空白符，必须整个串是一个严格完整的数字表示才成功，
     在类似需求下可以先用`Trim`方法去除空白等字符
     */
-    bool ParseInt64(int64_t &v, int base = 0) const;
-    bool ParseUInt64(uint64_t &v, int base = 0) const;
+    bool ParseI64(int64_t &v, int base = 0) const;
+    bool ParseSSize(ssize_t &v, int base = 0) const
+    {
+        int64_t n;
+        if (ParseI64(n, base))
+        {
+            v = n;
+            return true;
+        }
+        return false;
+    }
+    bool ParseU64(uint64_t &v, int base = 0) const;
     bool ParseFloat(float &v) const;
     bool ParseDouble(double &v) const;
     bool ParseLongDouble(long double &v) const;
@@ -546,8 +556,18 @@ public:
         return Slice().Trim(chs);
     }
 
-    bool ParseInt64(int64_t &v, int base = 0) const;
-    bool ParseUInt64(uint64_t &v, int base = 0) const;
+    bool ParseI64(int64_t &v, int base = 0) const;
+    bool ParseSSize(ssize_t &v, int base = 0) const
+    {
+        int64_t n;
+        if (ParseI64(n, base))
+        {
+            v = n;
+            return true;
+        }
+        return false;
+    }
+    bool ParseU64(uint64_t &v, int base = 0) const;
     bool ParseFloat(float &v) const;
     bool ParseDouble(double &v) const;
     bool ParseLongDouble(long double &v) const;
@@ -685,8 +705,8 @@ public:
     }
 
     //将整数转为字符串（十进制），这里的实现比STL稍快一些（有的STL实现用`snprintf`）
-    static Str FromInt64(int64_t n);
-    static Str FromUInt64(uint64_t n);
+    static Str FromI64(int64_t n);
+    static Str FromU64(uint64_t n);
 
     Str Upper() const
     {

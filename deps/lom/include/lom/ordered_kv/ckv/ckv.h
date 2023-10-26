@@ -25,10 +25,21 @@ public:
 
     virtual ~MetaDB() = default;
 
+    //允许MetaDB使用自己的批量写对象
     virtual WriteBatchBase::Ptr NewWriteBatch() = 0;
-    virtual LOM_ERR Write(const WriteBatchBase &wb) = 0;
 
-    virtual Snapshot::Ptr NewSnapshot() = 0;
+    /*
+    MetaDB的实现必须支持数据的原子性提交
+    而且，必须支持写操作和获取快照操作的互斥，且过程中需要能执行hook，
+    这是为了保证元数据和CKV数据的一致性，避免出现一个CKV快照获取到的MetaDB快照和CKV数据快照不一致
+    一般来说MetaDB的实现中可以简单弄一个锁来保证互斥
+        - 写操作的`commit_hook`需要在写操作的提交过程的最后进行
+        - 获取快照的`new_snapshot_hook`只需要保证和MetaDB的快照获取操作捆绑即可
+    */
+
+    virtual LOM_ERR Write(const WriteBatchBase &wb, std::function<void ()> commit_hook) = 0;
+
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) = 0;
 
     /*
     打开元数据库的函数接口
@@ -55,7 +66,17 @@ public:
 
     typedef std::shared_ptr<DB> Ptr;
 
-    virtual ~DB() = default;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) = 0;
+    virtual LOM_ERR Write(const WriteBatch &wb) override
+    {
+        return Write(wb, nullptr);
+    }
+
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) = 0;
+    virtual Snapshot::Ptr NewSnapshot() override
+    {
+        return NewSnapshot(nullptr);
+    }
 
     //指定目录`path`创建数据库，可指定选项
     struct Options

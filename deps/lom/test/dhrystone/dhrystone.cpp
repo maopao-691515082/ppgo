@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
 
     if (argc > 1)
     {
-        if (!lom::Str(argv[1]).ParseInt64(loops))
+        if (!lom::Str(argv[1]).ParseI64(loops))
         {
             fprintf(stderr, "invalid loop arg\n");
             exit(1);

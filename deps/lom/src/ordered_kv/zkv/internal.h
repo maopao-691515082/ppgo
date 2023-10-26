@@ -175,8 +175,8 @@ public:
 
     LOM_ERR Init(const char *path, Options opts);
 
-    virtual LOM_ERR Write(const WriteBatch &wb) override;
-    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot() override;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) override;
+    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) override;
 };
 
 }

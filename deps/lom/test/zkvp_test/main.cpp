@@ -22,12 +22,10 @@ int main(int argc, char *argv[])
     ssize_t test_count = 10000;
     if (argc >= 3)
     {
-        int64_t n;
-        if (!(lom::Str(argv[2]).ParseInt64(n) && n > 0))
+        if (!(lom::Str(argv[2]).ParseSSize(test_count) && test_count > 0))
         {
             LOM_DIE("invalid test count");
         }
-        test_count = n;
     }
 
     lom::ordered_kv::zkv::DB::Ptr db;

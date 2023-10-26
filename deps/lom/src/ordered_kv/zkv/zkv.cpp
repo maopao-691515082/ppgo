@@ -211,10 +211,10 @@ LOM_ERR DBImpl::GetFileIdxes(
         if (file_name.HasPrefix(kSnapshotFileNamePrefix))
         {
             auto snapshot_idx_str = file_name.SubStr(kSnapshotFileNamePrefix.Len());
-            int64_t si;
-            if (snapshot_idx_str.ParseInt64(si, 10) &&
+            ssize_t si;
+            if (snapshot_idx_str.ParseSSize(si, 10) &&
                 si > 0 && si < kSSizeSoftMax &&
-                snapshot_idx_str == ::lom::Str::FromInt64(si))
+                snapshot_idx_str == ::lom::Str::FromI64(si))
             {
                 snapshot_idxes = snapshot_idxes.Append(si);
             }
@@ -222,10 +222,10 @@ LOM_ERR DBImpl::GetFileIdxes(
         if (file_name.HasPrefix(kOpLogFileNamePrefix))
         {
             auto op_log_idx_str = file_name.SubStr(kOpLogFileNamePrefix.Len());
-            int64_t oi;
-            if (op_log_idx_str.ParseInt64(oi, 10) &&
+            ssize_t oi;
+            if (op_log_idx_str.ParseSSize(oi, 10) &&
                 oi > 0 && oi < kSSizeSoftMax &&
-                op_log_idx_str == ::lom::Str::FromInt64(oi))
+                op_log_idx_str == ::lom::Str::FromI64(oi))
             {
                 op_log_idxes = op_log_idxes.Append(oi);
             }
@@ -617,14 +617,14 @@ void DBImpl::DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Snapsho
             {
                 if (si < snapshot_idx)
                 {
-                    purge_file(kSnapshotFileNamePrefix.Concat(Str::FromInt64(si)));
+                    purge_file(kSnapshotFileNamePrefix.Concat(Str::FromI64(si)));
                 }
             }
             for (auto oi : op_log_idxes)
             {
                 if (oi < snapshot_idx)
                 {
-                    purge_file(kOpLogFileNamePrefix.Concat(Str::FromInt64(oi)));
+                    purge_file(kOpLogFileNamePrefix.Concat(Str::FromI64(oi)));
                 }
             }
 
@@ -736,11 +736,16 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
     return nullptr;
 }
 
-LOM_ERR DBImpl::Write(const WriteBatch &wb)
+LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
 {
     auto const &wb_ops = wb.RawOps();
     if (wb_ops.empty())
     {
+        if (commit_hook)
+        {
+            std::lock_guard<std::mutex> ulg(update_lock_);
+            commit_hook();
+        }
         return nullptr;
     }
 
@@ -761,18 +766,26 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb)
         {
             std::lock_guard<std::mutex> ulg(update_lock_);
             zm_ = new_zm;
+            if (commit_hook)
+            {
+                commit_hook();
+            }
         }
     }
 
     return nullptr;
 }
 
-::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot()
+::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot(std::function<void ()> new_snapshot_hook)
 {
     ZMap zm;
     {
         std::lock_guard<std::mutex> lg(update_lock_);
         zm = zm_;
+        if (new_snapshot_hook)
+        {
+            new_snapshot_hook();
+        }
     }
     return ::lom::ordered_kv::Snapshot::Ptr(new Snapshot(zm));
 }

@@ -78,7 +78,6 @@ class DBImpl : public DB
     {
         ssize_t id_;
         ::lom::os::File::Ptr file_;
-        ssize_t sz_;
 
         ssize_t seg_count_ = 0, freed_seg_count_ = 0;
 
@@ -88,17 +87,34 @@ class DBImpl : public DB
 
         static const ssize_t kSizeThreshold = 16LL * 1024 * 1024;
 
+        DataFile(ssize_t id, const ::lom::os::File::Ptr &file) : id_(id), file_(file)
+        {
+        }
+
+        DataFile(ssize_t id, const ::lom::os::File::Ptr &file, ssize_t seg_count, ssize_t freed_seg_count) :
+            id_(id), file_(file), seg_count_(seg_count), freed_seg_count_(freed_seg_count)
+        {
+        }
     };
     typedef ::lom::immut::AVLMap<ssize_t /*id*/, DataFile::Ptr> DataFiles;
 
-    ::lom::io::BufWriter::Ptr dw_;
+    struct Core
+    {
+        typedef ::std::shared_ptr<Core> Ptr;
 
-    Str path_;
-    Str serial_;
+        std::mutex write_lock;
 
-    MetaDB::Ptr meta_db_;
+        Str path;
+        Str serial;
 
-    DataFiles data_files_;
+        MetaDB::Ptr meta_db;
+
+        DataFiles data_files;
+        ::lom::io::BufWriter::Ptr data_writer;
+        ssize_t curr_data_file_sz_ = 0;
+    };
+
+    Core::Ptr core_;
 
 public:
 
@@ -106,8 +122,8 @@ public:
 
     LOM_ERR Init(const char *path, Options opts);
 
-    virtual LOM_ERR Write(const WriteBatch &wb) override;
-    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot() override;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) override;
+    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) override;
 };
 
 }

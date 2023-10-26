@@ -50,12 +50,12 @@ bool StrSlice::CaseEq(StrSlice s) const
         return true;                        \
     } while (false)
 
-bool Str::ParseInt64(int64_t &v, int base) const
+bool Str::ParseI64(int64_t &v, int base) const
 {
     LOM_STR_PARSE_NUM(strtoll(p, const_cast<char **>(&end_ptr), base));
 }
 
-bool Str::ParseUInt64(uint64_t &v, int base) const
+bool Str::ParseU64(uint64_t &v, int base) const
 {
     LOM_STR_PARSE_NUM(strtoull(p, const_cast<char **>(&end_ptr), base));
 }
@@ -75,14 +75,14 @@ bool Str::ParseLongDouble(long double &v) const
     LOM_STR_PARSE_NUM(strtold(p, const_cast<char **>(&end_ptr)));
 }
 
-bool StrSlice::ParseInt64(int64_t &v, int base) const
+bool StrSlice::ParseI64(int64_t &v, int base) const
 {
-    return Str(*this).ParseInt64(v, base);
+    return Str(*this).ParseI64(v, base);
 }
 
-bool StrSlice::ParseUInt64(uint64_t &v, int base) const
+bool StrSlice::ParseU64(uint64_t &v, int base) const
 {
-    return Str(*this).ParseUInt64(v, base);
+    return Str(*this).ParseU64(v, base);
 }
 
 bool StrSlice::ParseFloat(float &v) const
@@ -268,7 +268,7 @@ void Str::MoveFrom(Buf &&buf)
     });
 }
 
-Str Str::FromInt64(int64_t n)
+Str Str::FromI64(int64_t n)
 {
     if (n == 0)
     {
@@ -301,7 +301,7 @@ Str Str::FromInt64(int64_t n)
     return p;
 }
 
-Str Str::FromUInt64(uint64_t n)
+Str Str::FromU64(uint64_t n)
 {
     if (n == 0)
     {

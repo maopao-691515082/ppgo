@@ -17,6 +17,18 @@ public:
 
     typedef std::shared_ptr<DB> Ptr;
 
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) = 0;
+    virtual LOM_ERR Write(const WriteBatch &wb) override
+    {
+        return Write(wb, nullptr);
+    }
+
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) = 0;
+    virtual Snapshot::Ptr NewSnapshot() override
+    {
+        return NewSnapshot(nullptr);
+    }
+
     /*
     在指定`path`时为持久化存储模式，会在对应目录下以数据Dump+WAL的形式进行落盘
     若`path`为空指针则为纯内存模式，不会进行IO操作
