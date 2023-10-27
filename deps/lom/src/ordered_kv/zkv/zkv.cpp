@@ -727,10 +727,12 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
     //start dump thread
     {
         dump_task_ = std::make_shared<SnapshotDumpTask>();
-        std::thread([lock_file = lock_file_, handle_bg_err = opts.handle_bg_err, task = dump_task_] () {
-            static_cast<void>(lock_file);   //holder
-            DumpThreadMain(handle_bg_err, task);
-        }).detach();
+        std::thread(
+            [lock_file = lock_file_, handle_bg_err = opts.handle_bg_err, task = dump_task_] () {
+                static_cast<void>(lock_file);   //holder
+                DumpThreadMain(handle_bg_err, task);
+            }
+        ).detach();
     }
 
     return nullptr;

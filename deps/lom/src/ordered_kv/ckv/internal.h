@@ -76,14 +76,25 @@ class DBImpl : public DB
 
     class DataFile
     {
-        ssize_t id_;
-        ::lom::os::File::Ptr file_;
-
-        ssize_t seg_count_ = 0, freed_seg_count_ = 0;
-
     public:
 
         typedef ::std::shared_ptr<DataFile> Ptr;
+
+    private:
+
+        ssize_t id_;
+        ::lom::os::File::Ptr file_;
+
+        //文件中的总seg数量（包括释放的），和其中已释放的seg数量
+        ssize_t seg_count_ = 0, freed_seg_count_ = 0;
+
+        Ptr AdjustSegCounts(ssize_t inc_seg_count, ssize_t inc_freed_seg_count) const
+        {
+            return Ptr(new DataFile(
+                id_, file_, seg_count_ + inc_seg_count, freed_seg_count_ + inc_freed_seg_count));
+        }
+
+    public:
 
         static const ssize_t kSizeThreshold = 16LL * 1024 * 1024;
 
@@ -94,6 +105,16 @@ class DBImpl : public DB
         DataFile(ssize_t id, const ::lom::os::File::Ptr &file, ssize_t seg_count, ssize_t freed_seg_count) :
             id_(id), file_(file), seg_count_(seg_count), freed_seg_count_(freed_seg_count)
         {
+            Assert(seg_count_ >= 0 && freed_seg_count_ >= 0);
+        }
+
+        Ptr IncSegCount() const
+        {
+            return AdjustSegCounts(1, 0);
+        }
+        Ptr IncFreeSegCount() const
+        {
+            return AdjustSegCounts(0, 1);
         }
     };
     typedef ::lom::immut::AVLMap<ssize_t /*id*/, DataFile::Ptr> DataFiles;
@@ -115,6 +136,8 @@ class DBImpl : public DB
     };
 
     Core::Ptr core_;
+
+    static void GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core);
 
 public:
 

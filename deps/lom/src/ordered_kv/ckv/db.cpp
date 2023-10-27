@@ -92,6 +92,11 @@ static bool ParseDataFileInfo(StrSlice info, ssize_t &seg_count, ssize_t &freed_
     return ok;
 }
 
+void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core)
+{
+    //todo
+}
+
 LOM_ERR DBImpl::Init(const char *path, Options opts)
 {
     core_ = std::make_shared<Core>();
@@ -148,28 +153,42 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
                 ssize_t id;
                 if (!(k.Slice(kMeta_DataFileKeyPrefix.Len()).ParseSSize(id) && id > 0))
                 {
-                    LOM_RET_ERR("invalid meta, data file key %s", k.Repr().CStr());
+                    LOM_RET_ERR("invalid data file key %s", k.Repr().CStr());
                 }
                 if (id >= nid)
                 {
                     LOM_RET_ERR("invalid meta, file id %zd >= next file id %zd", id, nid);
+                }
+                if (core_->data_files.HasKey(id))
+                {
+                    LOM_RET_ERR("invalid meta, duplicate data file id %zd", id);
                 }
 
                 auto v = iter->Value();
                 ssize_t seg_count, freed_seg_count;
                 if (!ParseDataFileInfo(v, seg_count, freed_seg_count))
                 {
-                    LOM_RET_ERR("invalid meta, invalid data file info of id %zd", id);
+                    LOM_RET_ERR("invalid data file info of id %zd", id);
                 }
 
-                auto dfp = ::lom::Sprintf("%s/%s%zd", core_->path.CStr(), kDataFilePrefix.CStr(), id);
+                auto dfn = ::lom::Sprintf("%s%zd", kDataFilePrefix.CStr(), id);
+                auto dfp = ::lom::Sprintf("%s/%s", core_->path.CStr(), dfn.CStr());
                 ::lom::os::File::Ptr df;
-                LOM_RET_ON_ERR(::lom::os::File::Open(dfp.CStr(), df, "r"));
+                LOM_RET_ON_ERR(::lom::os::File::Open(dfp.CStr(), df));
 
-                if (core_->data_files.HasKey(id))
+                auto br = ::lom::io::BufReader::New(
+                    [df] (char *buf, ssize_t sz, ssize_t &rsz) -> LOM_ERR {
+                        return df->Read(buf, sz, rsz);
+                    }
+                );
+                ::lom::immut::ZList zl;
+                LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+                auto head_parts = zl.Parse();
+                if (!(head_parts.Len() == 2 && head_parts.At(0) == core_->serial && head_parts.At(1) == dfn))
                 {
-                    LOM_RET_ERR("invalid meta, duplicate data file id %zd", id);
+                    LOM_RET_ERR("invalid header of data file `%s`", dfp.CStr());
                 }
+
                 core_->data_files =
                     core_->data_files.Set(
                         id, DataFile::Ptr(new DataFile(id, df, seg_count, freed_seg_count)));
@@ -196,7 +215,13 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
         }
     }
 
-    //todo
+    std::thread(
+        [handle_bg_err = opts.handle_bg_err, db_core = core_] () {
+            GCThreadMain(handle_bg_err, db_core);
+        }
+    ).detach();
+
+    return nullptr;
 }
 
 DBImpl::~DBImpl()
