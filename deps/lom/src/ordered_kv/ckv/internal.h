@@ -13,6 +13,75 @@ namespace ckv
 
 class DBImpl : public DB
 {
+    class DataFile
+    {
+    public:
+
+        typedef ::std::shared_ptr<DataFile> Ptr;
+
+    private:
+
+        ssize_t id_;
+        ::lom::os::File::Ptr file_;
+
+        //文件中的总seg数量（包括释放的），和其中已释放的seg数量
+        ssize_t seg_count_ = 0, freed_seg_count_ = 0;
+
+        Ptr AdjustSegCounts(ssize_t inc_seg_count, ssize_t inc_freed_seg_count) const
+        {
+            return Ptr(new DataFile(
+                id_, file_, seg_count_ + inc_seg_count, freed_seg_count_ + inc_freed_seg_count));
+        }
+
+    public:
+
+        static const ssize_t kSizeThreshold = 16LL * 1024 * 1024;
+
+        DataFile(ssize_t id, const ::lom::os::File::Ptr &file) : id_(id), file_(file)
+        {
+        }
+
+        DataFile(ssize_t id, const ::lom::os::File::Ptr &file, ssize_t seg_count, ssize_t freed_seg_count) :
+            id_(id), file_(file), seg_count_(seg_count), freed_seg_count_(freed_seg_count)
+        {
+            Assert(seg_count_ >= 0 && freed_seg_count_ >= 0);
+        }
+
+        ssize_t ID() const
+        {
+            return id_;
+        }
+        ::lom::io::BufReader::Ptr NewPReadBufReader(ssize_t off) const
+        {
+            return ::lom::io::BufReader::New(
+                [f = file_, off] (char *buf, ssize_t sz, ssize_t &rsz) mutable -> LOM_ERR {
+                    auto err = f->PRead(off, buf, sz, rsz);
+                    if (!err)
+                    {
+                        off += rsz;
+                    }
+                    return err;
+                }
+            );
+        }
+
+        Ptr IncSegCount() const
+        {
+            return AdjustSegCounts(1, 0);
+        }
+        Ptr IncFreeSegCount() const
+        {
+            return AdjustSegCounts(0, 1);
+        }
+
+        bool NeedGC() const
+        {
+            //当被释放的seg数量超出一半时视为需要GC
+            return freed_seg_count_ > seg_count_ / 2;
+        }
+    };
+    typedef ::lom::immut::AVLMap<ssize_t /*id*/, DataFile::Ptr> DataFiles;
+
     class Snapshot : public ::lom::ordered_kv::Snapshot
     {
         class Iterator : public ::lom::ordered_kv::Iterator
@@ -59,6 +128,9 @@ class DBImpl : public DB
             }
         };
 
+        ::lom::ordered_kv::Snapshot::Ptr meta_snapshot_;
+        DataFiles data_files_;
+
     protected:
 
         virtual LOM_ERR DBGet(const Str &k, std::function<void (const StrSlice *)> f) const override;
@@ -68,56 +140,11 @@ class DBImpl : public DB
 
     public:
 
-        Snapshot(/*todo*/)
+        Snapshot(const ::lom::ordered_kv::Snapshot::Ptr &meta_snapshot, const DataFiles &data_files) :
+            meta_snapshot_(meta_snapshot), data_files_(data_files)
         {
-            //todo
         }
     };
-
-    class DataFile
-    {
-    public:
-
-        typedef ::std::shared_ptr<DataFile> Ptr;
-
-    private:
-
-        ssize_t id_;
-        ::lom::os::File::Ptr file_;
-
-        //文件中的总seg数量（包括释放的），和其中已释放的seg数量
-        ssize_t seg_count_ = 0, freed_seg_count_ = 0;
-
-        Ptr AdjustSegCounts(ssize_t inc_seg_count, ssize_t inc_freed_seg_count) const
-        {
-            return Ptr(new DataFile(
-                id_, file_, seg_count_ + inc_seg_count, freed_seg_count_ + inc_freed_seg_count));
-        }
-
-    public:
-
-        static const ssize_t kSizeThreshold = 16LL * 1024 * 1024;
-
-        DataFile(ssize_t id, const ::lom::os::File::Ptr &file) : id_(id), file_(file)
-        {
-        }
-
-        DataFile(ssize_t id, const ::lom::os::File::Ptr &file, ssize_t seg_count, ssize_t freed_seg_count) :
-            id_(id), file_(file), seg_count_(seg_count), freed_seg_count_(freed_seg_count)
-        {
-            Assert(seg_count_ >= 0 && freed_seg_count_ >= 0);
-        }
-
-        Ptr IncSegCount() const
-        {
-            return AdjustSegCounts(1, 0);
-        }
-        Ptr IncFreeSegCount() const
-        {
-            return AdjustSegCounts(0, 1);
-        }
-    };
-    typedef ::lom::immut::AVLMap<ssize_t /*id*/, DataFile::Ptr> DataFiles;
 
     struct Core
     {
@@ -132,7 +159,13 @@ class DBImpl : public DB
 
         DataFiles data_files;
         ::lom::io::BufWriter::Ptr data_writer;
-        ssize_t curr_data_file_sz_ = 0;
+        ssize_t curr_data_file_sz = 0;
+
+        std::atomic<bool> stopped;
+
+        Core() : stopped(false)
+        {
+        }
     };
 
     Core::Ptr core_;
@@ -140,6 +173,10 @@ class DBImpl : public DB
     static void GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core);
 
 public:
+
+    DBImpl() : core_(new Core())
+    {
+    }
 
     virtual ~DBImpl();
 

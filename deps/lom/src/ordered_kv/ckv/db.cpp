@@ -94,13 +94,73 @@ static bool ParseDataFileInfo(StrSlice info, ssize_t &seg_count, ssize_t &freed_
 
 void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core)
 {
-    //todo
+    while (!db_core->stopped.load())
+    {
+        //获取data_files的快照（不需要meta_db的）
+        DataFiles dfs;
+        db_core->meta_db->NewSnapshot(
+            [&] () {
+                dfs = db_core->data_files;
+            }
+        );
+
+        //找到需要GC的数据文件
+        DataFile::Ptr df;
+        if (dfs.Size() >= 16)
+        {
+            //最后一个文件一般来说是当前data_writer，不能被GC，需要排除掉
+            for (ssize_t i = dfs.Size() - 2; i >= 0; -- i)
+            {
+                auto kvpp = dfs.GetByIdx(i);
+                Assert(*kvpp.first == (*kvpp.second)->ID());
+                if ((*kvpp.second)->NeedGC())
+                {
+                    df = *kvpp.second;
+                    break;
+                }
+            }
+        }
+        if (!df)
+        {
+            //暂时没有数据文件可供GC
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+
+        auto do_gc = [&] () -> LOM_ERR {
+            auto br = df->NewPReadBufReader(0);
+            ::lom::immut::ZList header_zl;
+            LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, header_zl));
+            //打开文件的时候已经检查过header_zl是否有效，这里就不再检查了
+
+            //渐进式执行GC，迁移选中的数据文件中的有效数据，每次一个seg
+            for (;;)
+            {
+                if (db_core->stopped.load())
+                {
+                    //数据库停止，及时结束
+                    return nullptr;
+                }
+
+                //todo 读取一个seg，判断是否已被释放，若没有释放，则进行迁移
+            }
+
+            //todo 成功GC了一个文件，将其删除
+
+            return nullptr;
+        };
+
+        auto err = do_gc();
+        if (err && handle_bg_err)
+        {
+            handle_bg_err(err);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
 }
 
 LOM_ERR DBImpl::Init(const char *path, Options opts)
 {
-    core_ = std::make_shared<Core>();
-
     core_->path = ::lom::os::Path(path_str).Str();
 
     auto open_meta_db = opts.open_meta_db;
@@ -119,6 +179,18 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
     if (opts.create_if_missing)
     {
         LOM_RET_ON_ERR(::lom::os::MakeDirs(path_.CStr()));
+    }
+
+    if (opts.handle_bg_err)
+    {
+        //handle_bg_err有可能被并发调用，包装成加锁同步版本
+        auto handle_bg_err_sync =
+            [lock = std::make_shared<std::mutex>(), handle_bg_err = opts.handle_bg_err] (LOM_ERR err) {
+                std::lock_guard<std::mutex> lg(*lock);
+                handle_bg_err(err);
+            }
+        ;
+        opts.handle_bg_err = handle_bg_err_sync;
     }
 
     auto meta_db_path = path_.Concat("/META");
@@ -226,7 +298,7 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
 
 DBImpl::~DBImpl()
 {
-    //todo
+    core_->stopped.store(true);
 }
 
 LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
@@ -236,17 +308,30 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
     {
         if (commit_hook)
         {
-            core_->meta_db->Write(WriteBatch(), commit_hook);
+            core_->meta_db->Write(wb, commit_hook);
         }
         return nullptr;
     }
+
+    std::lock_guard<std::mutex> wlg(write_lock_);
 
     //todo
 }
 
 ::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot(std::function<void ()> new_snapshot_hook)
 {
-    //todo
+    DataFiles dfs;
+    auto meta_snapshot = core_->meta_db->NewSnapshot(
+        [&] () {
+            dfs = core_->data_files;
+            if (new_snapshot_hook)
+            {
+                new_snapshot_hook();
+            }
+        }
+    );
+
+    return ::lom::ordered_kv::Snapshot::Ptr(new Snapshot(meta_snapshot, dfs));
 }
 
 LOM_ERR DB::Open(const char *path, Ptr &db, Options opts)

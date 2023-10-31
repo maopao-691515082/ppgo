@@ -45,19 +45,21 @@ StrSlice ZList::FirstStr() const
 
 std::function<bool (StrSlice &)> ZList::NewForwardIterator() const
 {
-    return [z = z_, p = static_cast<const char *>(z_->Data()), sz = z_->Len()] (StrSlice &s) mutable -> bool {
-        static_cast<void>(z); //holder
-        if (sz == 0)
-        {
-            return false;
+    return
+        [z = z_, p = static_cast<const char *>(z_->Data()), sz = z_->Len()] (StrSlice &s) mutable -> bool {
+            static_cast<void>(z); //holder
+            if (sz == 0)
+            {
+                return false;
+            }
+            int64_t n;
+            Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n <= sz);
+            s = StrSlice(p, n);
+            p += n;
+            sz -= n;
+            return true;
         }
-        int64_t n;
-        Assert(::lom::var_int::Decode(p, sz, n) && n >= 0 && n <= sz);
-        s = StrSlice(p, n);
-        p += n;
-        sz -= n;
-        return true;
-    };
+    ;
 }
 
 ZList ZList::Append(StrSlice s) const
