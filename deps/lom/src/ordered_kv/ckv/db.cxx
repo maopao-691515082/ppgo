@@ -198,7 +198,7 @@ void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr
             //skip header
             {
                 ::lom::immut::ZList header_zl;
-                LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, header_zl));
+                LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(*br, header_zl));
                 //打开文件的时候已经检查过header_zl是否有效，这里就不再检查了
             }
 
@@ -215,7 +215,7 @@ void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr
                 ssize_t off = br->ByteCountRead();
                 ::lom::immut::ZList seg_zl;
                 {
-                    auto err = ::lom::immut::ZList::LoadFrom(br, seg_zl);
+                    auto err = ::lom::immut::ZList::LoadFrom(*br, seg_zl);
                     if (err)
                     {
                         if (err == ::lom::io::UnexpectedEOF())
@@ -265,7 +265,7 @@ void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr
                         LOM_RET_ON_ERR(PrepareDataWriter(*meta_snapshot, dfs, dw, dw_fid));
                         ssize_t dw_off = dw->ByteCountWritten();
                         {
-                            auto err = seg_zl.DumpTo(dw);
+                            auto err = seg_zl.DumpTo(*dw);
                             if (err)
                             {
                                 //出错了，如果是新数据文件可以不管，如果是当前正在写的数据文件则需要及时关掉
@@ -392,7 +392,7 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
                     }
                 );
                 ::lom::immut::ZList zl;
-                LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+                LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(*br, zl));
                 auto head_parts = zl.Parse();
                 if (!(head_parts.Len() == 2 && head_parts.At(0) == core_->serial && head_parts.At(1) == dfn))
                 {

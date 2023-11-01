@@ -299,10 +299,10 @@ bool DecodeUInt(const char *&p, ssize_t &sz, uint64_t &n)
     return false;
 }
 
-static LOM_ERR LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
+static LOM_ERR LoadEncodedFrom(::lom::io::BufReader &br, std::string &s)
 {
     s.resize(1);
-    LOM_RET_ON_ERR(br->ReadFull(&s[0], 1));
+    LOM_RET_ON_ERR(br.ReadFull(&s[0], 1));
 
     ssize_t remain_len = 0;
     auto b = static_cast<uint8_t>(s[0]);
@@ -338,13 +338,13 @@ static LOM_ERR LoadEncodedFrom(const io::BufReader::Ptr &br, std::string &s)
     if (remain_len > 0)
     {
         s.resize(1 + static_cast<size_t>(remain_len));
-        LOM_RET_ON_ERR(br->ReadFull(&s[1], remain_len));
+        LOM_RET_ON_ERR(br.ReadFull(&s[1], remain_len));
     }
 
     return nullptr;
 }
 
-LOM_ERR LoadFrom(const io::BufReader::Ptr &br, int64_t &n)
+LOM_ERR LoadFrom(::lom::io::BufReader &br, int64_t &n)
 {
     std::string s;
     LOM_RET_ON_ERR(LoadEncodedFrom(br, s));
@@ -358,7 +358,7 @@ LOM_ERR LoadFrom(const io::BufReader::Ptr &br, int64_t &n)
     return nullptr;
 }
 
-LOM_ERR LoadUIntFrom(const io::BufReader::Ptr &br, uint64_t &n)
+LOM_ERR LoadUIntFrom(::lom::io::BufReader &br, uint64_t &n)
 {
     std::string s;
     LOM_RET_ON_ERR(LoadEncodedFrom(br, s));

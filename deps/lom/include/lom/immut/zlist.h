@@ -123,8 +123,8 @@ public:
     ZList Extend(const GoSlice<StrSlice> &gs) const;
 
     //指定buf-io对象读写ZL
-    LOM_ERR DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush = true) const;
-    static LOM_ERR LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl);
+    LOM_ERR DumpTo(::lom::io::BufWriter &bw, bool need_flush = true) const;
+    static LOM_ERR LoadFrom(::lom::io::BufReader &br, ZList &zl);
 };
 
 }

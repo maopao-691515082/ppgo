@@ -30,8 +30,8 @@ bool Decode(const char *&p, ssize_t &sz, int64_t &n);
 bool DecodeUInt(const char *&p, ssize_t &sz, uint64_t &n);
 
 //从buf reader中读取
-LOM_ERR LoadFrom(const io::BufReader::Ptr &br, int64_t &n);
-LOM_ERR LoadUIntFrom(const io::BufReader::Ptr &br, uint64_t &n);
+LOM_ERR LoadFrom(::lom::io::BufReader &br, int64_t &n);
+LOM_ERR LoadUIntFrom(::lom::io::BufReader &br, uint64_t &n);
 
 }
 

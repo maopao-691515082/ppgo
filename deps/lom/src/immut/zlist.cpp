@@ -118,33 +118,33 @@ static ssize_t ZHash(const std::shared_ptr<Str::Buf> &z)
     return h.Hash();
 }
 
-LOM_ERR ZList::DumpTo(const ::lom::io::BufWriter::Ptr &bw, bool need_flush) const
+LOM_ERR ZList::DumpTo(::lom::io::BufWriter &bw, bool need_flush) const
 {
     auto write_int =
-        [&bw] (int64_t n) -> LOM_ERR {
+        [&] (int64_t n) -> LOM_ERR {
             auto enc = ::lom::var_int::Encode(n);
-            return bw->WriteAll(enc.Data(), enc.Len());
+            return bw.WriteAll(enc.Data(), enc.Len());
         }
     ;
 
     LOM_RET_ON_ERR(write_int(ZHash(z_)));
     LOM_RET_ON_ERR(write_int(z_->Len()));
-    LOM_RET_ON_ERR(bw->WriteAll(z_->Data(), z_->Len()));
+    LOM_RET_ON_ERR(bw.WriteAll(z_->Data(), z_->Len()));
     if (need_flush)
     {
-        LOM_RET_ON_ERR(bw->Flush());
+        LOM_RET_ON_ERR(bw.Flush());
     }
     return nullptr;
 }
 
-LOM_ERR ZList::LoadFrom(const ::lom::io::BufReader::Ptr &br, ZList &zl)
+LOM_ERR ZList::LoadFrom(::lom::io::BufReader &br, ZList &zl)
 {
     int64_t h;
     LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, h));
     int64_t len;
     LOM_RET_ON_ERR(::lom::var_int::LoadFrom(br, len));
     auto z = std::make_shared<Str::Buf>(len);
-    LOM_RET_ON_ERR(br->ReadFull(z->Data(), len));
+    LOM_RET_ON_ERR(br.ReadFull(z->Data(), len));
     if (h != ZHash(z))
     {
         LOM_RET_ERR("hash mismatch");

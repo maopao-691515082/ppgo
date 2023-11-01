@@ -260,7 +260,7 @@ LOM_ERR DBImpl::CreateMetaFile() const
 
         LOM_RET_ON_ERR(::lom::immut::ZList(GoSlice<StrSlice>{
             serial_,
-        }).DumpTo(bw));
+        }).DumpTo(*bw));
     }
 
     LOM_RET_ON_ERR(::lom::os::Rename(tmp_meta_file_path.CStr(), meta_file_path.CStr()));
@@ -278,7 +278,7 @@ LOM_ERR DBImpl::LoadMetaFile()
         }
     );
     ::lom::immut::ZList zl;
-    LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+    LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(*br, zl));
     if (zl.StrCount() != 1)
     {
         LOM_RET_ERR("invalid meta file");
@@ -305,11 +305,11 @@ LOM_ERR DBImpl::DumpSnapshotFile(const Str &path, ssize_t idx, const Str &serial
         LOM_RET_ON_ERR(::lom::immut::ZList(GoSlice<StrSlice>{
             serial,
             snapshot_file_name,
-        }).DumpTo(bw, false));
+        }).DumpTo(*bw, false));
 
         for (ssize_t i = 0; i < zm.Size(); ++ i)
         {
-            LOM_RET_ON_ERR(zm.GetByIdx(i).second->DumpTo(bw, false));
+            LOM_RET_ON_ERR(zm.GetByIdx(i).second->DumpTo(*bw, false));
         }
 
         LOM_RET_ON_ERR(bw->Flush());
@@ -340,7 +340,7 @@ LOM_ERR DBImpl::NewOpLogFile()
         LOM_RET_ON_ERR(::lom::immut::ZList(GoSlice<StrSlice>{
             serial_,
             op_log_file_name,
-        }).DumpTo(bw));
+        }).DumpTo(*bw));
     }
 
     LOM_RET_ON_ERR(::lom::os::Rename(tmp_op_log_file_path.CStr(), op_log_file_path.CStr()));
@@ -394,7 +394,7 @@ LOM_ERR DBImpl::RecordOpLog(const WriteBatch::RawOpsMap &wb_ops)
         }
     }
     ::lom::immut::ZList record_zl(record);
-    auto err = record_zl.DumpTo(curr_op_log_writer_);
+    auto err = record_zl.DumpTo(*curr_op_log_writer_);
     if (err)
     {
         //failed, skip curr op-log file
@@ -424,7 +424,7 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
 
         ::lom::immut::ZList zl;
 
-        LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+        LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(*br, zl));
         auto head_parts = zl.Parse();
         if (!(head_parts.Len() == 2 && head_parts.At(0) == serial_ && head_parts.At(1) == file_name))
         {
@@ -443,7 +443,7 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
 
             //为性能起见这里只简单检查，如果需要详细检查确保数据正确性，以后可增加一些选项控制
 
-            LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+            LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(*br, zl));
             if (!(zl.StrCount() > 0 && zl.StrCount() % 2 == 0))
             {
                 LOM_RET_ERR(
@@ -478,7 +478,7 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
 
         ::lom::immut::ZList zl;
 
-        LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, zl));
+        LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(*br, zl));
         auto head_parts = zl.Parse();
         if (!(head_parts.Len() == 2 && head_parts.At(0) == serial_ && head_parts.At(1) == file_name))
         {
@@ -496,7 +496,7 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
                 break;
             }
 
-            auto err = ::lom::immut::ZList::LoadFrom(br, zl);
+            auto err = ::lom::immut::ZList::LoadFrom(*br, zl);
             if (err)
             {
                 if (err == ::lom::io::UnexpectedEOF())
