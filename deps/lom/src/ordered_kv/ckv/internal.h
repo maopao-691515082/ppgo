@@ -64,6 +64,14 @@ class DBImpl : public DB
                 }
             );
         }
+        ssize_t SegCount() const
+        {
+            return seg_count_;
+        }
+        ssize_t FreedSegCount() const
+        {
+            return freed_seg_count_;
+        }
 
         Ptr IncSegCount() const
         {
@@ -159,7 +167,6 @@ class DBImpl : public DB
 
         DataFiles data_files;
         ::lom::io::BufWriter::Ptr data_writer;
-        ssize_t curr_data_file_sz = 0;
 
         std::atomic<bool> stopped;
 

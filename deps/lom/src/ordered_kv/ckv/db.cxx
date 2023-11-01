@@ -54,11 +54,11 @@ static void SetNextDataFileId(WriteBatchBase &wb, ssize_t id)
     wb.Put(kMeta_NextDataFileIdKey, ::lom::var_int::Encode(id));
 }
 
-static LOM_ERR GetNextDataFileId(const ::lom::ordered_kv::Snapshot &snapshot, ssize_t &nid) const
+static LOM_ERR GetNextDataFileId(const ::lom::ordered_kv::Snapshot &meta_snapshot, ssize_t &nid) const
 {
     Str v;
     bool ok;
-    LOM_RET_ON_ERR(snapshot.Get(kMeta_NextDataFileIdKey, v, ok));
+    LOM_RET_ON_ERR(meta_snapshot.Get(kMeta_NextDataFileIdKey, v, ok));
     if (!ok)
     {
         LOM_RET_ERR("next-file-id lost");
@@ -74,6 +74,15 @@ static LOM_ERR GetNextDataFileId(const ::lom::ordered_kv::Snapshot &snapshot, ss
 
     nid = id;
     return nullptr;
+}
+
+static void SetDataFileInfo(
+    ::lom::ordered_kv::Snapshot &meta_snapshot, ssize_t data_file_id,
+    ssize_t seg_count, ssize_t freed_seg_count)
+{
+    meta_snapshot.wb.Put(
+        ::lom::Sprintf("%s%zd", kMeta_DataFileKeyPrefix.CStr(), data_file_id),
+        ::lom::var_int::Encode(seg_count).Concat(::lom::var_int::Encode(freed_seg_count)));
 }
 
 static bool ParseDataFileInfo(StrSlice info, ssize_t &seg_count, ssize_t &freed_seg_count)
@@ -92,31 +101,87 @@ static bool ParseDataFileInfo(StrSlice info, ssize_t &seg_count, ssize_t &freed_
     return ok;
 }
 
+static void SetSegInfo(
+    ::lom::ordered_kv::Snapshot &meta_snapshot, StrSlice seg_first_k, ssize_t data_file_id, ssize_t offset)
+{
+    meta_snapshot.wb.Put(
+        kMeta_SegKeyPrefix.Concat(seg_first_k),
+        ::lom::var_int::Encode(data_file_id).Concat(::lom::var_int::Encode(offset)));
+}
+
+static bool ParseSegInfo(StrSlice info, ssize_t &data_file_id, ssize_t &offset)
+{
+    auto p = info.Data();
+    auto sz = info.Len();
+    int64_t id, off;
+    bool ok =
+        ::lom::var_int::Decode(p, sz, id) && ::lom::var_int::Decode(p, sz, off) &&
+        sz == 0 && id > 0 && off > 0;
+    if (ok)
+    {
+        data_file_id = id;
+        offset = off;
+    }
+    return ok;
+}
+
+static LOM_ERR GetSegInfo(
+    const ::lom::ordered_kv::Snapshot &meta_snapshot, StrSlice seg_first_k,
+    ssize_t &data_file_id, ssize_t &off, bool &ok)
+{
+    Str v;
+    LOM_RET_ON_ERR(meta_snapshot.Get(kMeta_SegKeyPrefix.Concat(seg_first_k), v, ok));
+    if (ok)
+    {
+        if (!ParseSegInfo(v, data_file_id, off))
+        {
+            LOM_RET_ERR("invalid seg info of seg-first-k %s", seg_first_k.Repr().CStr());
+        }
+    }
+    return nullptr;
+}
+
+static LOM_ERR PrepareDataWriter(
+    ::lom::ordered_kv::Snapshot &meta_snapshot,
+    DataFiles &dfs, ::lom::io::BufWriter::Ptr &dw, ssize_t &dw_fid)
+{
+    if (dw && dw->ByteCountWritten() < DataFile::kSizeThreshold)
+    {
+        //当前数据文件状态正常，不做更改
+        Assert(dfs.Size() > 0);
+        dw_fid = *dfs.GetByIdx(dfs.Size() - 1).first;
+        return nullptr;
+    }
+
+    //todo
+}
+
 void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core)
 {
     while (!db_core->stopped.load())
     {
-        //获取data_files的快照（不需要meta_db的）
-        DataFiles dfs;
-        db_core->meta_db->NewSnapshot(
-            [&] () {
-                dfs = db_core->data_files;
-            }
-        );
-
         //找到需要GC的数据文件
         DataFile::Ptr df;
-        if (dfs.Size() >= 16)
         {
-            //最后一个文件一般来说是当前data_writer，不能被GC，需要排除掉
-            for (ssize_t i = dfs.Size() - 2; i >= 0; -- i)
+            //获取data_files的快照（不需要meta_db的）
+            DataFiles dfs;
+            db_core->meta_db->NewSnapshot(
+                [&] () {
+                    dfs = db_core->data_files;
+                }
+            );
+            if (dfs.Size() >= 16)
             {
-                auto kvpp = dfs.GetByIdx(i);
-                Assert(*kvpp.first == (*kvpp.second)->ID());
-                if ((*kvpp.second)->NeedGC())
+                //最后一个文件一般来说是当前data_writer，不能被GC，需要排除掉
+                for (ssize_t i = dfs.Size() - 2; i >= 0; -- i)
                 {
-                    df = *kvpp.second;
-                    break;
+                    auto kvpp = dfs.GetByIdx(i);
+                    Assert(*kvpp.first == (*kvpp.second)->ID());
+                    if ((*kvpp.second)->NeedGC())
+                    {
+                        df = *kvpp.second;
+                        break;
+                    }
                 }
             }
         }
@@ -129,9 +194,13 @@ void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr
 
         auto do_gc = [&] () -> LOM_ERR {
             auto br = df->NewPReadBufReader(0);
-            ::lom::immut::ZList header_zl;
-            LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, header_zl));
-            //打开文件的时候已经检查过header_zl是否有效，这里就不再检查了
+
+            //skip header
+            {
+                ::lom::immut::ZList header_zl;
+                LOM_RET_ON_ERR(::lom::immut::ZList::LoadFrom(br, header_zl));
+                //打开文件的时候已经检查过header_zl是否有效，这里就不再检查了
+            }
 
             //渐进式执行GC，迁移选中的数据文件中的有效数据，每次一个seg
             for (;;)
@@ -142,7 +211,76 @@ void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr
                     return nullptr;
                 }
 
-                //todo 读取一个seg，判断是否已被释放，若没有释放，则进行迁移
+                //读取一个seg
+                ssize_t off = br->ByteCountRead();
+                ::lom::immut::ZList seg_zl;
+                {
+                    auto err = ::lom::immut::ZList::LoadFrom(br, seg_zl);
+                    if (err)
+                    {
+                        if (err == ::lom::io::UnexpectedEOF())
+                        {
+                            //最后一个记录不完整，或者EOF，都等同于正常读完
+                            break;
+                        }
+                        LOM_RET_ON_ERR(err);
+                    }
+                }
+                if (seg_zl.StrCount() == 0)
+                {
+                    LOM_RET_ERR("data corrupted: empty seg");
+                }
+
+                //判断seg是否已被释放
+                auto meta_snapshot = db_core->meta_db->NewSnapshot();
+                ssize_t data_file_id, offset;
+                bool ok;
+                LOM_RET_ON_ERR(GetSegInfo(*meta_snapshot, seg_zl.FirstStr(), data_file_id, offset, ok));
+                if (ok && data_file_id == df->ID() && offset == off)
+                {
+                    //有效seg
+
+                    std::lock_guard<std::mutex> wlg(db_core->write_lock);
+
+                    //上面是乐观判断，存在数据竞争，需要再次确认
+                    meta_snapshot = db_core->meta_db->NewSnapshot();
+                    LOM_RET_ON_ERR(GetSegInfo(*meta_snapshot, seg_zl.FirstStr(), data_file_id, offset, ok));
+                    if (ok && data_file_id == df->ID() && offset == off)
+                    {
+                        //确认有效，迁移
+                        //当然过程是临时修改+原子提交
+                        DataFiles dfs = db_core->data_files;
+
+                        //释放老seg
+                        meta_snapshot->wb.Del(kMeta_SegKeyPrefix.Concat(seg_zl.FirstStr()));
+                        auto new_df = df->IncFreeSegCount();
+                        Assert(dfs.Get(data_file_id) != nullptr);
+                        dfs = dfs.Set(data_file_id, new_df);
+                        SetDataFileInfo(
+                            *meta_snapshot, data_file_id, new_df->SegCount(), new_df->FreedSegCount());
+
+                        //写入新seg
+                        ::lom::io::BufWriter::Ptr dw = db_core->data_writer;
+                        ssize_t dw_fid;
+                        LOM_RET_ON_ERR(PrepareDataWriter(*meta_snapshot, dfs, dw, dw_fid));
+                        ssize_t dw_off = dw->ByteCountWritten();
+                        {
+                            auto err = seg_zl.DumpTo(dw);
+                            if (err)
+                            {
+                                //出错了，如果是新数据文件可以不管，如果是当前正在写的数据文件则需要及时关掉
+                                if (dw == db_core->data_writer)
+                                {
+                                    db_core->data_writer = nullptr;
+                                }
+                            }
+                            LOM_RET_ON_ERR(err);
+                        }
+                        SetSegInfo(*meta_snapshot, seg_zl.FirstStr(), dw_fid, dw_off);
+
+                        //todo
+                    }
+                }
             }
 
             //todo 成功GC了一个文件，将其删除
@@ -204,16 +342,16 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
     ));
 
     {
-        auto snapshot = core_->meta_db->NewSnapshot();
+        auto meta_snapshot = core_->meta_db->NewSnapshot();
         Str serial_k = "SERIAL";
         bool ok;
-        LOM_RET_ON_ERR(snapshot->Get(serial_k, core_->serial, ok));
+        LOM_RET_ON_ERR(meta_snapshot->Get(serial_k, core_->serial, ok));
         if (ok)
         {
             ssize_t nid;
-            LOM_RET_ON_ERR(GetNextDataFileId(*snapshot, nid));
+            LOM_RET_ON_ERR(GetNextDataFileId(*meta_snapshot, nid));
 
-            auto iter = snapshot->NewIterator();
+            auto iter = meta_snapshot->NewIterator();
             for (iter->Seek(kMeta_DataFileKeyPrefix); iter->Valid(); iter->Next())
             {
                 auto k = iter->Key();
@@ -269,7 +407,7 @@ LOM_ERR DBImpl::Init(const char *path, Options opts)
         }
         else
         {
-            auto iter = snapshot->NewIterator();
+            auto iter = meta_snapshot->NewIterator();
             LOM_RET_ON_ERR(iter->Err());
             if (!iter->IsRightBorder())
             {
@@ -313,7 +451,7 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
         return nullptr;
     }
 
-    std::lock_guard<std::mutex> wlg(write_lock_);
+    std::lock_guard<std::mutex> wlg(core_->write_lock);
 
     //todo
 }
@@ -336,6 +474,8 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
 
 LOM_ERR DB::Open(const char *path, Ptr &db, Options opts)
 {
+    LOM_RET_ERR("incompleted");
+
     auto new_db = std::make_shared<DBImpl>();
     LOM_RET_ON_ERR(new_db->Init(path, opts));
     db = std::static_pointer_cast<DB>(new_db);

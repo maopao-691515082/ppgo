@@ -62,7 +62,12 @@ class BufReaderImpl : public BufReader
 
         for (ssize_t i = 0; i < sz;)
         {
-            LOM_RET_ON_ERR(Fill());
+            auto err = Fill();
+            if (err == UnexpectedEOF())
+            {
+                rsz = -1;
+            }
+            LOM_RET_ON_ERR(err);
             if (len_ == 0)
             {
                 //EOF
@@ -99,6 +104,37 @@ class BufReaderImpl : public BufReader
         return nullptr;
     }
 
+protected:
+
+    virtual LOM_ERR ReadImpl(char *buf, ssize_t sz, ssize_t &rsz) override
+    {
+        LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
+
+        LOM_RET_ON_ERR(Fill());
+        if (len_ == 0)
+        {
+            rsz = 0;
+            return nullptr;
+        }
+        auto copy_len = std::min(len_, sz);
+        memcpy(buf, buf_ + start_, copy_len);
+        start_ += copy_len;
+        len_ -= copy_len;
+
+        rsz = copy_len;
+        return nullptr;
+    }
+
+    virtual LOM_ERR ReadUntilImpl(char end_ch, char *buf, ssize_t sz, ssize_t &rsz) override
+    {
+        return ReadFullOrUntil(buf, sz, &end_ch, rsz);
+    }
+
+    virtual LOM_ERR ReadFullImpl(char *buf, ssize_t sz, ssize_t &rsz) override
+    {
+        return ReadFullOrUntil(buf, sz, nullptr, rsz);
+    }
+
 public:
 
     BufReaderImpl(BufReader::DoReadFunc do_read, ssize_t buf_sz, MakeBufFunc make_buf) :
@@ -120,36 +156,6 @@ public:
         LOM_RET_ON_ERR(Fill());
         rsz = len_;
         return nullptr;
-    }
-
-    virtual LOM_ERR Read(char *buf, ssize_t sz, ssize_t &rsz) override
-    {
-        LOM_IO_CHECK_NON_POSITIVE_SIZE_PARAM(sz);
-
-        LOM_RET_ON_ERR(Fill());
-        if (len_ == 0)
-        {
-            rsz = 0;
-            return nullptr;
-        }
-        auto copy_len = std::min(len_, sz);
-        memcpy(buf, buf_ + start_, copy_len);
-        start_ += copy_len;
-        len_ -= copy_len;
-
-        rsz = copy_len;
-        return nullptr;
-    }
-
-    virtual LOM_ERR ReadUntil(char end_ch, char *buf, ssize_t sz, ssize_t &rsz) override
-    {
-        return ReadFullOrUntil(buf, sz, &end_ch, rsz);
-    }
-
-    virtual LOM_ERR ReadFull(char *buf, ssize_t sz, ssize_t *rsz_ptr) override
-    {
-        ssize_t rsz;
-        return ReadFullOrUntil(buf, sz, nullptr, rsz_ptr ? *rsz_ptr : rsz);
     }
 };
 
@@ -187,23 +193,9 @@ class BufWriterImpl : public BufWriter
         return nullptr;
     }
 
-public:
+protected:
 
-    BufWriterImpl(BufWriter::DoWriteFunc do_write, ssize_t buf_sz, MakeBufFunc make_buf) :
-        do_write_(do_write), buf_sz_(AdjustBufSize(buf_sz)), make_buf_(make_buf)
-    {
-        buf_ = make_buf_ ? make_buf_(buf_sz_) : new char[buf_sz_];
-    }
-
-    virtual ~BufWriterImpl()
-    {
-        if (!make_buf_)
-        {
-            delete[] buf_;
-        }
-    }
-
-    virtual LOM_ERR WriteAll(const char *buf, ssize_t sz) override
+    virtual LOM_ERR WriteAllImpl(const char *buf, ssize_t sz) override
     {
         if (sz < 0)
         {
@@ -239,6 +231,22 @@ public:
         }
 
         return nullptr;
+    }
+
+public:
+
+    BufWriterImpl(BufWriter::DoWriteFunc do_write, ssize_t buf_sz, MakeBufFunc make_buf) :
+        do_write_(do_write), buf_sz_(AdjustBufSize(buf_sz)), make_buf_(make_buf)
+    {
+        buf_ = make_buf_ ? make_buf_(buf_sz_) : new char[buf_sz_];
+    }
+
+    virtual ~BufWriterImpl()
+    {
+        if (!make_buf_)
+        {
+            delete[] buf_;
+        }
     }
 
     virtual LOM_ERR Flush() override
