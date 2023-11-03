@@ -17,6 +17,8 @@ public:
 
     typedef std::shared_ptr<DB> Ptr;
 
+    typedef ::lom::immut::AVL<Str, ::lom::immut::ZList> ZMap;
+
     virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) = 0;
     virtual LOM_ERR Write(const WriteBatch &wb) override
     {
@@ -28,6 +30,12 @@ public:
     {
         return NewSnapshot(nullptr);
     }
+
+    //返回粗略的空间耗费值
+    virtual ssize_t SpaceCost() = 0;
+
+    //获取底层的数据
+    virtual ZMap RawZMap() = 0;
 
     /*
     在指定`path`时为持久化存储模式，会在对应目录下以数据Dump+WAL的形式进行落盘

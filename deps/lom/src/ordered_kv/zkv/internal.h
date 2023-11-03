@@ -13,12 +13,6 @@ namespace zkv
 
 class DBImpl : public DB
 {
-public:
-
-    typedef ::lom::immut::AVL<Str, ::lom::immut::ZList> ZMap;
-
-private:
-
     class Snapshot : public ::lom::ordered_kv::Snapshot
     {
         class Iterator : public ::lom::ordered_kv::Iterator
@@ -141,6 +135,7 @@ private:
     std::mutex write_lock_, update_lock_;
 
     ZMap zm_;
+    ssize_t zm_cost_ = 0;
 
     bool mem_mode_ = false;
 
@@ -177,6 +172,9 @@ public:
 
     virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) override;
     virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) override;
+
+    virtual ssize_t SpaceCost() override;
+    virtual ZMap RawZMap() override;
 };
 
 }

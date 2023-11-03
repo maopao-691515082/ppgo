@@ -16,11 +16,13 @@ static const Str
 
 //核心流程：对ZMap数据的写操作过程
 template <typename WBOps>
-static DBImpl::ZMap WriteZM(DBImpl::ZMap zm, const WBOps &wb_ops)
+static DB::ZMap WriteZM(DB::ZMap zm, const WBOps &wb_ops, ssize_t &cost_diff)
 {
     static const ssize_t
         kZLDataLenMax = 1024,
         kZLDataLenMergeThreshold = kZLDataLenMax / 2;
+
+    cost_diff = 0;
 
     auto wb_ops_iter = wb_ops.begin();
     while (wb_ops_iter != wb_ops.end())
@@ -32,6 +34,7 @@ static DBImpl::ZMap WriteZM(DBImpl::ZMap zm, const WBOps &wb_ops)
         ssize_t merge_idx = 0;  //保持指向当前合并的ZL应该插入的位置
         if (zm.Size() > 0)
         {
+            ssize_t k_len = wb_ops_iter->first.Len();
             auto v_ptr = zm.Get(wb_ops_iter->first, &merge_idx);
             if (v_ptr == nullptr)
             {
@@ -41,6 +44,7 @@ static DBImpl::ZMap WriteZM(DBImpl::ZMap zm, const WBOps &wb_ops)
                     -- merge_idx;
                 }
                 auto pp = zm.GetByIdx(merge_idx);
+                k_len = pp.first->Len();
                 zl = *pp.second;
             }
             else
@@ -51,6 +55,7 @@ static DBImpl::ZMap WriteZM(DBImpl::ZMap zm, const WBOps &wb_ops)
 
             //删掉这个ZL
             zm = zm.DelByIdx(merge_idx);
+            cost_diff -= k_len + zl.SpaceCost();
 
             //删除后，当前`merge_idx`是ZL的后继，获取后继的信息
             if (merge_idx < zm.Size())
@@ -165,6 +170,7 @@ static DBImpl::ZMap WriteZM(DBImpl::ZMap zm, const WBOps &wb_ops)
 
                 //插入
                 zm = zm.AddByIdx(merge_idx, new_zl_first_k, new_zl);
+                cost_diff += new_zl_first_k.Len() + new_zl.SpaceCost();
                 ++ merge_idx;
             }
             if (merged_kvs.Len() > 0)
@@ -188,11 +194,13 @@ static DBImpl::ZMap WriteZM(DBImpl::ZMap zm, const WBOps &wb_ops)
             {
                 //需要合并，删掉后继ZL，链接到新的ZL后面
                 zm = zm.DelByIdx(merge_idx);
+                cost_diff -= next_zl_first_k->Len() + next_zl.SpaceCost();
                 new_zl = new_zl.Extend(next_zl);
             }
 
             //插入
             zm = zm.AddByIdx(merge_idx, new_zl_first_k, new_zl);
+            cost_diff += new_zl_first_k.Len() + new_zl.SpaceCost();
             ++ merge_idx;
         }
     }
@@ -432,6 +440,7 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
         }
 
         GoSlice<std::pair<Str, ::lom::immut::ZList>> kvs;
+        ssize_t kv_space_cost_total = 0;
         for (;;)
         {
             ssize_t rsz;
@@ -458,8 +467,10 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
             }
 
             kvs = kvs.Append(std::make_pair(k, zl));
+            kv_space_cost_total += k.Len() + zl.SpaceCost();
         }
         zm_ = ZMap::Build(kvs);
+        zm_cost_ = kv_space_cost_total;
     }
 
     //replay op-log
@@ -553,7 +564,9 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
             }
         }
 
-        zm_ = WriteZM(zm_, unique_ops);
+        ssize_t cost_diff;
+        zm_ = WriteZM(zm_, unique_ops, cost_diff);
+        zm_cost_ += cost_diff;
     }
 
     return nullptr;
@@ -763,11 +776,13 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
         }
 
         old_zm = zm_;   //已经保证了没有人修改`zm_`，所以不加`update_lock_`直接读
-        ZMap new_zm = WriteZM(old_zm, wb_ops);
+        ssize_t cost_diff;
+        ZMap new_zm = WriteZM(old_zm, wb_ops, cost_diff);
 
         {
             std::lock_guard<std::mutex> ulg(update_lock_);
             zm_ = new_zm;
+            zm_cost_ += cost_diff;
             if (commit_hook)
             {
                 commit_hook();
@@ -790,6 +805,18 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
         }
     }
     return ::lom::ordered_kv::Snapshot::Ptr(new Snapshot(zm));
+}
+
+ssize_t DBImpl::SpaceCost()
+{
+    std::lock_guard<std::mutex> ulg(update_lock_);
+    return zm_cost_;
+}
+
+DB::ZMap DBImpl::RawZMap()
+{
+    std::lock_guard<std::mutex> ulg(update_lock_);
+    return zm_;
 }
 
 LOM_ERR DB::Open(const char *path, DB::Ptr &db, DB::Options opts)

@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
         LOM_DIE("open db failed: %s", err->FmtWithTB().CStr());
     }
     std::cout << "open db ok, cost: " << (lom::NowFloat() - ts) << " sec" << std::endl;
+    std::cout << "space cost: " << db->SpaceCost() << std::endl;
 
     std::map<lom::Str, lom::Str> smkv;
     {
@@ -75,6 +76,21 @@ int main(int argc, char *argv[])
             std::cout << "completed " << i << " kvs write op, " << kv_op_count << " kv write op" << std::endl;
             std::cout << "speed: " <<
                 (i - last_i) / tm << "\t" << (kv_op_count - last_kv_op_count) / tm << std::endl;
+
+            std::cout << "space cost: " << db->SpaceCost() << std::endl;
+
+            ssize_t space_cost = 0;
+            auto zm = db->RawZMap();
+            for (ssize_t j = 0; j < zm.Size(); ++ j)
+            {
+                auto pp = zm.GetByIdx(j);
+                space_cost += pp.first->Len() + pp.second->SpaceCost();
+            }
+            if (db->SpaceCost() != space_cost)
+            {
+                LOM_DIE("space check failed, real space cost = %zd", space_cost);
+            }
+
             last_log_time = now;
             last_i = i;
             last_kv_op_count = kv_op_count;
@@ -118,6 +134,7 @@ int main(int argc, char *argv[])
         }
     }
     std::cout << "write ok" << std::endl;
+    std::cout << "space cost: " << db->SpaceCost() << std::endl;
 
     {
         auto snapshot = db->NewSnapshot();
@@ -151,6 +168,7 @@ int main(int argc, char *argv[])
         }
     }
     std::cout << "check ok" << std::endl;
+    std::cout << "space cost: " << db->SpaceCost() << std::endl;
 
     db = nullptr;
 
@@ -168,6 +186,7 @@ int main(int argc, char *argv[])
         LOM_DIE("open db failed: %s", err->Msg().CStr());
     }
     std::cout << "reopen db ok, cost " << (lom::NowFloat() - ts) << " sec" << std::endl;
+    std::cout << "space cost: " << db->SpaceCost() << std::endl;
 
     {
         auto snapshot = db->NewSnapshot();
@@ -201,4 +220,5 @@ int main(int argc, char *argv[])
         }
     }
     std::cout << "check ok" << std::endl;
+    std::cout << "space cost: " << db->SpaceCost() << std::endl;
 }
