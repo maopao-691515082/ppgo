@@ -1,0 +1,95 @@
+//okv的通用数据库接口
+public interface DB
+{
+    //批量写入数据
+    public write(wb WriteBatch);
+
+    //获取快照
+    public new_snapshot() Snapshot;
+}
+
+//批量写入数据的请求对象
+public class WriteBatch
+{
+    public func size() int;
+    public func clear();
+    public func set(k, v string);
+    public func del(k string);
+}
+
+//快照对象，内部包含一个`WriteBatch`对象，可以进行临时性修改和导出改动的操作
+public class Snapshot
+{
+    //获取值，`ok`返回是否存在
+    public func get(k string) (v string, ok bool);
+
+    //建立一个迭代器，初始指向第一个元素
+    public func new_iter() Iter;
+
+    //可进行临时性修改
+    public func set(k, v string);
+    public func del(k string);
+
+    //将改动导出为`WriteBatch`
+    public func export_wb() WriteBatch;
+}
+
+/*
+迭代器对象
+迭代器机制将数据集合视为带有双端边界的线性表，迭代器在没有异常的情况下会指向其中某个元素或左右边界
+通过`Snapshot.new_iter`方法获取，新迭代器默认指向第一个元素（空数据集则指向右边界）
+若迭代器操作中出现异常，则会一直保持异常状态，后续所有调用均会返回异常
+迭代器包含了对快照数据的引用，对应的快照不可被临时修改，否则行为未定义
+*/
+public class Iter
+{
+    //判断当前指向是左边界/右边界/元素
+    public func is_left_border() bool;
+    public func is_right_border() bool;
+    public func valid() bool;
+
+    //获取当前指向的键/值，只能在`valid()`为true时调用
+    public func key() string;
+    public func value() string;
+    public func kv() (k, v string);
+
+    //定位到第一个K/最后一个K，若空库则定位至右边界/左边界
+    public func seek_first();
+    public func seek_last();
+
+    //定位到从左到右第一个大于等于`k`的K，若所有K都比`k`小或为空数据集，则定位到右边界
+    public func seek(k string);
+    //相当于先`Seek(k)`再进行`Prev()`
+    public func seek_prev(k string);
+
+    /*
+    移动迭代器
+    通过`step`指定步数，正数向右移动，负数向左
+    若未指定`stop_at`，则到达边界停止
+    若指定`stop_at`，则在遇到或越过它处停下，即：
+        - 若向右移动，则在第一个大于等于它的K处停下
+        - 若向左移动，则在第一个小于等于它的K处停下
+    返回返回实际移动的步数，说明：
+        - 返回的步数和方向无关，是非负的计数值，例如`step`输入`-100`，若能成功向左移动100步，则返回值是`100`
+        - 如果当前K就符合`stop_at`的要求，则不做移动（返回0）
+    */
+    public func move(step int, /, stop_at string) int;
+
+    //基于`move`封装的简便接口
+    public func next()
+    {
+        this.move(1);
+    }
+    public func prev()
+    {
+        this.move(-1);
+    }
+    public func move_to(k string)
+    {
+        this.move(kLenSoftMax, stop_at = k);
+    }
+    public func rev_move_to(k string)
+    {
+        this.move(-kLenSoftMax, stop_at = k);
+    }
+}
