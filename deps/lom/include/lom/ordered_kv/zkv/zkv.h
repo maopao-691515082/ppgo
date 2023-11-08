@@ -47,10 +47,14 @@ public:
         为false时打开已有库，库不存在则失败
         为true时尝试打开，若库不存在则创建一个新的
             创建过程中，目录创建是增量的，因此允许通过软连接预先安排不同目录的存储布局
+        持久化模式下有效
         */
         bool create_if_missing = false;
 
-        //提供给后台任务的错误处理回调，若指定，则快照落盘等后台任务如果出现错误，会调用这个函数
+        /*
+        提供给后台任务的错误处理回调，若指定，则快照落盘等后台任务如果出现错误，会调用这个函数
+        持久化模式下有效
+        */
         std::function<void (LOM_ERR)> handle_bg_err;
     };
     static LOM_ERR Open(const char *path, Ptr &db, Options opts);

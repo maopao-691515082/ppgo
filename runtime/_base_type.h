@@ -67,6 +67,10 @@ public:
     {
     }
 
+    tp_string(::lom::StrSlice s) : s_(s)
+    {
+    }
+
     tp_string(const Vec<char8_t> &v);
     tp_string(const VecView<char8_t> &vv);
 

@@ -1,0 +1,48 @@
+import "db/ordered_kv";
+
+//用于处理后台任务的错误信息接口
+public interface ErrMsgHandler
+{
+    //使用者保证，handle不要抛出异常，否则内部调用也会将其抛弃掉
+    public handle(err_msg string);
+}
+
+class _native_type_helper
+{
+    wb ordered_kv.WriteBatch;
+    snapshot ordered_kv.Snapshot;
+}
+
+public class DB
+{
+    //批量写入数据
+    public func write(wb ordered_kv.WriteBatch);
+
+    //获取快照
+    public func new_snapshot() ordered_kv.Snapshot;
+
+    //近似的空间消耗
+    public func space_cost() int;
+}
+
+/*
+打开DB
+若指定`path`，则表示开启持久化，以Dump+WAL的方式持久化到对应目录，否则为纯内存模式
+以下参数仅当开启持久化时有意义：
+    - 若指定`create_if_missing`为true，则在数据库不存在时创建
+    - 可指定非空的`bg_err_msg_handler`回调用于处理后台任务执行中的错误信息
+*/
+public func open(/, path string, create_if_missing bool, bg_err_msg_handler ErrMsgHandler) DB
+{
+    if (!path.valid())
+    {
+        return open_m();
+    }
+    if (path.get().contains_byte('\0'))
+    {
+        throw("invalid path, contains null byte");
+    }
+    return open_p(path.get(), create_if_missing.get_or(false), bg_err_msg_handler.get_or(nil));
+}
+func open_m() DB;
+func open_p(path string, create_if_missing bool, bg_err_msg_handler ErrMsgHandler) DB;

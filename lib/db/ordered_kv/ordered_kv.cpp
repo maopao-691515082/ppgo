@@ -32,7 +32,7 @@ namespace PPGO_THIS_MOD
 ::ppgo::Exc::Ptr cls_Snapshot::method_get(
     ::std::tuple<::ppgo::tp_string, ::ppgo::tp_bool> &ret, ::ppgo::tp_string k)
 {
-    Str v;
+    ::lom::Str v;
     auto err = nas.s->Get(k.RawStr(), v, std::get<1>(ret));
     if (err)
     {
@@ -149,18 +149,23 @@ namespace PPGO_THIS_MOD
 }
 ::ppgo::Exc::Ptr cls_Iter::method_seek(::std::tuple<> &ret, ::ppgo::tp_string k)
 {
-    nas.iter->Seek(k);
+    nas.iter->Seek(k.RawStr());
     return nas.iter->Err() ? ::ppgo::Exc::FromLomErr(nas.iter->Err()) : nullptr;
 }
 ::ppgo::Exc::Ptr cls_Iter::method_seek_prev(::std::tuple<> &ret, ::ppgo::tp_string k)
 {
-    nas.iter->SeekPrev(k);
+    nas.iter->SeekPrev(k.RawStr());
     return nas.iter->Err() ? ::ppgo::Exc::FromLomErr(nas.iter->Err()) : nullptr;
 }
 ::ppgo::Exc::Ptr cls_Iter::method_move(
     ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_int step, ::std::optional<::ppgo::tp_string> stop_at)
 {
-    auto moved_step = nas.iter->Move(step, stop_at);
+    ::std::optional<::lom::Str> stop_at_str;
+    if (stop_at)
+    {
+        stop_at_str = stop_at->RawStr();
+    }
+    auto moved_step = nas.iter->Move(step, stop_at_str);
     if (nas.iter->Err())
     {
         return ::ppgo::Exc::FromLomErr(nas.iter->Err());
