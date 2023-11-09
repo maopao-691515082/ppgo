@@ -1063,12 +1063,14 @@ def output_native_src():
                 if out_fn.endswith(".h"):
                     hfns.append(out_fn)
                 with open(ppgoc_env.out_dir + "/" + out_fn, "w") as out_f:
-                    for line in open(mod.dir + "/" + fn):
+                    print >> out_f, '#line 1 "PPGO_LIB/%s/%s"' % (mod.name, fn)
+                    for line_idx, line in enumerate(open(mod.dir + "/" + fn)):
                         if re.match(r"^\s*#\s*pragma\s+ppgo\s+define-THIS_MOD\s*$", line):
                             print >> out_f, "#ifdef PPGO_THIS_MOD"
                             print >> out_f, "#error macro PPGO_THIS_MOD redefined"
                             print >> out_f, "#endif"
                             print >> out_f, "#define PPGO_THIS_MOD %s" % mnc
+                            print >> out_f, "#line %d" % (line_idx + 2)
                         elif re.match(r"^\s*#\s*pragma\s+ppgo\s+undef-THIS_MOD\s*$", line):
                             print >> out_f, "#undef PPGO_THIS_MOD"
                         else:

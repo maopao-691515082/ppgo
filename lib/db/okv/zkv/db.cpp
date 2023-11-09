@@ -77,3 +77,5 @@ typedef decltype(cls__native_type_helper().attr_snapshot) cls_ptr_Snapshot;
 }
 
 }
+
+#pragma ppgo undef-THIS_MOD

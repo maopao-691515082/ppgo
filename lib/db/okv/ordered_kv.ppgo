@@ -11,6 +11,10 @@ public interface DB
 //批量写入数据的请求对象
 public class WriteBatch
 {
+    public func init()
+    {
+    }
+
     public func size() int;
     public func clear();
     public func set(k, v string);

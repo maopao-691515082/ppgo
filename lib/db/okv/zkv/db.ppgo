@@ -1,4 +1,4 @@
-import "db/ordered_kv";
+import "db/okv";
 
 //用于处理后台任务的错误信息接口
 public interface ErrMsgHandler
@@ -9,17 +9,17 @@ public interface ErrMsgHandler
 
 class _native_type_helper
 {
-    wb ordered_kv.WriteBatch;
-    snapshot ordered_kv.Snapshot;
+    wb okv.WriteBatch;
+    snapshot okv.Snapshot;
 }
 
 public class DB
 {
     //批量写入数据
-    public func write(wb ordered_kv.WriteBatch);
+    public func write(wb okv.WriteBatch);
 
     //获取快照
-    public func new_snapshot() ordered_kv.Snapshot;
+    public func new_snapshot() okv.Snapshot;
 
     //近似的空间消耗
     public func space_cost() int;
