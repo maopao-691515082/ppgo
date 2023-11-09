@@ -1,3 +1,8 @@
+/*
+拷贝`from_b`的内容覆盖`b`，等同于：
+b.resize(from_b.len());
+b[:].copy_from(from_b);
+*/
 public func copy_from(b []byte, from_b [:]byte);
 
 public func index_byte(b []byte, c byte) int

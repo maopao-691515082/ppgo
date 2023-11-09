@@ -17,7 +17,7 @@ namespace PPGO_THIS_MOD
         ::ppgo::Exc::Sprintf("invalid view");
     }
     auto copy_len = std::min(b.Len(), from_b.Len());
-    memcpy(&b.GetRef(0), &from_b.GetRef(0), copy_len);
+    memcpy(b.GetElemPtr(0), from_b.GetElemPtr(0), copy_len);
     std::get<0>(ret) = copy_len;
     return nullptr;
 }
@@ -29,7 +29,7 @@ namespace PPGO_THIS_MOD
     {
         ::ppgo::Exc::Sprintf("invalid view");
     }
-    auto p = &b.GetRef(0);
+    auto p = b.GetElemPtr(0);
     auto len = b.Len();
     for (ssize_t i = 0; i < len; ++ i)
     {

@@ -12,7 +12,7 @@ namespace PPGO_THIS_MOD
     ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
     ssize_t n;
-    auto err = nas.conn.Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), n);
+    auto err = nas.conn.Read(reinterpret_cast<char *>(b.GetElemPtr(0)), b.Len(), n);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
@@ -30,7 +30,7 @@ namespace PPGO_THIS_MOD
 ::ppgo::Exc::Ptr cls_Conn::method_write_impl(
     ::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
-    auto err = nas.conn.WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len());
+    auto err = nas.conn.WriteAll(reinterpret_cast<const char *>(b.GetElemPtr(0)), b.Len());
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);

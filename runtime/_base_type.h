@@ -460,6 +460,12 @@ public:
         return GetRef(idx);
     }
 
+    E *GetElemPtr(ssize_t idx) const
+    {
+        Assert(idx >= 0 && idx <= Len());
+        return &v_->v_[idx];
+    }
+
     E Pop(ssize_t idx) const
     {
         Assert(idx >= 0 && idx < Len());
@@ -559,6 +565,12 @@ public:
     E Get(ssize_t idx) const
     {
         return GetRef(idx);
+    }
+
+    E *GetElemPtr(ssize_t idx) const
+    {
+        Assert(idx >= 0 && idx <= Len());
+        return v_.GetElemPtr(begin_ + idx);
     }
 };
 

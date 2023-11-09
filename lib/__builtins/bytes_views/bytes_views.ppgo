@@ -1,3 +1,5 @@
+//拷贝`from_b`的内容到`b`，拷贝长度为二者长度的较小值，返回拷贝的长度
 public func copy_from(b [:]byte, from_b [:]byte) int;
 
+//在`b`中查找字节`c`，返回第一次出现的索引，未找到则返回-1
 public func index_byte(b [:]byte, c byte) int;

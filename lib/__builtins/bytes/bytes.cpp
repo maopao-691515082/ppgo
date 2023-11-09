@@ -17,7 +17,7 @@ namespace PPGO_THIS_MOD
     }
     auto len = from_b.Len();
     b.Resize(len);
-    memcpy(&b.GetRef(0), &from_b.GetRef(0), len);
+    memcpy(b.GetElemPtr(0), from_b.GetElemPtr(0), len);
     return nullptr;
 }
 

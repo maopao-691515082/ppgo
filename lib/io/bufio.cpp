@@ -13,7 +13,7 @@ namespace PPGO_THIS_MOD
     ::ppgo::Vec<::ppgo::tp_byte> b;
     nas.br = ::lom::io::BufReader::New(
         [b, r = attr_r] (char *buf, ssize_t sz, ssize_t &rsz) -> LOM_ERR {
-            ssize_t begin = buf - reinterpret_cast<char *>(&b.GetRef(0));
+            ssize_t begin = buf - reinterpret_cast<char *>(b.GetElemPtr(0));
             ssize_t end = begin + sz;
             ::std::tuple<::ppgo::tp_int> read_ret;
             auto exc = r->method_read(read_ret, ::ppgo::VecView<::ppgo::tp_byte>(b, begin, end));
@@ -27,7 +27,7 @@ namespace PPGO_THIS_MOD
         buf_sz,
         [b] (ssize_t sz) -> char * {
             b.Resize(sz);
-            return reinterpret_cast<char *>(&b.GetRef(0));
+            return reinterpret_cast<char *>(b.GetElemPtr(0));
         }
     );
 
@@ -50,7 +50,7 @@ namespace PPGO_THIS_MOD
     ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
     ssize_t rsz;
-    auto err = nas.br->Read(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), rsz);
+    auto err = nas.br->Read(reinterpret_cast<char *>(b.GetElemPtr(0)), b.Len(), rsz);
     if (err)
     {
         return ::ppgo::Exc::FromLomErr(err);
@@ -64,7 +64,7 @@ namespace PPGO_THIS_MOD
     ::ppgo::tp_byte c, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_bool allow_eof)
 {
     ssize_t rsz = -1;
-    auto err = nas.br->ReadUntil(static_cast<char>(c), reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), rsz);
+    auto err = nas.br->ReadUntil(static_cast<char>(c), reinterpret_cast<char *>(b.GetElemPtr(0)), b.Len(), rsz);
     if (err)
     {
         if (err == ::lom::io::UnexpectedEOF() && rsz >= 0 && allow_eof)
@@ -82,7 +82,7 @@ namespace PPGO_THIS_MOD
     ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::VecView<::ppgo::tp_byte> b, ::ppgo::tp_bool allow_eof)
 {
     ssize_t rsz = -1;
-    auto err = nas.br->ReadFull(reinterpret_cast<char *>(&b.GetRef(0)), b.Len(), &rsz);
+    auto err = nas.br->ReadFull(reinterpret_cast<char *>(b.GetElemPtr(0)), b.Len(), &rsz);
     if (err)
     {
         if (err == ::lom::io::UnexpectedEOF() && rsz >= 0 && allow_eof)
@@ -101,7 +101,7 @@ namespace PPGO_THIS_MOD
     ::ppgo::Vec<::ppgo::tp_byte> b;
     nas.bw = ::lom::io::BufWriter::New(
         [b, w = attr_w] (const char *buf, ssize_t sz, ssize_t &wsz) -> LOM_ERR {
-            ssize_t begin = buf - reinterpret_cast<const char *>(&b.GetRef(0));
+            ssize_t begin = buf - reinterpret_cast<const char *>(b.GetElemPtr(0));
             ssize_t end = begin + sz;
             ::std::tuple<> write_ret;
             auto exc = w->method_write(write_ret, ::ppgo::VecView<::ppgo::tp_byte>(b, begin, end));
@@ -115,7 +115,7 @@ namespace PPGO_THIS_MOD
         buf_sz,
         [b] (ssize_t sz) -> char * {
             b.Resize(sz);
-            return reinterpret_cast<char *>(&b.GetRef(0));
+            return reinterpret_cast<char *>(b.GetElemPtr(0));
         }
     );
 
@@ -124,7 +124,7 @@ namespace PPGO_THIS_MOD
 
 ::ppgo::Exc::Ptr cls_BufWriter::method_write(::std::tuple<> &ret, ::ppgo::VecView<::ppgo::tp_byte> b)
 {
-    auto err = nas.bw->WriteAll(reinterpret_cast<const char *>(&b.GetRef(0)), b.Len());
+    auto err = nas.bw->WriteAll(reinterpret_cast<const char *>(b.GetElemPtr(0)), b.Len());
     if (err)
     {
         return ::ppgo::Exc::FromLomErr(err);
