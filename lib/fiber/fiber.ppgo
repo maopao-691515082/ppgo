@@ -1,6 +1,6 @@
 public interface Fiber
 {
-    public run();
+    public func run();
 }
 
 public func run(main_fiber Fiber);

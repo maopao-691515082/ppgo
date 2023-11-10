@@ -2,10 +2,10 @@
 public interface DB
 {
     //批量写入数据
-    public write(wb WriteBatch);
+    public func write(wb WriteBatch);
 
     //获取快照
-    public new_snapshot() Snapshot;
+    public func new_snapshot() Snapshot;
 }
 
 //批量写入数据的请求对象

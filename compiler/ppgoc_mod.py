@@ -295,6 +295,10 @@ class Intf(COIBase):
             if decrs - set(["public"]):
                 t.syntax_err("接口方法只能用public修饰")
 
+            t = tl.pop()
+            if not t.is_reserved("func"):
+                t.syntax_err("需要`func`")
+
             name_t, name = tl.pop_name()
             if name in self.methods:
                 name_t.syntax_err("方法重定义")

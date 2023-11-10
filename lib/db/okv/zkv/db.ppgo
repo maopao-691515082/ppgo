@@ -4,7 +4,7 @@ import "db/okv";
 public interface ErrMsgHandler
 {
     //使用者保证，handle不要抛出异常，否则内部调用也会将其抛弃掉
-    public handle(err_msg string);
+    public func handle(err_msg string);
 }
 
 class _native_type_helper

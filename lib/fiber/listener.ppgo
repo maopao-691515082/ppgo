@@ -1,6 +1,6 @@
 interface ClientWorker
 {
-    public run(conn Conn);
+    public func run(conn Conn);
 }
 
 public class Listener

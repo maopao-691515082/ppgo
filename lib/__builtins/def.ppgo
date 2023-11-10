@@ -1,5 +1,5 @@
 public interface Withable
 {
-    public enter();
-    public exit();
+    public func enter();
+    public func exit();
 }

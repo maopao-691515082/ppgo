@@ -1,6 +1,6 @@
 public interface Thread
 {
-    public run();
+    public func run();
 }
 
 public func new(t Thread);
