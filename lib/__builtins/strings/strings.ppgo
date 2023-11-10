@@ -8,6 +8,11 @@ public func parse_int(s string, /, base int) int;
 public func parse_uint(s string, /, base int) uint;
 public func parse_float(s string) float;
 
-public func contains_byte(s string, b byte) bool;
+public func index_byte(s string, b byte) int;
+public func rindex_byte(s string, b byte) int;
+public func contains_byte(s string, b byte) bool
+{
+    return index_byte(s, b) >= 0;
+}
 
 public func join(s string, ss [:]string) string;

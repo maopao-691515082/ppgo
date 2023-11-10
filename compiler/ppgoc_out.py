@@ -695,6 +695,11 @@ def output_stmts(code, stmts):
             code += "(void)(%s);" % ec
             continue
 
+        if stmt.type == "block":
+            with code.new_blk(""):
+                output_stmts(code, stmt.stmts)
+            continue
+
         if stmt.type == "for_vec":
             with code.new_blk(""):
                 vv = "vec_%d" % new_id()

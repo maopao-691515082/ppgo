@@ -53,6 +53,12 @@ class Parser:
                 t.warning("空语句")
                 continue
 
+            if t.is_sym("{"):
+                block_stmts = self.parse(vars_stk + (ppgoc_util.OrderedDict(),), loop_deep)
+                self.tl.pop_sym("}")
+                stmts.append(Stmt("block", stmts = block_stmts))
+                continue
+
             if t.is_reserved("for"):
                 self.tl.pop_sym("(")
                 t = self.tl.pop()

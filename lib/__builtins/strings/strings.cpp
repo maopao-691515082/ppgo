@@ -76,10 +76,17 @@ namespace PPGO_THIS_MOD
     PARSE_NUM(strtold(p, const_cast<char **>(&end_ptr)));
 }
 
-::ppgo::Exc::Ptr func_contains_byte(
-    ::std::tuple<::ppgo::tp_bool> &ret, ::ppgo::tp_string s, ::ppgo::tp_byte b)
+::ppgo::Exc::Ptr func_index_byte(
+    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_string s, ::ppgo::tp_byte b)
 {
-    std::get<0>(ret) = s.RawStr().ContainsByte(b);
+    std::get<0>(ret) = s.RawStr().IndexByte(b);
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_rindex_byte(
+    ::std::tuple<::ppgo::tp_int> &ret, ::ppgo::tp_string s, ::ppgo::tp_byte b)
+{
+    std::get<0>(ret) = s.RawStr().RIndexByte(b);
     return nullptr;
 }
 

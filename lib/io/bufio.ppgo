@@ -10,6 +10,9 @@ public class BufReader
     }
     func br_init(buf_sz int);
 
+    //返回通过`read`系列接口累计读出的字节数
+    public func byte_count_read() int;
+
     /*
     若缓冲中有数据，则返回其长度
     若缓冲是空的，则等待至少1字节数据到达，或EOF，或出错异常
@@ -76,6 +79,9 @@ public class BufWriter
         this.bw_init(buf_sz.get_or(0));
     }
     func bw_init(buf_sz int);
+
+    //返回通过`write`系列接口累计写入的字节数
+    public func byte_count_written() int;
 
     //实现`Writable`接口
     public func write(b [:]byte);

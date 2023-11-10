@@ -34,6 +34,12 @@ namespace PPGO_THIS_MOD
     return nullptr;
 }
 
+::ppgo::Exc::Ptr cls_BufReader::method_byte_count_read(::std::tuple<::ppgo::tp_int> &ret)
+{
+    std::get<0>(ret) = nas.br->ByteCountRead();
+    return nullptr;
+}
+
 ::ppgo::Exc::Ptr cls_BufReader::method_wait(::std::tuple<::ppgo::tp_int> &ret)
 {
     ssize_t rsz;
@@ -119,6 +125,12 @@ namespace PPGO_THIS_MOD
         }
     );
 
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr cls_BufWriter::method_byte_count_written(::std::tuple<::ppgo::tp_int> &ret)
+{
+    std::get<0>(ret) = nas.bw->ByteCountWritten();
     return nullptr;
 }
 
