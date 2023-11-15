@@ -25,10 +25,22 @@ namespace PPGO_THIS_MOD
     std::get<0>(ret) = ::ppgo::tp_string(s.RawStr().Upper());
     return nullptr;
 }
-
 ::ppgo::Exc::Ptr func_lower(::std::tuple<::ppgo::tp_string> &ret, ::ppgo::tp_string s)
 {
     std::get<0>(ret) = ::ppgo::tp_string(s.RawStr().Lower());
+    return nullptr;
+}
+
+::ppgo::Exc::Ptr func_has_prefix(
+    ::std::tuple<::ppgo::tp_bool> &ret, ::ppgo::tp_string s, ::ppgo::tp_string prefix)
+{
+    std::get<0>(ret) = s.RawStr().HasPrefix(prefix.RawStr());
+    return nullptr;
+}
+::ppgo::Exc::Ptr func_has_suffix(
+    ::std::tuple<::ppgo::tp_bool> &ret, ::ppgo::tp_string s, ::ppgo::tp_string suffix)
+{
+    std::get<0>(ret) = s.RawStr().HasSuffix(suffix.RawStr());
     return nullptr;
 }
 

@@ -1,16 +1,16 @@
-public func time_us() int;
+public func now_us() int;
 
-public func time_ms() int
+public func now_ms() int
 {
-    return time_us() / 1000;
+    return now_us() / 1000;
 }
 
-public func time_sec() int
+public func now_sec() int
 {
-    return time_us() / 1000000;
+    return now_us() / 1000000;
 }
 
-public func time() float
+public func now() float
 {
-    return time_us().<float> / 1e6;
+    return now_us().<float> / 1e6;
 }

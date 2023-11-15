@@ -1,0 +1,22 @@
+//将整数`n`打包成字符串，会保证打包结果的字典序和`n`的大小顺序相同
+public func encode(n int) string;
+
+/*
+从`s`的下标`begin`处解析一个整数，返回解析结果和后续内容开始的下标
+解析失败或`begin`非法会抛出异常
+*/
+public func decode(s string, begin int) (n int, next int)
+{
+    if (begin < 0 || begin > s.len())
+    {
+        throw("empty string or invalid begin index");
+    }
+    var tmp_n, cost_len = decode_impl(s, begin);
+    if (cost_len <= 0)
+    {
+        throw("decode failed");
+    }
+    n = tmp_n;
+    next = begin + cost_len;
+}
+func decode_impl(s string, begin int) (n int, cost_len int);

@@ -279,9 +279,9 @@ public func main()
             return;
         }
     }
-    var ts = time.time();
+    var ts = time.now();
     proc0();
-    var tm = time.time() - ts;
+    var tm = time.now() - ts;
     println("Time used: %f sec".(tm));
     println("This machine benchmarks at %f PPGoStones/second".(loops.<float> / tm));
 }
