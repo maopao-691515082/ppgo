@@ -513,15 +513,17 @@ class Parser:
                                 arg_defs["e"] = None, oe.tp.vec_elem_tp
                                 ret_tp = oe.tp
                             elif name == "extend":
-                                arg_defs["es"] = None, oe.tp
+                                arg_defs["es"] = (
+                                    None, ppgoc_type.make_vec_view_type(oe.tp.t, oe.tp.vec_elem_tp))
                                 ret_tp = oe.tp
                             elif name == "insert":
                                 arg_defs["idx"] = None, ppgoc_type.INT_TYPE
                                 arg_defs["e"] = None, oe.tp.vec_elem_tp
                                 ret_tp = oe.tp
-                            elif name == "insert_vec":
+                            elif name == "insert_all":
                                 arg_defs["idx"] = None, ppgoc_type.INT_TYPE
-                                arg_defs["es"] = None, oe.tp
+                                arg_defs["es"] = (
+                                    None, ppgoc_type.make_vec_view_type(oe.tp.t, oe.tp.vec_elem_tp))
                                 ret_tp = oe.tp
                             elif name == "pop":
                                 arg_defs["idx"] = None, ppgoc_type.make_optional_type("idx", ppgoc_type.INT_TYPE)

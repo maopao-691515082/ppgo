@@ -57,9 +57,13 @@ template <typename E>
 
 template <typename E>
 ::ppgo::Exc::Ptr func_extend(
-    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::Vec<E> es)
+    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::VecView<E> es)
 {
-    v.InsertVec(v.Len(), es);
+    if (!es.Valid())
+    {
+        return ::ppgo::Exc::Sprintf("vector.insert: invalid view");
+    }
+    v.InsertVecView(v.Len(), es);
     ::std::get<0>(ret) = v;
     return nullptr;
 }
@@ -78,14 +82,18 @@ template <typename E>
 }
 
 template <typename E>
-::ppgo::Exc::Ptr func_insert_vec(
-    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int idx, ::ppgo::Vec<E> es)
+::ppgo::Exc::Ptr func_insert_all(
+    ::std::tuple<::ppgo::Vec<E>> &ret, ::ppgo::Vec<E> v, ::ppgo::tp_int idx, ::ppgo::VecView<E> es)
 {
+    if (!es.Valid())
+    {
+        return ::ppgo::Exc::Sprintf("vector.insert: invalid view");
+    }
     if (idx < 0 || idx > v.Len())
     {
-        return ::ppgo::Exc::Sprintf("vector.insert_vec: index out of range");
+        return ::ppgo::Exc::Sprintf("vector.insert_all: index out of range");
     }
-    v.InsertVec(idx, es);
+    v.InsertVecView(idx, es);
     ::std::get<0>(ret) = v;
     return nullptr;
 }

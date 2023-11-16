@@ -424,18 +424,24 @@ public:
         v_->v_.emplace_back(e);
     }
 
-    void InsertVec(ssize_t idx, Vec<E> es) const
+    void InsertVecView(ssize_t idx, VecView<E> es) const
     {
+        Vec<E> v;
+        ::ppgo::tp_int begin, end;
+        es.Resolve(v, begin, end);
+
         Assert(idx >= 0 && idx <= Len());
-        if (v_ != es.v_)
+        if (v_ != v.v_)
         {
-            v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), es.v_->v_.begin(), es.v_->v_.end());
+            v_->v_.insert(
+                v_->v_.begin() + static_cast<size_t>(idx),
+                v.v_->v_.begin() + begin, v.v_->v_.begin() + end);
             return;
         }
 
         //es就是自身，走特殊流程
-        std::vector<E> v(es.v_->v_);
-        v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), v.begin(), v.end());
+        std::vector<E> vcp(v.v_->v_.begin() + begin, v.v_->v_.begin() + end);
+        v_->v_.insert(v_->v_.begin() + static_cast<size_t>(idx), vcp.begin(), vcp.end());
     }
 
     void Insert(ssize_t idx, E e) const

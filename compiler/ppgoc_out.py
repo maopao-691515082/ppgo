@@ -1054,9 +1054,16 @@ def output_prog_cpp():
         code += '#include "ppgo.h"'
         with code.new_blk("namespace ppgo"):
             with code.new_blk("Exc::Ptr main()"):
-                code += "::std::tuple<> ret;"
-                code += "auto exc = ::ppgo::%s::init(); if (exc) { return exc; }" % main_mnc
-                code += "return ::ppgo::%s::func_main(ret);" % main_mnc
+                #内建模块没有显式import，需要提前初始化
+                for mn, mnc in mncs.iteritems():
+                    if mn.startswith("__builtins"):
+                        with code.new_blk(""):
+                            code += "auto exc = ::ppgo::%s::init(); if (exc) { return exc; }" % mnc
+                with code.new_blk(""):
+                    code += "auto exc = ::ppgo::%s::init(); if (exc) { return exc; }" % main_mnc
+                with code.new_blk(""):
+                    code += "::std::tuple<> ret;"
+                    code += "return ::ppgo::%s::func_main(ret);" % main_mnc
 
 def output_native_src():
     hfns = []
