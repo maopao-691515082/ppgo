@@ -885,6 +885,7 @@ class Parser:
                         el[ei - 1] = Expr("%d", e, ppgoc_type.STR_TYPE)
                         verb = "ll" + verb
                     elif e.tp.is_float_type:
+                        el[ei - 1] = Expr("%Lf", e, ppgoc_type.STR_TYPE)
                         verb = "La" if verb == "x" else "LA"
                     elif e.tp.is_str_type:
                         for d in "+0\x20":
@@ -897,6 +898,7 @@ class Parser:
                 elif verb in "eEfFgG":
                     if not e.tp.is_float_type:
                         raise FmtError("'%%%s'需要浮点数类型" % verb)
+                    el[ei - 1] = Expr("%Lf", e, ppgoc_type.STR_TYPE)
                     verb = "L" + verb
                 elif verb in ("s", "T"):
                     if not ppgoc_type.ANY_TYPE.can_convert_from(e.tp):

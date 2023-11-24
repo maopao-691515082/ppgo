@@ -543,6 +543,11 @@ def gen_expr_code(expr, pos_info = None, mode = "r"):
         assert e.tp.is_integer_type
         return "static_cast<long long>(%s)" % gen_expr_code(e, pos_info)
 
+    if expr.op == "%Lf":
+        e = expr.arg
+        assert e.tp.is_float_type
+        return "static_cast<long double>(%s)" % gen_expr_code(e, pos_info)
+
     if expr.op == "new_vec":
         tp, el = expr.arg
         assert tp.is_vec
