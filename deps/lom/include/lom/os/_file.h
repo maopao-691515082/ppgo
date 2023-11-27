@@ -160,7 +160,7 @@ public:
     `perm_bits`指定了创建新文件时的权限，只有存在创建文件的行为时才有意义，否则被忽略
         - 当然，实际创建的文件权限会受到umask影响
     */
-    static LOM_ERR Open(const char *path, Ptr &fp, const char *mode = "r", int perm_bits = 0644);
+    static LOM_ERR Open(const Str &path, Ptr &fp, const char *mode = "r", int perm_bits = 0644);
 };
 
 }

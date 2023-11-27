@@ -221,8 +221,10 @@ static LOM_ERR ConnectStreamSock(
     return nullptr;
 }
 
-LOM_ERR ConnectTCP(const char *ip, uint16_t port, Conn &conn)
+LOM_ERR ConnectTCP(const Str &ipv4, uint16_t port, Conn &conn)
 {
+    const char *ip;
+    LOM_RET_ON_ERR(ipv4.AsCStr(ip));
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -236,7 +238,7 @@ LOM_ERR ConnectTCP(const char *ip, uint16_t port, Conn &conn)
         AF_INET, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr), conn);
 }
 
-LOM_ERR ConnectUnixSockStream(const char *path, Conn &conn)
+LOM_ERR ConnectUnixSockStream(const Str &path, Conn &conn)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;

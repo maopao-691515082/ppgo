@@ -276,13 +276,14 @@ LOM_ERR ListenTCP(uint16_t port, Listener &listener)
         Sprintf("tcp4[:%u]", static_cast<unsigned int>(port)), listener, listen_fd);
 }
 
-LOM_ERR ListenUnixSockStream(const char *path, Listener &listener)
+LOM_ERR ListenUnixSockStream(const Str &path, Listener &listener)
 {
     struct sockaddr_un addr;
     socklen_t addr_len;
     LOM_RET_ON_ERR(PathToUnixSockAddr(path, addr, addr_len));
     return ListenStream(
-        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len, Sprintf("unix[%s]", path), listener);
+        AF_UNIX, reinterpret_cast<struct sockaddr *>(&addr), addr_len,
+        Sprintf("unix[%s]", path.CStr()), listener);
 }
 
 LOM_ERR ListenUnixSockStreamWithAbstractPath(const Str &path, Listener &listener)

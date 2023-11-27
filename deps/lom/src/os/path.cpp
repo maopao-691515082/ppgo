@@ -27,9 +27,10 @@ static LOM_ERR PathMake(const char *p, GoSlice<::lom::Str> &paths, bool keep_rel
         path = ::lom::Sprintf("%s/%s", cwd, p);
         free(cwd);
     }
+    bool is_abs_path = path.HasPrefix("/");
     if (!keep_relative)
     {
-        Assert(path.HasPrefix("/"));
+        Assert(is_abs_path);
     }
     auto parts = path.Slice().Split("/");
     paths = paths.Nil();
@@ -54,7 +55,7 @@ static LOM_ERR PathMake(const char *p, GoSlice<::lom::Str> &paths, bool keep_rel
         }
         paths = paths.Append(part);
     }
-    if (keep_relative && prefix_dd > 0)
+    if (!is_abs_path && prefix_dd > 0)
     {
         paths.Reverse();
         for (ssize_t i = 0; i < prefix_dd; ++ i)
@@ -66,11 +67,19 @@ static LOM_ERR PathMake(const char *p, GoSlice<::lom::Str> &paths, bool keep_rel
     return nullptr;
 }
 
-::lom::Str NormPath(const char *path)
+::lom::Str NormPath(const Str &path_s)
 {
+    const char *path;
+    {
+        LOM_ERR err = path_s.AsCStr(path);
+        Assert(!err);
+    }
+
     GoSlice<::lom::Str> paths;
-    LOM_ERR err = PathMake(path, paths, true);
-    Assert(!err);
+    {
+        LOM_ERR err = PathMake(path, paths, true);
+        Assert(!err);
+    }
 
     if (paths.Len() == 0)
     {
@@ -89,11 +98,19 @@ static LOM_ERR PathMake(const char *p, GoSlice<::lom::Str> &paths, bool keep_rel
     return ::lom::Str(std::move(b));
 }
 
-Path::Path(const char *path)
+Path::Path(const ::lom::Str &path_s)
 {
+    const char *path;
+    {
+        LOM_ERR err = path_s.AsCStr(path);
+        Assert(!err);
+    }
+
     GoSlice<::lom::Str> paths;
-    LOM_ERR err = PathMake(path, paths);
-    Assert(!err);
+    {
+        LOM_ERR err = PathMake(path, paths);
+        Assert(!err);
+    }
     paths_ = paths;
 }
 
@@ -113,10 +130,13 @@ Path::Path(const char *path)
     return ::lom::Str(std::move(b));
 }
 
-LOM_ERR Path::Make(const char *path_str, Path &path)
+LOM_ERR Path::Make(const ::lom::Str &path_s, Path &path)
 {
+    const char *path_cs;
+    LOM_RET_ON_ERR(path_s.AsCStr(path_cs));
+
     GoSlice<::lom::Str> paths;
-    LOM_RET_ON_ERR(PathMake(path_str, paths));
+    LOM_RET_ON_ERR(PathMake(path_cs, paths));
     path = Path(paths);
     return nullptr;
 }

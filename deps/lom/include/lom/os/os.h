@@ -22,10 +22,10 @@ LOM_ERR MakeDirs(const Path &path, int perm_bits = 0777);
     - 对于文件，正常删除
     - 对于目录，删除整个目录结构（递归进行）
 */
-LOM_ERR RemoveTree(const char *path);
+LOM_ERR RemoveTree(const Str &path);
 
 //封装`rename`
-LOM_ERR Rename(const char *old_path, const char *new_path);
+LOM_ERR Rename(const Str &old_path, const Str &new_path);
 
 }
 

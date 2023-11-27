@@ -27,7 +27,7 @@ LOM_ERR MakeDirs(const Path &path, int perm_bits)
     return nullptr;
 }
 
-LOM_ERR RemoveTree(const char *path)
+LOM_ERR RemoveTree(const Str &path)
 {
     FileStat fst;
     LOM_RET_ON_ERR(FileStat::LStat(path, fst));
@@ -37,18 +37,21 @@ LOM_ERR RemoveTree(const char *path)
         LOM_RET_ON_ERR(ListDir(path, names));
         for (auto const &name : names)
         {
-            LOM_RET_ON_ERR(RemoveTree(Sprintf("%s/%s", path, name.CStr()).CStr()));
+            LOM_RET_ON_ERR(RemoveTree(Sprintf("%s/%s", path.CStr(), name.CStr()).CStr()));
         }
     }
-    if (::remove(path) == -1)
+    if (::remove(path.CStr()) == -1)
     {
-        LOM_RET_SYS_CALL_ERR("remove `%s` failed", path);
+        LOM_RET_SYS_CALL_ERR("remove `%s` failed", path.CStr());
     }
     return nullptr;
 }
 
-LOM_ERR Rename(const char *old_path, const char *new_path)
+LOM_ERR Rename(const Str &old_path_s, const Str &new_path_s)
 {
+    const char *old_path, *new_path;
+    LOM_RET_ON_ERR(old_path_s.AsCStr(old_path));
+    LOM_RET_ON_ERR(new_path_s.AsCStr(new_path));
     if (::rename(old_path, new_path) == -1)
     {
         LOM_RET_SYS_CALL_ERR("rename `%s` to `%s` failed", old_path, new_path);

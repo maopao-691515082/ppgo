@@ -154,7 +154,7 @@ void RegFiber(Fiber *fiber);
 Fiber *GetCurrFiber();
 jmp_buf *GetSchedCtx();
 
-LOM_ERR PathToUnixSockAddr(const char *path, struct sockaddr_un &addr, socklen_t &addr_len);
+LOM_ERR PathToUnixSockAddr(const Str &path, struct sockaddr_un &addr, socklen_t &addr_len);
 LOM_ERR AbstractPathToUnixSockAddr(const Str &path, struct sockaddr_un &addr, socklen_t &addr_len);
 
 }

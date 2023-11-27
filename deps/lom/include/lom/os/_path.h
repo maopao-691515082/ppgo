@@ -23,7 +23,7 @@ namespace os
         - 若为绝对路径，按惯例，根目录的所在目录是自身（例如：`/..`不是错误，而视为`/`）
     - 不会扩展`~`和`~<USER>`开头的路径，将其视为普通路径名
 */
-::lom::Str NormPath(const char *path);
+::lom::Str NormPath(const Str &path);
 
 /*
 从一个路径串构建标准化的路径对象
@@ -43,7 +43,7 @@ class Path
 
 public:
 
-    Path(const char *path);
+    Path(const Str &path);
 
     //返回标准化的路径串
     ::lom::Str Str() const;
@@ -61,7 +61,7 @@ public:
         return paths_.Len() > 0 ? paths_.At(paths_.Len() - 1) : "/";
     }
 
-    static LOM_ERR Make(const char *path_str, Path &path);
+    static LOM_ERR Make(const ::lom::Str &path_str, Path &path);
 };
 
 }

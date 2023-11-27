@@ -6,8 +6,10 @@ namespace lom
 namespace fiber
 {
 
-LOM_ERR PathToUnixSockAddr(const char *path, struct sockaddr_un &addr, socklen_t &addr_len)
+LOM_ERR PathToUnixSockAddr(const Str &path_s, struct sockaddr_un &addr, socklen_t &addr_len)
 {
+    const char *path;
+    LOM_RET_ON_ERR(path_s.AsCStr(path));
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     size_t path_len = strlen(path);

@@ -537,4 +537,14 @@ Str StrSlice::Concat(StrSlice s) const
     return Str(std::move(b));
 }
 
+LOM_ERR Str::AsCStr(const char *&p) const
+{
+    if (ContainsChar('\0'))
+    {
+        LOM_RET_ERR("string is not C-string");
+    }
+    p = Data();
+    return nullptr;
+}
+
 }

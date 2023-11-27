@@ -49,7 +49,7 @@ LOM_ERR ListenTCP(uint16_t port, Listener &listener);
 /*
 监听Unix域流式socket，`path`必须是一个普通的文件路径，不能是空串或长度超过`sockaddr_un.sun_path`的大小减一
 */
-LOM_ERR ListenUnixSockStream(const char *path, Listener &listener);
+LOM_ERR ListenUnixSockStream(const Str &path, Listener &listener);
 
 /*
 类似`ListenUnixSockStream`，但是使用Linux的抽象路径机制，输入的`path`不需要带首位的`\0`，接口会自动补上，

@@ -49,6 +49,10 @@ static_assert(
     sizeof(off_t) == 8 && std::is_signed_v<off_t>,
     "error: lom needs 64-bit signed `off_t`");
 
+//先行声明错误类型
+#define LOM_ERR ::std::shared_ptr<::lom::Err>
+namespace lom { class Err; }
+
 namespace lom
 {
 

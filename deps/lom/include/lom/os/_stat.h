@@ -56,8 +56,8 @@ public:
     }
 
     //系统调用`stat`和`lstat`的封装使用
-    static LOM_ERR Stat(const char *path, FileStat &fst);
-    static LOM_ERR LStat(const char *path, FileStat &fst);
+    static LOM_ERR Stat(const Str &path, FileStat &fst);
+    static LOM_ERR LStat(const Str &path, FileStat &fst);
 };
 
 }

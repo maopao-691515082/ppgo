@@ -6,8 +6,6 @@
 #include "str.h"
 #include "code_pos.h"
 
-#define LOM_ERR ::std::shared_ptr<::lom::Err>
-
 namespace lom
 {
 

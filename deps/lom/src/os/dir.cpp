@@ -6,8 +6,11 @@ namespace lom
 namespace os
 {
 
-LOM_ERR ListDir(const char *path, GoSlice<Str> &ret_names)
+LOM_ERR ListDir(const Str &path_s, GoSlice<Str> &ret_names)
 {
+    const char *path;
+    LOM_RET_ON_ERR(path_s.AsCStr(path));
+
     DIR *d = ::opendir(path);
     if (d == nullptr)
     {

@@ -234,8 +234,11 @@ LOM_ERR File::PWriteAll(int fd, ssize_t off, const char *buf, ssize_t sz)
     }
 }
 
-LOM_ERR File::Open(const char *path, File::Ptr &fp, const char *mode, int perm_bits)
+LOM_ERR File::Open(const Str &path_s, File::Ptr &fp, const char *mode, int perm_bits)
 {
+    const char *path;
+    LOM_RET_ON_ERR(path_s.AsCStr(path));
+
     int open_flags = 0;
     const char *m = mode;
     char mm = *m;

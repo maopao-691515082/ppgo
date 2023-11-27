@@ -742,6 +742,9 @@ public:
     {
         return Slice().Concat(s);
     }
+
+    //检查是否包含字符'\0'，若包含则返回错误，否则成功并通过p返回Data()
+    LOM_ERR AsCStr(const char *&p) const;
 };
 
 /*

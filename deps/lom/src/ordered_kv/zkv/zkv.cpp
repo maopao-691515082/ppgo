@@ -691,7 +691,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
             {
                 LOM_RET_ERR("zkv db not found at `%s`", path_.CStr());
             }
-            LOM_RET_ON_ERR(::lom::os::MakeDirs(path_.CStr()));
+            LOM_RET_ON_ERR(::lom::os::MakeDirs(path_));
             LOM_RET_ON_ERR(::lom::os::File::Open(lock_file_path.CStr(), lock_file_, "w+x", 0600));
             new_db_created = true;
         }

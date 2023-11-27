@@ -8,7 +8,7 @@ namespace lom
 namespace thread
 {
 
-LOM_ERR SetThreadName(const char *name);
+LOM_ERR SetThreadName(const Str &name);
 
 }
 

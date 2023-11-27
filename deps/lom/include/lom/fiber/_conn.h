@@ -41,14 +41,14 @@ public:
     `ipv4`必须是标准的IPV4格式，不支持hostname或域名
     `port`指定端口
 */
-LOM_ERR ConnectTCP(const char *ipv4, uint16_t port, Conn &conn);
+LOM_ERR ConnectTCP(const Str &ipv4, uint16_t port, Conn &conn);
 
 /*
 向本地Unix域的流式socket建立连接
 `path`指定需要连接的地址，注意是普通C字符串，即`\0`结尾，长度不能超过`sockaddr_un.sun_path`的大小减一
 其他输入参数含义和返回行为同`ConnectTCP`
 */
-LOM_ERR ConnectUnixSockStream(const char *path, Conn &conn);
+LOM_ERR ConnectUnixSockStream(const Str &path, Conn &conn);
 
 /*
 类似`ConnectUnixSockStream`，但是使用Linux的抽象路径机制，输入的`path`不需要带首位的`\0`，接口会自动补上，
