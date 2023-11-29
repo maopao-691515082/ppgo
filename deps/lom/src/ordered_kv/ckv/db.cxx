@@ -299,7 +299,7 @@ void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr
 
 LOM_ERR DBImpl::Init(const char *path, Options opts)
 {
-    core_->path = ::lom::os::Path(path_str).Str();
+    LOM_RET_ON_ERR(::lom::os::AbsPath(path, core_->path));
 
     auto open_meta_db = opts.open_meta_db;
     if (!open_meta_db)

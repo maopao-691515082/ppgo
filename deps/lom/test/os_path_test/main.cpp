@@ -14,8 +14,14 @@ int main(int argc, char *argv[])
     {
         if (strcmp(argv[1], "abs") == 0)
         {
-            ::lom::os::Path path(argv[i]);
-            std::cout << "[" << path.Str().CStr() << "]" << std::endl;
+            ::lom::Str path;
+            auto err = ::lom::os::AbsPath(argv[i], path);
+            if (err)
+            {
+                std::cerr << "`AbsPath` failed: " << err->Msg().CStr() << std::endl;
+                exit(1);
+            }
+            std::cout << "[" << path.CStr() << "]" << std::endl;
         }
         else
         {

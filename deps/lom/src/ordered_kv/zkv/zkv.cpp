@@ -673,7 +673,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
 
     //persistent mode, init
 
-    path_ = ::lom::os::Path(path_str).Str();
+    LOM_RET_ON_ERR(::lom::os::AbsPath(path_str, path_));
 
     //open and lock
     bool new_db_created = false;
