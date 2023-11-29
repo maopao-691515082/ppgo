@@ -62,7 +62,7 @@ namespace PPGO_THIS_MOD
     ::std::tuple<std::shared_ptr<cls_Conn>> &ret, ::ppgo::tp_string ipv4, ::ppgo::tp_u16 port)
 {
     auto conn = std::make_shared<cls_Conn>();
-    auto err = ::lom::fiber::ConnectTCP(ipv4.CStr(), port, conn->nas.conn);
+    auto err = ::lom::fiber::ConnectTCP(ipv4.RawStr(), port, conn->nas.conn);
     if (err)
     {
         auto exc = ::ppgo::PPGO_THIS_MOD::ExcFromLomErr(err);
