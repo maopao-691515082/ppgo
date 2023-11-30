@@ -99,12 +99,12 @@ public:
 
 //这些宏可以简化使用
 
-#define LOM_RET_ERR(_fmt, ...) do {                                             \
-    return ::lom::Err::FromStr(::lom::Sprintf(_fmt, ##__VA_ARGS__), CodePos()); \
+#define LOM_RET_ERR(_fmt, ...) do {                                                     \
+    return ::lom::Err::FromStr(::lom::Sprintf(_fmt, ##__VA_ARGS__), ::lom::CodePos());  \
 } while (false)
 
-#define LOM_RET_SYS_CALL_ERR_WITH_CODE(_code, _fmt, ...) do {                                           \
-    return ::lom::SysCallErr::Maker().Make((_code), ::lom::Sprintf(_fmt, ##__VA_ARGS__), CodePos());    \
+#define LOM_RET_SYS_CALL_ERR_WITH_CODE(_code, _fmt, ...) do {                                               \
+    return ::lom::SysCallErr::Maker().Make((_code), ::lom::Sprintf(_fmt, ##__VA_ARGS__), ::lom::CodePos()); \
 } while (false)
 
 #define LOM_RET_SYS_CALL_ERR(_fmt, ...) \
