@@ -29,4 +29,23 @@ LOM_ERR Err::FromStr(const Str &msg, CodePos _cp)
     return err;
 }
 
+bool IsSysCallErr(LOM_ERR err, ::std::optional<int> code, ::std::optional<int> eno)
+{
+    auto sys_call_err = dynamic_cast<SysCallErr *>(err.get());
+    if (!sys_call_err)
+    {
+        return false;
+    }
+    if (code && sys_call_err->Code() != *code)
+    {
+        return false;
+    }
+    if (eno && sys_call_err->Errno() != *eno)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 }

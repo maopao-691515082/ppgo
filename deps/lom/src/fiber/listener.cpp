@@ -163,8 +163,7 @@ LOM_ERR Listener::Serve(
         auto err = Accept(conn);
         if (err)
         {
-            auto sys_call_err = dynamic_cast<::lom::SysCallErr *>(err.get());
-            if (sys_call_err && sys_call_err->Code() == ::lom::fiber::err_code::kClosed)
+            if (IsSysCallErr(err, ::lom::fiber::err_code::kClosed))
             {
                 return err;
             }

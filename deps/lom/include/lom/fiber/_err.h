@@ -20,6 +20,7 @@ enum : int
     kInvalid    = -5,
     kCanceled   = -6,
     kConnReset  = -7,
+    kBrokenPipe = -8,
 
     kStdCodeMin = -10000,   //标准错误边界，比这个值小的错误码可由用户定义（若需要的话）
 };

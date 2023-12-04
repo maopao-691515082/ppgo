@@ -95,6 +95,9 @@ public:
     }
 };
 
+bool IsSysCallErr(
+    LOM_ERR err, ::std::optional<int> code = ::std::nullopt, ::std::optional<int> eno = ::std::nullopt);
+
 }
 
 //这些宏可以简化使用

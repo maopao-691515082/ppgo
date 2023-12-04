@@ -18,6 +18,10 @@ namespace fiber
         LOM_RET_SYS_CALL_ERR_WITH_CODE(                             \
             err_code::kConnReset, "connection reset by peer");      \
     }                                                               \
+    if (errno == EPIPE) {                                           \
+        LOM_RET_SYS_CALL_ERR_WITH_CODE(                             \
+            err_code::kBrokenPipe, "broken pipe");                  \
+    }                                                               \
     if (errno == EWOULDBLOCK) {                                     \
         errno = EAGAIN;                                             \
     }                                                               \
