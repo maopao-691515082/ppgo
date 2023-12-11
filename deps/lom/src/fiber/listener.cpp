@@ -93,7 +93,7 @@ class ServeWorker
 
                 if (conn_fds.empty())
                 {
-                    ::lom::fiber::SleepMS(1);
+                    LOM_DISCARD(::lom::fiber::SleepMS(1));
                     continue;
                 }
 
@@ -121,7 +121,15 @@ class ServeWorker
             }
         });
 
-        ::lom::fiber::Run();
+        auto err = ::lom::fiber::Run();
+        if (err)
+        {
+            if (err_log_)
+            {
+                err->PushTB();
+                err_log_(err);
+            }
+        }
     }
 
 public:
@@ -163,7 +171,7 @@ LOM_ERR Listener::Serve(
         auto err = Accept(conn);
         if (err)
         {
-            if (IsSysCallErr(err, ::lom::fiber::err_code::kClosed))
+            if (err->IsSysCallErr(::lom::fiber::err_code::kClosed))
             {
                 return err;
             }
@@ -172,7 +180,7 @@ LOM_ERR Listener::Serve(
                 err->PushTB();
                 err_log(err);
             }
-            ::lom::fiber::SleepMS(1);
+            LOM_DISCARD(::lom::fiber::SleepMS(1));
             continue;
         }
 
@@ -192,7 +200,7 @@ LOM_ERR Listener::Serve(
                 err->PushTB();
                 err_log(err);
             }
-            conn.Close();
+            LOM_DISCARD(conn.Close());
             continue;
         }
 

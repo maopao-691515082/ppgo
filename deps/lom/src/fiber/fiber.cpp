@@ -60,7 +60,7 @@ void Fiber::Start()
 
         curr_fiber->run_();
 
-        curr_fiber->cf_ctx_.cancelation_sem.Destroy();
+        LOM_DISCARD(curr_fiber->cf_ctx_.cancelation_sem.Destroy());
 
         curr_fiber->finished_ = true;
 
@@ -137,7 +137,7 @@ LOM_ERR Ctx::Call(std::function<LOM_ERR ()> f) const
     Assert(!err);
 
     Defer defer_recover_cf_ctx([&] () {
-        cf_ctx.cancelation_sem.Destroy();
+        LOM_DISCARD(cf_ctx.cancelation_sem.Destroy());
         cf_ctx = cf_ctx_old;
     });
 

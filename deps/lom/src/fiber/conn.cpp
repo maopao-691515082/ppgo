@@ -198,7 +198,7 @@ static LOM_ERR ConnectStreamSock(
 
 #define LOM_FIBER_CONN_ERR_RETURN(_err_msg, _err_code) do {                         \
     auto _err = ::lom::SysCallErr::Maker().Make((err_code::_err_code), (_err_msg)); \
-    conn.Close();                                                                   \
+    LOM_DISCARD(conn.Close());                                                      \
     return _err;                                                                    \
 } while (false)
 

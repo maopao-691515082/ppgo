@@ -2,7 +2,6 @@
 
 #include "_internal.h"
 
-#include "mem.h"
 #include "str.h"
 #include "code_pos.h"
 
@@ -19,6 +18,8 @@ class Err
 
 public:
 
+    virtual ~Err() = default;
+
     void PushTB(CodePos _cp = CodePos())
     {
         tb_.emplace_back(_cp.Str());
@@ -26,20 +27,10 @@ public:
 
     virtual Str Msg() const = 0;
 
-    Str FmtWithTB() const
-    {
-        Str::Buf b;
-        b.Append("Error: ");
-        b.Append(Msg());
-        b.Append("\n");
-        for (auto const &s : tb_)
-        {
-            b.Append("  from ");
-            b.Append(s);
-            b.Append("\n");
-        }
-        return Str(std::move(b));
-    }
+    Str FmtWithTB() const;
+
+    //判断是否为系统调用错误，可指定`code`或`eno`来精确判断具体的错误码或errno
+    bool IsSysCallErr(::std::optional<int> code = ::std::nullopt, ::std::optional<int> eno = ::std::nullopt);
 
     //构造最简单的错误对象（只包含一个错误信息），可指定`_cp`为无效位置来禁止记录第一条traceback
     static LOM_ERR FromStr(const Str &msg, CodePos _cp = CodePos());
@@ -94,9 +85,6 @@ public:
         return ::lom::Sprintf("SysCallErr: %s; <code=%d> <errno=%d>", msg_.CStr(), code_, errno_);
     }
 };
-
-bool IsSysCallErr(
-    LOM_ERR err, ::std::optional<int> code = ::std::nullopt, ::std::optional<int> eno = ::std::nullopt);
 
 }
 

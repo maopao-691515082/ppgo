@@ -50,11 +50,24 @@ static_assert(
     "error: lom needs 64-bit signed `off_t`");
 
 //先行声明错误类型
-#define LOM_ERR ::std::shared_ptr<::lom::Err>
+#define LOM_ERR ::lom::NoDiscard<::std::shared_ptr<::lom::Err>>
 namespace lom { class Err; }
 
 namespace lom
 {
+
+//将类`T`扩展为nodiscard版本
+template <typename T>
+class [[nodiscard]] NoDiscard : public T
+{
+public:
+
+    //直接`using`继承构造函数可能存在一些不匹配的情况，用更通用的模板方式
+    template <typename ...Args>
+    NoDiscard(Args &&...args) : T(std::forward<Args>(args)...)
+    {
+    }
+};
 
 static inline void Assert(bool cond)
 {
@@ -65,3 +78,7 @@ static inline void Assert(bool cond)
 }
 
 }
+
+#define LOM_DISCARD(_expr) do { \
+    static_cast<void>(_expr);   \
+} while (false)
