@@ -151,7 +151,7 @@ public:
         }
     }
 
-    virtual LOM_ERR Wait(ssize_t &rsz)
+    virtual LOM_ERR Wait(ssize_t &rsz) override
     {
         LOM_RET_ON_ERR(Fill());
         rsz = len_;
