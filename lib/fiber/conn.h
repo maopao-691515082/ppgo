@@ -15,7 +15,7 @@ struct NativeAttrs<PPGO_THIS_MOD::cls_Conn>
 
     ~NativeAttrs()
     {
-        conn.Close();
+        LOM_DISCARD(conn.Close());
     }
 };
 

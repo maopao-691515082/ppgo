@@ -13,7 +13,7 @@ namespace PPGO_THIS_MOD
 {
     auto write_to_stdout = [to_std_err] (const char *p, ssize_t sz) {
         ::ppgo::Assert(sz >= 0);
-        ::lom::os::File::WriteAll(to_std_err ? 2 : 1, p, sz);
+        LOM_DISCARD(::lom::os::File::WriteAll(to_std_err ? 2 : 1, p, sz));
     };
 
     auto s = ::ppgo::Any::ToStr(a);

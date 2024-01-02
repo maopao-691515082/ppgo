@@ -15,7 +15,7 @@ struct NativeAttrs<PPGO_THIS_MOD::cls_Listener>
 
     ~NativeAttrs()
     {
-        listener.Close();
+        LOM_DISCARD(listener.Close());
     }
 };
 

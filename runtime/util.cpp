@@ -10,7 +10,7 @@ void OutputUnexpectedErrMsg(const ::lom::Str &s)
 {
     auto write_to_stderr = [] (const char *p, ssize_t sz) {
         ::ppgo::Assert(sz >= 0);
-        ::lom::os::File::WriteAll(2, p, sz);
+        LOM_DISCARD(::lom::os::File::WriteAll(2, p, sz));
     };
 
     write_to_stderr(s.Data(), s.Len());
