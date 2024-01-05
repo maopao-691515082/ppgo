@@ -41,9 +41,9 @@ public:
         - 获取快照的`new_snapshot_hook`只需要保证和MetaDB的快照获取操作捆绑即可
     */
 
-    virtual LOM_ERR Write(const WriteBatchBase &wb, std::function<void ()> commit_hook) = 0;
+    virtual LOM_ERR Write(const WriteBatchBase &wb, std::function<void ()> const &commit_hook) = 0;
 
-    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) = 0;
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> const &new_snapshot_hook) = 0;
 
     /*
     打开元数据库的函数接口
@@ -70,13 +70,13 @@ public:
 
     typedef std::shared_ptr<DB> Ptr;
 
-    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) = 0;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> const &commit_hook) = 0;
     virtual LOM_ERR Write(const WriteBatch &wb) override
     {
         return Write(wb, nullptr);
     }
 
-    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) = 0;
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> const &new_snapshot_hook) = 0;
     virtual Snapshot::Ptr NewSnapshot() override
     {
         return NewSnapshot(nullptr);

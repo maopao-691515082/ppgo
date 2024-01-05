@@ -15,7 +15,7 @@ class Defer
 
 public:
 
-    Defer(std::function<void ()> f) : f_(f)
+    Defer(const std::function<void ()> &f) : f_(f)
     {
     }
 

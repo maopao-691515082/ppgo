@@ -137,7 +137,7 @@ protected:
 
 public:
 
-    BufReaderImpl(BufReader::DoReadFunc do_read, ssize_t buf_sz, MakeBufFunc make_buf) :
+    BufReaderImpl(BufReader::DoReadFunc const &do_read, ssize_t buf_sz, MakeBufFunc const &make_buf) :
         do_read_(do_read), buf_sz_(AdjustBufSize(buf_sz)), make_buf_(make_buf)
     {
         buf_ = make_buf_ ? make_buf_(buf_sz_) : new char[buf_sz_];
@@ -159,7 +159,8 @@ public:
     }
 };
 
-BufReader::Ptr BufReader::New(BufReader::DoReadFunc do_read, ssize_t buf_sz, MakeBufFunc make_buf)
+BufReader::Ptr BufReader::New(
+    BufReader::DoReadFunc const &do_read, ssize_t buf_sz, MakeBufFunc const &make_buf)
 {
     return BufReader::Ptr(new BufReaderImpl(do_read, buf_sz, make_buf));
 }
@@ -235,7 +236,7 @@ protected:
 
 public:
 
-    BufWriterImpl(BufWriter::DoWriteFunc do_write, ssize_t buf_sz, MakeBufFunc make_buf) :
+    BufWriterImpl(BufWriter::DoWriteFunc const &do_write, ssize_t buf_sz, MakeBufFunc const &make_buf) :
         do_write_(do_write), buf_sz_(AdjustBufSize(buf_sz)), make_buf_(make_buf)
     {
         buf_ = make_buf_ ? make_buf_(buf_sz_) : new char[buf_sz_];
@@ -259,7 +260,8 @@ public:
     }
 };
 
-BufWriter::Ptr BufWriter::New(BufWriter::DoWriteFunc do_write, ssize_t buf_sz, MakeBufFunc make_buf)
+BufWriter::Ptr BufWriter::New(
+    BufWriter::DoWriteFunc const &do_write, ssize_t buf_sz, MakeBufFunc const &make_buf)
 {
     return BufWriter::Ptr(new BufWriterImpl(do_write, buf_sz, make_buf));
 }

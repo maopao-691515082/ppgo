@@ -191,7 +191,8 @@ public:
     注：一般是对需要构建的数据一次性调用`Build`，而不是分别`Build`后自行组合，
     `Build`用二分法构建，保证返回的是AVL平衡树
     */
-    static NodePtr Build(std::function<NodePtr (ssize_t idx)> new_func, ssize_t begin_idx, ssize_t end_idx)
+    static NodePtr Build(
+        std::function<NodePtr (ssize_t idx)> const &new_func, ssize_t begin_idx, ssize_t end_idx)
     {
         Assert(0 <= begin_idx && begin_idx <= end_idx);
 

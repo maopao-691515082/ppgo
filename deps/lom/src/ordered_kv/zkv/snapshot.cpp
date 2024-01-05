@@ -10,7 +10,7 @@ namespace zkv
 {
 
 void DBImpl::Snapshot::DBGet(
-    const Str &k, std::function<void (std::function<bool (StrSlice &)>, StrSlice)> f) const
+    const Str &k, std::function<void (std::function<bool (StrSlice &)> const &, StrSlice)> const &f) const
 {
     ssize_t idx;
     auto v_ptr = zm_.Get(k, &idx);
@@ -43,9 +43,9 @@ void DBImpl::Snapshot::DBGet(
     f(nullptr, StrSlice());
 }
 
-LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<void (const StrSlice *)> f) const
+LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<void (const StrSlice *)> const &f) const
 {
-    DBGet(k, [f] (std::function<bool (StrSlice &)> iter, StrSlice v) {
+    DBGet(k, [f] (std::function<bool (StrSlice &)> const &iter, StrSlice v) {
         return iter ? f(&v) : f(nullptr);
     });
     return nullptr;
@@ -53,7 +53,7 @@ LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<void (const StrSlice
 
 LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<StrSlice ()> &v) const
 {
-    DBGet(k, [&v] (std::function<bool (StrSlice &)> iter, StrSlice iter_v) {
+    DBGet(k, [&v] (std::function<bool (StrSlice &)> const &iter, StrSlice iter_v) {
         if (iter)
         {
             v = [iter, iter_v] () -> StrSlice {

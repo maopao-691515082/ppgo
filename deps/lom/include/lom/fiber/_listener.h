@@ -35,9 +35,9 @@ public:
     */
     static const size_t kWorkerCountMax = 1024;
     LOM_ERR Serve(
-        size_t worker_count, std::function<void (Conn)> work_with_conn,
-        std::function<void (LOM_ERR)> err_log = nullptr,
-        std::function<void (size_t)> init_worker = nullptr) const;
+        size_t worker_count, const std::function<void (Conn)> &work_with_conn,
+        const std::function<void (LOM_ERR)> &err_log = nullptr,
+        const std::function<void (size_t)> &init_worker = nullptr) const;
 
     //从一个原始fd创建新的`Listener`对象
     static LOM_ERR NewFromRawFd(int fd, Listener &listener);

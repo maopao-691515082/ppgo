@@ -129,7 +129,7 @@ public:
         return nullptr;
     }
 
-    static Ptr New(DoReadFunc do_read, ssize_t buf_sz = 0, MakeBufFunc make_buf = nullptr);
+    static Ptr New(DoReadFunc const &do_read, ssize_t buf_sz = 0, MakeBufFunc const &make_buf = nullptr);
 };
 
 /*
@@ -176,7 +176,7 @@ public:
     //将缓冲中的数据通过下层写函数全部写出去
     virtual LOM_ERR Flush() = 0;
 
-    static Ptr New(DoWriteFunc do_write, ssize_t buf_sz = 0, MakeBufFunc make_buf = nullptr);
+    static Ptr New(DoWriteFunc const &do_write, ssize_t buf_sz = 0, MakeBufFunc const &make_buf = nullptr);
 };
 
 }

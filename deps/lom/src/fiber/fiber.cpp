@@ -12,7 +12,7 @@ static thread_local int64_t next_fiber_seq = 1;
 static thread_local Fiber *initing_fiber;
 static thread_local ucontext_t fiber_init_ret_uctx;
 
-Fiber::Fiber(std::function<void ()> run, ssize_t stk_sz, const Sem *worker_cancelation_sem) :
+Fiber::Fiber(std::function<void ()> const &run, ssize_t stk_sz, const Sem *worker_cancelation_sem) :
     run_(run), finished_(false), stk_sz_(stk_sz), is_worker_(worker_cancelation_sem != nullptr)
 {
     stk_ = new char[stk_sz_];
@@ -75,7 +75,7 @@ void Fiber::Start()
     }
 }
 
-Fiber *Fiber::New(std::function<void ()> run, ssize_t stk_sz, const Sem *worker_cancelation_sem)
+Fiber *Fiber::New(std::function<void ()> const &run, ssize_t stk_sz, const Sem *worker_cancelation_sem)
 {
     return new Fiber(run, stk_sz, worker_cancelation_sem);
 }
@@ -85,7 +85,7 @@ void Fiber::Destroy()
     delete this;
 }
 
-void Create(std::function<void ()> run, CreateOptions opts)
+void Create(std::function<void ()> const &run, CreateOptions opts)
 {
     AssertInited();
 
@@ -111,13 +111,13 @@ void Create(std::function<void ()> run, CreateOptions opts)
     RegFiber(Fiber::New(run, opts.stk_sz, worker_cancelation_sem));
 }
 
-void CreateWorker(std::function<void ()> run, CreateOptions opts)
+void CreateWorker(std::function<void ()> const &run, CreateOptions opts)
 {
     opts.is_worker = true;
     Create(run, opts);
 }
 
-LOM_ERR Ctx::Call(std::function<LOM_ERR ()> f) const
+LOM_ERR Ctx::Call(std::function<LOM_ERR ()> const &f) const
 {
     AssertInited();
 

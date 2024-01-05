@@ -141,7 +141,7 @@ class DBImpl : public DB
 
     protected:
 
-        virtual LOM_ERR DBGet(const Str &k, std::function<void (const StrSlice *)> f) const override;
+        virtual LOM_ERR DBGet(const Str &k, std::function<void (const StrSlice *)> const &f) const override;
         virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const override;
 
         virtual ::lom::ordered_kv::Iterator::Ptr DBNewIterator() const override;
@@ -177,7 +177,7 @@ class DBImpl : public DB
 
     Core::Ptr core_;
 
-    static void GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core);
+    static void GCThreadMain(std::function<void (LOM_ERR)> const &handle_bg_err, Core::Ptr db_core);
 
 public:
 
@@ -189,8 +189,8 @@ public:
 
     LOM_ERR Init(const char *path, Options opts);
 
-    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) override;
-    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) override;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> const &commit_hook) override;
+    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> const &new_snapshot_hook) override;
 };
 
 }

@@ -266,7 +266,7 @@ protected:
     参数和返回说明参考`Get`的注释
     */
     virtual LOM_ERR DBGet(
-        const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> f) const = 0;
+        const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> const &f) const = 0;
     virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const = 0;
 
     virtual Iterator::Ptr DBNewIterator() const = 0;
@@ -280,7 +280,7 @@ public:
     WriteBatch wb;
 
     //获取值并调用回调函数，`f`的参数为空指针表示没有找到
-    LOM_ERR Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> f) const;
+    LOM_ERR Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> const &f) const;
     /*
     获取值，通过`v`返回一个值的获取器，`v`返回值为空函数表示没有找到
     若`v`有效，则需要保证其总是可用的，即一直引用一份对应的快照数据

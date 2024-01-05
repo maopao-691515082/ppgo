@@ -38,12 +38,12 @@ public:
         return WriteBatchBase::Ptr(new WriteBatch());
     }
 
-    virtual LOM_ERR Write(const WriteBatchBase &wb, std::function<void ()> commit_hook) override
+    virtual LOM_ERR Write(const WriteBatchBase &wb, std::function<void ()> const &commit_hook) override
     {
         return zkv_->Write(dynamic_cast<const WriteBatch &>(wb), commit_hook);
     }
 
-    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) override
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> const &new_snapshot_hook) override
     {
         return zkv_->NewSnapshot(new_snapshot_hook);
     }
@@ -156,7 +156,7 @@ static LOM_ERR PrepareDataWriter(
     //todo
 }
 
-void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> handle_bg_err, Core::Ptr db_core)
+void DBImpl::GCThreadMain(std::function<void (LOM_ERR)> const &handle_bg_err, Core::Ptr db_core)
 {
     while (!db_core->stopped.load())
     {
@@ -439,7 +439,7 @@ DBImpl::~DBImpl()
     core_->stopped.store(true);
 }
 
-LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
+LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> const &commit_hook)
 {
     auto const &wb_ops = wb.RawOps();
     if (wb_ops.empty())
@@ -456,7 +456,7 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
     //todo
 }
 
-::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot(std::function<void ()> new_snapshot_hook)
+::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot(std::function<void ()> const &new_snapshot_hook)
 {
     DataFiles dfs;
     auto meta_snapshot = core_->meta_db->NewSnapshot(

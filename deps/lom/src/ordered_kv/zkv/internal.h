@@ -95,11 +95,13 @@ class DBImpl : public DB
 
         ZMap zm_;
 
-        void DBGet(const Str &k, std::function<void (std::function<bool (StrSlice &)>, StrSlice)> f) const;
+        void DBGet(
+            const Str &k,
+            std::function<void (std::function<bool (StrSlice &)> const &, StrSlice)> const &f) const;
 
     protected:
 
-        virtual LOM_ERR DBGet(const Str &k, std::function<void (const StrSlice *)> f) const override;
+        virtual LOM_ERR DBGet(const Str &k, std::function<void (const StrSlice *)> const &f) const override;
         virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const override;
 
         virtual ::lom::ordered_kv::Iterator::Ptr DBNewIterator() const override;
@@ -151,7 +153,8 @@ class DBImpl : public DB
 
     SnapshotDumpTask::Ptr dump_task_;
 
-    static LOM_ERR GetFileIdxes(const Str &path, GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes);
+    static LOM_ERR GetFileIdxes(
+        const Str &path, GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes);
     LOM_ERR GetFileIdxes(GoSlice<ssize_t> &snapshot_idxes, GoSlice<ssize_t> &op_log_idxes) const;
 
     LOM_ERR CreateMetaFile() const;
@@ -162,7 +165,8 @@ class DBImpl : public DB
     LOM_ERR RecordOpLog(const WriteBatch::RawOpsMap &wb_ops);
     LOM_ERR LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx);
 
-    static void DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, SnapshotDumpTask::Ptr task);
+    static void DumpThreadMain(
+        std::function<void (LOM_ERR)> const &handle_bg_err, SnapshotDumpTask::Ptr task);
 
 public:
 
@@ -170,8 +174,9 @@ public:
 
     LOM_ERR Init(const char *path, Options opts);
 
-    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) override;
-    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) override;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> const &commit_hook) override;
+    virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(
+        std::function<void ()> const &new_snapshot_hook) override;
 
     virtual ssize_t SpaceCost() override;
     virtual ZMap RawZMap() override;

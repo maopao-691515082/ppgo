@@ -78,7 +78,7 @@ private:
 
     static void Start();
 
-    Fiber(std::function<void ()> run, ssize_t stk_sz, const Sem *worker_cancelation_sem);
+    Fiber(std::function<void ()> const &run, ssize_t stk_sz, const Sem *worker_cancelation_sem);
 
     Fiber(const Fiber&) = delete;
     Fiber& operator=(const Fiber&) = delete;
@@ -145,7 +145,7 @@ public:
         return cancelation_sem_;
     }
 
-    static Fiber *New(std::function<void ()> run, ssize_t stk_sz, const Sem *worker_cancelation_sem);
+    static Fiber *New(std::function<void ()> const &run, ssize_t stk_sz, const Sem *worker_cancelation_sem);
 
     void Destroy();
 };

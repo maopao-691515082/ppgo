@@ -273,7 +273,7 @@ public:
     以当前串为分隔符，用输入的迭代`next`函数提供的序列进行连接，返回结果
     `next`返回true表示成功获取，false表示结束
     */
-    Str Join(std::function<bool (StrSlice &)> next, ssize_t size_hint = 0) const;
+    Str Join(const std::function<bool (StrSlice &)> &next, ssize_t size_hint = 0) const;
 
     /*
     在当前串中查找子串`a`，并返回等同于将其替换为指定串的结果的新Str
@@ -282,7 +282,7 @@ public:
     每一次替换完成后，是从剩余的串开始查找下一个串`a`，
     例如`StrSlice("xxx").Replace("x", "xx")`会返回`"xxxxxx"`，而不会永久循环
     */
-    Str Replace(StrSlice a, std::function<StrSlice ()> f, ssize_t max_count = kStrLenMax) const;
+    Str Replace(StrSlice a, const std::function<StrSlice ()> &f, ssize_t max_count = kStrLenMax) const;
     Str Replace(StrSlice a, StrSlice b, ssize_t max_count = kStrLenMax) const;
 
     //字符串连接，返回连接后的结果
@@ -729,7 +729,7 @@ public:
     Str Join(const GoSlice<StrSlice> &gs) const;
     Str Join(const GoSlice<Str> &gs) const;
 
-    Str Replace(StrSlice a, std::function<StrSlice ()> f, ssize_t max_count = kStrLenMax) const
+    Str Replace(StrSlice a, const std::function<StrSlice ()> &f, ssize_t max_count = kStrLenMax) const
     {
         return Slice().Replace(a, f, max_count);
     }

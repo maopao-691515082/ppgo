@@ -135,8 +135,8 @@ class ServeWorker
 public:
 
     ServeWorker(
-        size_t idx, std::function<void (size_t)> init_worker, std::function<void (Conn)> work_with_conn,
-        std::function<void (LOM_ERR)> err_log
+        size_t idx, std::function<void (size_t)> const &init_worker,
+        std::function<void (Conn)> const &work_with_conn, std::function<void (LOM_ERR)> const &err_log
     ) :
         idx_(idx), init_worker_(init_worker), work_with_conn_(work_with_conn), err_log_(err_log)
     {
@@ -151,8 +151,8 @@ public:
 };
 
 LOM_ERR Listener::Serve(
-    size_t worker_count, std::function<void (Conn)> work_with_conn,
-    std::function<void (LOM_ERR)> err_log, std::function<void (size_t)> init_worker) const
+    size_t worker_count, std::function<void (Conn)> const &work_with_conn,
+    std::function<void (LOM_ERR)> const &err_log, std::function<void (size_t)> const &init_worker) const
 {
     if (worker_count > kWorkerCountMax)
     {

@@ -572,7 +572,7 @@ LOM_ERR DBImpl::LoadDataFromFiles(ssize_t snapshot_idx, ssize_t max_op_log_idx)
     return nullptr;
 }
 
-void DBImpl::DumpThreadMain(std::function<void (LOM_ERR)> handle_bg_err, SnapshotDumpTask::Ptr task)
+void DBImpl::DumpThreadMain(std::function<void (LOM_ERR)> const &handle_bg_err, SnapshotDumpTask::Ptr task)
 {
     for (;;)
     {
@@ -751,7 +751,7 @@ LOM_ERR DBImpl::Init(const char *path_str, Options opts)
     return nullptr;
 }
 
-LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
+LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> const &commit_hook)
 {
     auto const &wb_ops = wb.RawOps();
     if (wb_ops.empty())
@@ -793,7 +793,7 @@ LOM_ERR DBImpl::Write(const WriteBatch &wb, std::function<void ()> commit_hook)
     return nullptr;
 }
 
-::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot(std::function<void ()> new_snapshot_hook)
+::lom::ordered_kv::Snapshot::Ptr DBImpl::NewSnapshot(std::function<void ()> const &new_snapshot_hook)
 {
     ZMap zm;
     {

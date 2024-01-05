@@ -19,13 +19,13 @@ public:
 
     typedef ::lom::immut::AVL<Str, ::lom::immut::ZList> ZMap;
 
-    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> commit_hook) = 0;
+    virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> const &commit_hook) = 0;
     virtual LOM_ERR Write(const WriteBatch &wb) override
     {
         return Write(wb, nullptr);
     }
 
-    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> new_snapshot_hook) = 0;
+    virtual Snapshot::Ptr NewSnapshot(std::function<void ()> const &new_snapshot_hook) = 0;
     virtual Snapshot::Ptr NewSnapshot() override
     {
         return NewSnapshot(nullptr);

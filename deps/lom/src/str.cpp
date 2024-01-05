@@ -439,7 +439,7 @@ Str StrSlice::Join(const GoSlice<Str> &gs) const
     return StrSliceJoin<Str>(*this, gs);
 }
 
-Str StrSlice::Join(std::function<bool (StrSlice &)> next, ssize_t size_hint) const
+Str StrSlice::Join(std::function<bool (StrSlice &)> const &next, ssize_t size_hint) const
 {
     auto this_data = Data();
     auto this_len = Len();
@@ -457,7 +457,7 @@ Str StrSlice::Join(std::function<bool (StrSlice &)> next, ssize_t size_hint) con
     return Str(std::move(b));
 }
 
-Str StrSlice::Replace(StrSlice a, std::function<StrSlice ()> f, ssize_t max_count) const
+Str StrSlice::Replace(StrSlice a, std::function<StrSlice ()> const &f, ssize_t max_count) const
 {
     auto a_len = a.Len();
     Assert(a_len > 0);

@@ -35,9 +35,9 @@ struct CreateOptions
     //指定创建worker fiber，worker在创建者结束时会收到canceled信号
     bool is_worker  = false;
 };
-void Create(std::function<void ()> run, CreateOptions opts = CreateOptions());
+void Create(std::function<void ()> const &run, CreateOptions opts = CreateOptions());
 //创建worker的快捷接口，会无视`opts`的`is_worker`
-void CreateWorker(std::function<void ()> run, CreateOptions opts = CreateOptions());
+void CreateWorker(std::function<void ()> const &run, CreateOptions opts = CreateOptions());
 
 //开始运行，除非出现内部错误（一般就是系统异常导致epoll_wait失败），否则永远不退出
 LOM_ERR Run();
@@ -58,7 +58,7 @@ public:
     }
 
     //`Call`的返回值是透传f的返回
-    LOM_ERR Call(std::function<LOM_ERR ()> f) const;
+    LOM_ERR Call(std::function<LOM_ERR ()> const &f) const;
 
     //检查当前控制流上下文，如有取消或超时则以错误形式返回
     static LOM_ERR Check();

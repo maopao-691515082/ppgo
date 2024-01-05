@@ -6,7 +6,7 @@ namespace lom
 namespace ordered_kv
 {
 
-LOM_ERR Snapshot::Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> f) const
+LOM_ERR Snapshot::Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> const &f) const
 {
     auto iter = wb.RawOps().find(k);
     if (iter == wb.RawOps().end())
