@@ -93,6 +93,55 @@ class DBImpl : public DB
             }
         };
 
+        class ForwardIterator : public ::lom::ordered_kv::ForwardIterator
+        {
+            ZMap zm_;
+            ssize_t zm_idx_ = 0;
+            std::function<bool (StrSlice &)> zl_forward_iter_;
+            StrSlice k_, v_;
+
+            void Reset(ssize_t idx)
+            {
+                zm_idx_ = idx;
+                if (0 <= zm_idx_ && zm_idx_ < zm_.Size())
+                {
+                    zl_forward_iter_ = zm_.GetByIdx(zm_idx_).second->NewForwardIterator();
+                    Assert(zl_forward_iter_(k_) && zl_forward_iter_(v_));
+                }
+                else
+                {
+                    zl_forward_iter_ = nullptr;
+                }
+            }
+
+        protected:
+
+            virtual bool ValidImpl() const override
+            {
+                return zm_idx_ >= 0 && zm_idx_ < zm_.Size();
+            }
+
+            virtual StrSlice KeyImpl() const override
+            {
+                return k_;
+            }
+            virtual StrSlice ValueImpl() const override
+            {
+                return v_;
+            }
+
+            virtual void SeekImpl(const Str &k) override;
+
+            virtual void NextImpl() override;
+
+        public:
+
+            ForwardIterator(const ZMap &zm) : zm_(zm)
+            {
+                Reset(0);
+            }
+        };
+
         ZMap zm_;
 
         void DBGet(
@@ -105,6 +154,7 @@ class DBImpl : public DB
         virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const override;
 
         virtual ::lom::ordered_kv::Iterator::Ptr DBNewIterator() const override;
+        virtual ::lom::ordered_kv::ForwardIterator::Ptr DBNewForwardIterator() const override;
 
     public:
 

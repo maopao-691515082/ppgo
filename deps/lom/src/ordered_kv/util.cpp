@@ -6,6 +6,63 @@ namespace lom
 namespace ordered_kv
 {
 
+class ForwardIteratorByIterator : public ForwardIterator
+{
+    Iterator::Ptr iter_;
+
+    void Update()
+    {
+        if (iter_->Err())
+        {
+            SetErr(iter_->Err());
+        }
+    }
+
+protected:
+
+    virtual bool ValidImpl() const
+    {
+        return iter_->Valid();
+    }
+
+    virtual StrSlice KeyImpl() const
+    {
+        return iter_->Key();
+    }
+    virtual StrSlice ValueImpl() const
+    {
+        return iter_->Value();
+    }
+
+    virtual void SeekImpl(const Str &k)
+    {
+        iter_->Seek(k);
+        Update();
+    }
+
+    virtual void NextImpl()
+    {
+        iter_->Next();
+        Update();
+    }
+
+public:
+
+    ForwardIteratorByIterator(const Iterator::Ptr &iter) : iter_(iter)
+    {
+        if (iter_->IsLeftBorder())
+        {
+            SetErr(Err::FromStr("init from a left-border iterator"));
+        }
+        Update();
+    }
+};
+
+ForwardIterator::Ptr ForwardIterator::FromIterator(const Iterator::Ptr &iter)
+{
+    return ForwardIterator::Ptr(new ForwardIteratorByIterator(iter));
+}
+
 LOM_ERR Snapshot::Get(const Str &k, std::function<void (const StrSlice * /*ptr to v*/)> const &f) const
 {
     auto iter = wb.RawOps().find(k);
@@ -516,6 +573,135 @@ Iterator::Ptr Snapshot::NewIterator()
         return db_iter;
     }
     return Iterator::Ptr(new SnapshotIteratorImpl(shared_from_this(), db_iter));
+}
+
+class SnapshotForwardIteratorImpl : public ForwardIterator
+{
+    Snapshot::Ptr snapshot_;
+
+    const WriteBatch::RawOpsMap &ops_;
+    WriteBatch::RawOpsMap::const_iterator ops_iter_;
+
+    ForwardIterator::Ptr db_forward_iter_;
+
+    //ops和DB的当前K的大小关系
+    int key_cmp_result_;
+
+    void ComputeKeyCmpResult()
+    {
+        if (ops_iter_ == ops_.end())
+        {
+            key_cmp_result_ = db_forward_iter_->Valid() ? 1 : 0;
+        }
+        else
+        {
+            key_cmp_result_ =
+                db_forward_iter_->Valid() ?
+                    ops_iter_->first.Slice().Cmp(db_forward_iter_->Key()) :
+                    -1
+            ;
+        }
+    }
+
+    void Update()
+    {
+        if (Err())
+        {
+            return;
+        }
+
+        //反复计算当前的K大小关系，并跳过ops中的删除标记，直到不需要跳过
+        bool skipped_del = false;
+        do
+        {
+            if (db_forward_iter_->Err())
+            {
+                SetErr(db_forward_iter_->Err());
+                return;
+            }
+
+            skipped_del = false;
+
+            ComputeKeyCmpResult();
+
+            if (key_cmp_result_ <= 0 && ops_iter_ != ops_.end() && !ops_iter_->second)
+            {
+                ++ ops_iter_;
+                if (key_cmp_result_ == 0)
+                {
+                    db_forward_iter_->Next();
+                }
+                skipped_del = true;
+            }
+        } while (skipped_del);
+    }
+
+protected:
+
+    virtual bool ValidImpl() const override
+    {
+        return ops_iter_ != ops_.end() || db_forward_iter_->Valid();
+    }
+
+    virtual StrSlice KeyImpl() const override
+    {
+        return key_cmp_result_ <= 0 ?
+            ops_iter_->first.Slice() :
+            db_forward_iter_->Key();
+    }
+    virtual StrSlice ValueImpl() const override
+    {
+        return key_cmp_result_ <= 0 ?
+            ops_iter_->second->Slice() :
+            db_forward_iter_->Value();
+    }
+
+    virtual void SeekImpl(const Str &k) override
+    {
+        ops_iter_ = ops_.lower_bound(k);
+        db_forward_iter_->Seek(k);
+        Update();
+    }
+
+    virtual void NextImpl() override
+    {
+        if (ValidImpl())
+        {
+            if (key_cmp_result_ < 0)
+            {
+                ++ ops_iter_;
+            }
+            else if (key_cmp_result_ > 0)
+            {
+                db_forward_iter_->Next();
+            }
+            else
+            {
+                ++ ops_iter_;
+                db_forward_iter_->Next();
+            }
+            Update();
+        }
+    }
+
+public:
+
+    SnapshotForwardIteratorImpl(const Snapshot::Ptr &snapshot, const ForwardIterator::Ptr &db_forward_iter) :
+        snapshot_(snapshot), ops_(snapshot->wb.RawOps()), ops_iter_(ops_.begin()),
+        db_forward_iter_(db_forward_iter)
+    {
+        Update();
+    }
+};
+
+ForwardIterator::Ptr Snapshot::NewForwardIterator()
+{
+    auto db_forward_iter = DBNewForwardIterator();
+    if (db_forward_iter->Err() || wb.RawOps().empty())
+    {
+        return db_forward_iter;
+    }
+    return ForwardIterator::Ptr(new SnapshotForwardIteratorImpl(shared_from_this(), db_forward_iter));
 }
 
 }

@@ -74,6 +74,11 @@ LOM_ERR DBImpl::Snapshot::DBGet(const Str &k, std::function<StrSlice ()> &v) con
     return ::lom::ordered_kv::Iterator::Ptr(new Iterator(zm_));
 }
 
+::lom::ordered_kv::ForwardIterator::Ptr DBImpl::Snapshot::DBNewForwardIterator() const
+{
+    return ::lom::ordered_kv::ForwardIterator::Ptr(new ForwardIterator(zm_));
+}
+
 }
 
 }

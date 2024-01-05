@@ -242,6 +242,94 @@ public:
 };
 
 /*
+简单的前向迭代器基类，只支持前向迭代功能，即`Iterator`的子集
+`Snapshot`类的实现者可通过自实现相关接口来提供一个独立于`Iterator`的`ForwardIterator`的实现，
+一般来说是为了在这种场景下提升性能，如果不提供，则默认基于`Iterator`包装实现
+*/
+class ForwardIterator
+{
+    LOM_ERR err_;
+
+protected:
+
+    void SetErr(LOM_ERR err)
+    {
+        if (!err_)
+        {
+            err_ = err;
+        }
+    }
+
+    virtual bool ValidImpl() const = 0;
+
+    virtual StrSlice KeyImpl() const = 0;
+    virtual StrSlice ValueImpl() const = 0;
+
+    virtual void SeekImpl(const Str &k) = 0;
+
+    virtual void NextImpl() = 0;
+
+public:
+
+    typedef std::shared_ptr<ForwardIterator> Ptr;
+
+    virtual ~ForwardIterator() = default;
+
+    /*
+    若操作中出现错误，则可通过`Err`获取，且一旦出错，迭代器状态就被锁死，不可进一步操作，
+    只能调用`Err`和`Valid`判断状态
+    */
+    LOM_ERR Err() const
+    {
+        return err_;
+    }
+
+    /*
+    在定位、移动等操作后都应该用`Valid`用来判断是否有效，确认有效才可以进行进一步读取
+    若`Err`返回空而`Valid`返回false，则说明迭代器到达了边界
+    */
+    bool Valid() const
+    {
+        return !err_ && ValidImpl();
+    }
+
+    /*
+    返回KV，只有在`Valid()`为true的情况下才有意义
+        - 在一次调用后，直到迭代器销毁或状态改变之前，返回的两个串的引用应保证可用
+            - 最简单的办法就是迭代器对象本身以直接或间接的形式保存KV的不可变的字符串
+    */
+    StrSlice Key() const
+    {
+        Assert(Valid());
+        return KeyImpl();
+    }
+    StrSlice Value() const
+    {
+        Assert(Valid());
+        return ValueImpl();
+    }
+
+    //定位到从左到右第一个大于等于`k`的K，若所有K都比`k`小或为空数据集，则定位到右边界
+    void Seek(const Str &k)
+    {
+        if (!err_)
+        {
+            SeekImpl(k);
+        }
+    }
+
+    void Next()
+    {
+        if (!err_)
+        {
+            NextImpl();
+        }
+    }
+
+    static Ptr FromIterator(const Iterator::Ptr &iter);
+};
+
+/*
 通用的快照基类
     - 快照对象是“创建快照时的DB数据版本+临时修改空间”的叠加视图，后者叠加在前者上面
         - 例：创建快照时数据集合为`{a:1,b:2}`，则后续DB数据修改不会影响本快照看到的数据，
@@ -270,6 +358,10 @@ protected:
     virtual LOM_ERR DBGet(const Str &k, std::function<StrSlice ()> &v) const = 0;
 
     virtual Iterator::Ptr DBNewIterator() const = 0;
+    virtual ForwardIterator::Ptr DBNewForwardIterator() const
+    {
+        return ForwardIterator::FromIterator(DBNewIterator());
+    }
 
 public:
 
@@ -293,6 +385,7 @@ public:
 
     //创建一个当前快照的迭代器
     Iterator::Ptr NewIterator();
+    ForwardIterator::Ptr NewForwardIterator();
 };
 
 //库的接口类

@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 
     {
         auto iter = smkv.begin();
-        auto db_iter = snapshot_sync_with_db->NewIterator();
+        auto db_iter = snapshot_sync_with_db->NewForwardIterator();
         while (db_iter->Valid())
         {
             if (iter == smkv.end())
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
 
     {
         auto iter = smkv.begin();
-        auto db_iter = snapshot->NewIterator();
+        auto db_iter = snapshot->NewForwardIterator();
         while (db_iter->Valid())
         {
             if (iter == smkv.end())

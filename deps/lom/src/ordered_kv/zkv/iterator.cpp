@@ -170,6 +170,51 @@ ssize_t DBImpl::Snapshot::Iterator::MoveImpl(ssize_t step, const std::optional<S
     return moved_step;
 }
 
+void DBImpl::Snapshot::ForwardIterator::SeekImpl(const Str &k)
+{
+    ssize_t zm_idx;
+    auto v_ptr = zm_.Get(k, &zm_idx);
+    if (v_ptr != nullptr || zm_idx == 0)
+    {
+        //`k`刚好匹配了一个ZL头，或小于所有K
+        Reset(zm_idx);
+        return;
+    }
+
+    //在前驱节点找
+    Reset(zm_idx - 1);
+    auto ks = k.Slice();
+    for (;;)
+    {
+        if (k_ >= ks)
+        {
+            return;
+        }
+        if (!zl_forward_iter_(k_))
+        {
+            //前驱中都小于`k`，以找到的位置为准
+            Reset(zm_idx);
+            return;
+        }
+        Assert(zl_forward_iter_(v_));
+    }
+}
+
+void DBImpl::Snapshot::ForwardIterator::NextImpl()
+{
+    if (!ValidImpl())
+    {
+        return;
+    }
+
+    if (!zl_forward_iter_(k_))
+    {
+        Reset(zm_idx_ + 1);
+        return;
+    }
+    Assert(zl_forward_iter_(v_));
+}
+
 }
 
 }
