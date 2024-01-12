@@ -221,7 +221,7 @@ public:
 由于`sz_high_`使用uint8_t，节点数量会被限制在`2**40`以内
 这样设计是因为`h_`也是8字节，避免中间有个padding字节，且由于`sz_low_`是`uint32_t`，
 在`h_`前面有两个padding字节的空间可以利用，例如用map实现set的时候，可以将key和value放在`h_`前面，
-且value类型设置为`bool`或`char`，避免空间浪费，这也是默认管理信息用宏而不是独立结构体的原因
+且value类型设置为单字节类型（如`char`），避免空间浪费，这也是默认管理信息用宏而不是独立结构体的原因
 */
 
 #define LOM_IMMUT_AVL_DEF_DEFAULT_NODE_MNG_ATTR()   \

@@ -2,6 +2,8 @@
 
 #include "../_util.h"
 
+#include "_lite.h"
+
 namespace lom
 {
 

@@ -11,6 +11,9 @@ namespace ordered_kv
 namespace ckv
 {
 
+namespace experimental
+{
+
 class DBImpl : public DB
 {
     class DataFile
@@ -192,6 +195,8 @@ public:
     virtual LOM_ERR Write(const WriteBatch &wb, std::function<void ()> const &commit_hook) override;
     virtual ::lom::ordered_kv::Snapshot::Ptr NewSnapshot(std::function<void ()> const &new_snapshot_hook) override;
 };
+
+}
 
 }
 

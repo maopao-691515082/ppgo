@@ -9,6 +9,9 @@ namespace ordered_kv
 namespace ckv
 {
 
+namespace experimental
+{
+
 static const Str
     kMeta_NextDataFileIdKey = "NFID",
     kMeta_DataFileKeyPrefix = "F_",
@@ -480,6 +483,8 @@ LOM_ERR DB::Open(const char *path, Ptr &db, Options opts)
     LOM_RET_ON_ERR(new_db->Init(path, opts));
     db = std::static_pointer_cast<DB>(new_db);
     return nullptr;
+}
+
 }
 
 }

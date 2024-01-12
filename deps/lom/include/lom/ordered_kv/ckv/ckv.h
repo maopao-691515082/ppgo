@@ -11,6 +11,9 @@ namespace ordered_kv
 namespace ckv
 {
 
+namespace experimental
+{
+
 /********
 思路有点问题，暂时没做完：）
 *********/
@@ -104,6 +107,8 @@ public:
         return Open(path, db, Options());
     }
 };
+
+}
 
 }
 

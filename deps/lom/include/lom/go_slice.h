@@ -273,7 +273,7 @@ public:
 
     GoSlice<T> Copy() const
     {
-        return Nil().AppendGoSlice(*this);
+        return GoSlice<T>(0, Len()).AppendGoSlice(*this);
     }
     GoSlice<T> CopyFrom(const GoSlice<T> &s) const
     {

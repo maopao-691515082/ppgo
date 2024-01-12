@@ -49,6 +49,7 @@ class AVL
         {
         }
 
+        Node(const Node &) = delete;
         Node &operator=(const Node &) = delete;
 
         Ptr Copy() const

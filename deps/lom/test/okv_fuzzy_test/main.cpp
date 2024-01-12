@@ -28,6 +28,12 @@ int main(int argc, char *argv[])
             err = lom::ordered_kv::zkv::DB::Open(zkv_db);
             db = std::dynamic_pointer_cast<lom::ordered_kv::DBBase>(zkv_db);
         }
+        else if (strcmp(argv[1], "zkvlite") == 0)
+        {
+            lom::ordered_kv::zkv::experimental::DBLite::Ptr zkv_db_lite;
+            err = lom::ordered_kv::zkv::experimental::DBLite::Open(zkv_db_lite);
+            db = std::dynamic_pointer_cast<lom::ordered_kv::DBBase>(zkv_db_lite);
+        }
     }
     if (err)
     {
