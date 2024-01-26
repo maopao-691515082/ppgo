@@ -17,8 +17,10 @@ namespace experimental
 /*
 lite版本：
     - 纯内存的KV表结构，即不支持持久化
-    - 数据的聚合节点使用`GoSlice<Str>`而不是`ZList`，牺牲内存来提升性能
-        - 可看做是介于`AVLMap<Str, Str>`和`zkv::DB`的内存版二者中间的均衡形式
+    - 数据的聚合节点使用`GoSlice<Str>`而不是`ZList`，
+      可看做是介于`AVLMap<Str, Str>`和`zkv::DB`的内存版二者中间的均衡形式
+        - 思路是在字符串比较长的时候避免`ZList`下的写拷贝和解析查找，但实际效果并不算理想，
+          先放在`experimental`里
 */
 class DBLite : public DBBase
 {

@@ -15,7 +15,7 @@ namespace experimental
 static DBLite::ZMap WriteZM(DBLite::ZMap zm, const WriteBatch::RawOpsMap &wb_ops)
 {
     static const ssize_t
-        kGSStrCountMax = 1024,
+        kGSStrCountMax = 40,
         kGSStrCountMergeThreshold = kGSStrCountMax / 2;
 
     auto wb_ops_iter = wb_ops.begin();

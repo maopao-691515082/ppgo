@@ -159,7 +159,7 @@ LOM_ERR Listener::Serve(
         worker_count = kWorkerCountMax;
     }
     std::vector<ServeWorker *> workers(worker_count);
-    for (size_t i = 0; i < worker_count; ++i)
+    for (size_t i = 0; i < worker_count; ++ i)
     {
         workers[i] = new ServeWorker(i, init_worker, work_with_conn, err_log);
     }

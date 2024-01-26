@@ -93,6 +93,28 @@ public:
         z_ = zl.z_;
     }
 
+    ZList(const ZList &zl) = default;
+    ZList(ZList &&zl)
+    {
+        str_count_ = zl.str_count_;
+        z_ = std::move(zl.z_);
+
+        zl.str_count_ = 0;
+        zl.z_ = EmptyBuf();
+    }
+
+    ZList &operator=(const ZList &zl) = default;
+    ZList &operator=(ZList &&zl)
+    {
+        str_count_ = zl.str_count_;
+        z_ = std::move(zl.z_);
+
+        zl.str_count_ = 0;
+        zl.z_ = EmptyBuf();
+
+        return *this;
+    }
+
     //返回字符串数量
     ssize_t StrCount() const
     {

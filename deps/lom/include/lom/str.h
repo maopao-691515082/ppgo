@@ -58,6 +58,28 @@ public:
     }
     StrSlice(const Str &s);
 
+    StrSlice(const StrSlice &) = default;
+    StrSlice(StrSlice &&other)
+    {
+        p_ = other.p_;
+        len_ = other.len_;
+
+        other.p_ = "";
+        other.len_ = 0;
+    }
+
+    StrSlice &operator=(const StrSlice &) = default;
+    StrSlice &operator=(StrSlice &&other)
+    {
+        p_ = other.p_;
+        len_ = other.len_;
+
+        other.p_ = "";
+        other.len_ = 0;
+
+        return *this;
+    }
+
     const char *Data() const
     {
         return p_;

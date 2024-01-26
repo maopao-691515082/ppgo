@@ -155,6 +155,30 @@ public:
     {
     }
 
+    GoSlice(const GoSlice<T> &other) = default;
+    GoSlice(GoSlice<T> &&other)
+    {
+        a_ = std::move(other.a_);
+        start_ = other.start_;
+        len_ = other.len_;
+
+        other.start_ = 0;
+        other.len_ = 0;
+    }
+
+    GoSlice<T> &operator=(const GoSlice<T> &other) = default;
+    GoSlice<T> &operator=(GoSlice<T> &&other)
+    {
+        a_ = std::move(other.a_);
+        start_ = other.start_;
+        len_ = other.len_;
+
+        other.start_ = 0;
+        other.len_ = 0;
+
+        return *this;
+    }
+
     ssize_t Len() const
     {
         return len_;
