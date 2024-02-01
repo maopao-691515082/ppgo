@@ -482,8 +482,11 @@ LOM_ERR Run()
             {
                 int64_t now = NowMS();
                 int64_t min_expire_at = expire_waiting_fibers.begin()->first;
-                ep_wait_timeout = (
-                    min_expire_at > now ? std::min(ep_wait_timeout, (int)(min_expire_at - now)) : 0);
+                ep_wait_timeout =
+                    min_expire_at > now ?
+                        std::min(ep_wait_timeout, static_cast<int>(min_expire_at - now)) :
+                        0
+                ;
             }
 
             static const int kEpollEvCountMax = 1024;
